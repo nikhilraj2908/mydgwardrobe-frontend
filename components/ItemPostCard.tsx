@@ -21,10 +21,14 @@ const BASE_URL = "https://api.digiwardrobe.com";
 interface CommentType {
   _id: string;
   text: string;
-  user: {
-    username: string;
-    photo?: string;
-  };
+  user:
+    | string
+    | {
+        _id?: string;
+        id?: string;
+        username: string;
+        photo?: string;
+      };
   createdAt: string;
 }
 
@@ -40,6 +44,8 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   const [imageError, setImageError] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectedComment, setSelectedComment] = useState<CommentType | null>(null);
+const [showCommentActions, setShowCommentActions] = useState(false);
   // const [saved, setSaved] = useState(false);
   // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // Debug log
@@ -72,6 +78,46 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
     }
   };
 
+
+  const canDeleteComment = (comment: CommentType) => {
+  if (!currentUserId || !item) return false;
+
+  const currentId = String(currentUserId);
+
+  const commentUserId =
+    typeof comment.user === "string"
+      ? String(comment.user)
+      : String(comment.user?._id || comment.user?.id || "");
+
+  const itemOwnerId =
+    typeof item.user === "string" ? String(item.user) : String(item.user?._id || "");
+
+  return commentUserId === currentId || itemOwnerId === currentId;
+};
+
+const handleDeleteComment = async () => {
+  if (!selectedComment?._id) return;
+
+  try {
+    const token = await AsyncStorage.getItem("token");
+    if (!token) {
+      Alert.alert("Login Required", "Please login to delete comments");
+      return;
+    }
+
+    await api.delete(`/api/comment/${selectedComment._id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setComments((prev) => prev.filter((c) => c._id !== selectedComment._id));
+    setCommentCount((prev) => Math.max(0, prev - 1));
+
+    setShowCommentActions(false);
+    setSelectedComment(null);
+  } catch (err) {
+    Alert.alert("Error", "Unable to delete comment");
+  }
+};
   /* ======================================================
      CHECK IF ITEM IS SAVED
   ====================================================== */
@@ -219,32 +265,57 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
 
     return `${BASE_URL}/${photoPath}`;
   };
+const formatCommentTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
 
-  const renderComment = ({ item: comment }: { item: CommentType }) => (
+const renderComment = ({ item: comment }: { item: CommentType }) => {
+  const userObj = typeof comment.user === "string" ? null : comment.user;
+
+  return (
     <View style={styles.commentItem}>
       <View style={styles.commentUser}>
-        {comment.user.photo ? (
+        {userObj?.photo ? (
           <Image
-            source={{ uri: `${BASE_URL}${comment.user.photo}` }}
+            source={{ uri: `${BASE_URL}${userObj.photo}` }}
             style={styles.commentAvatar}
           />
         ) : (
           <View style={styles.commentAvatarPlaceholder}>
             <Text style={styles.commentInitial}>
-              {comment.user.username?.charAt(0).toUpperCase() || "U"}
+              {userObj?.username?.charAt(0).toUpperCase() || "U"}
             </Text>
           </View>
         )}
+
         <View style={styles.commentContent}>
-          <Text style={styles.commentUsername}>{comment.user.username}</Text>
+          <View style={styles.commentHeaderRow}>
+            <Text style={styles.commentUsername}>{userObj?.username || "User"}</Text>
+
+            {canDeleteComment(comment) && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedComment(comment);
+                  setShowCommentActions(true);
+                }}
+              >
+                <Ionicons name="ellipsis-vertical" size={16} color="#000" />
+              </TouchableOpacity>
+            )}
+          </View>
+
           <Text style={styles.commentText}>{comment.text}</Text>
+
           <Text style={styles.commentTime}>
-            {new Date(comment.createdAt).toLocaleDateString()}
+            {formatCommentTime(comment.createdAt)}
           </Text>
         </View>
       </View>
     </View>
   );
+};
+
 
   const imageUrl = getImageUrl();
   const avatarUrl = getUserAvatarUrl();
@@ -459,6 +530,37 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
           </View>
         </View>
       </Modal>
+      <Modal
+  transparent
+  visible={showCommentActions}
+  animationType="fade"
+  onRequestClose={() => setShowCommentActions(false)}
+>
+  <TouchableOpacity
+    style={styles.overlay}
+    onPress={() => setShowCommentActions(false)}
+    activeOpacity={1}
+  >
+    <View style={styles.actionSheet}>
+      <TouchableOpacity
+        style={styles.deleteBtn}
+        onPress={() => {
+          Alert.alert(
+            "Delete Comment",
+            "Are you sure you want to delete this comment?",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Delete", style: "destructive", onPress: handleDeleteComment },
+            ]
+          );
+        }}
+      >
+        <Text style={styles.deleteText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
+  </TouchableOpacity>
+</Modal>
+
       {menuVisible && (
         <TouchableOpacity
           activeOpacity={1}
@@ -508,6 +610,35 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 99,
   },
+commentHeaderRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+
+overlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.4)",
+  justifyContent: "flex-end",
+},
+
+actionSheet: {
+  backgroundColor: "#fff",
+  padding: 16,
+  borderTopLeftRadius: 16,
+  borderTopRightRadius: 16,
+},
+
+deleteBtn: {
+  paddingVertical: 14,
+},
+
+deleteText: {
+  color: "#EF4444",
+  fontSize: 16,
+  fontWeight: "600",
+  textAlign: "center",
+},
 
   menuBox: {
     position: "absolute",
