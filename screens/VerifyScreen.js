@@ -52,7 +52,7 @@ const submitOtp = async () => {
     // Axios success
     if (res.status === 200) {
       alert("OTP Verified Successfully!");
-      router.replace("/home/");
+      router.replace("/profile/");
     }
   } catch (err) {
     alert(err.response?.data?.message || "Invalid OTP");

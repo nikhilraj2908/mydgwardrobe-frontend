@@ -12,9 +12,12 @@ import {
     View,
 } from "react-native";
 
+import api from "../../api/api"; // ✅ Axios instance
+
 export default function OtpVerify() {
   const router = useRouter();
-  const { email } = useLocalSearchParams(); // GET EMAIL HERE 🚀
+  const { email } = useLocalSearchParams(); // GET EMAIL
+
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -31,6 +34,9 @@ export default function OtpVerify() {
     }
   };
 
+  // -------------------------------------------------------------------
+  // ✅ VERIFY OTP (Axios Version)
+  // -------------------------------------------------------------------
   const verifyCode = async () => {
     const code = otp.join("");
 
@@ -42,52 +48,43 @@ export default function OtpVerify() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://192.168.137.145:5001/api/auth/verify-mobile-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: code }),
+      const res = await api.post("/api/auth/verify-mobile-login", {
+        email,
+        otp: code,
       });
 
-      const data = await res.json();
       setLoading(false);
 
-      if (!res.ok) {
-        Alert.alert("Error", data.message || "Invalid OTP");
-        return;
-      }
-
+      // Axios success = 200
       Alert.alert("Success", "Logged in successfully!");
-      router.push("/(tabs)/home"); // Go to home
+      router.push("/(tabs)/home");
+
     } catch (err) {
       setLoading(false);
-      Alert.alert("Error", "Server not reachable");
+      Alert.alert("Error", err.response?.data?.message || "Invalid OTP");
     }
   };
-const resendOtp = async () => {
-  setResending(true);
 
-  try {
-    const response = await fetch("http://192.168.137.145:5001/api/auth/resend-mobile-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }), // FIXED
-    });
+  // -------------------------------------------------------------------
+  // ✅ RESEND OTP  (Axios Version)
+  // -------------------------------------------------------------------
+  const resendOtp = async () => {
+    setResending(true);
 
-    const data = await response.json();
-    setResending(false);
+    try {
+      const res = await api.post("/api/auth/resend-mobile-otp", {
+        email,
+      });
 
-    if (!response.ok) {
-      Alert.alert("Error", data.message || "Failed to resend OTP");
-      return;
+      setResending(false);
+
+      Alert.alert("Success", "OTP resent to your email");
+
+    } catch (err) {
+      setResending(false);
+      Alert.alert("Error", err.response?.data?.message || "Cannot reach server");
     }
-
-    Alert.alert("Success", "OTP resent to your email");
-  } catch {
-    setResending(false);
-    Alert.alert("Error", "Cannot reach server");
-  }
-};
-
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

@@ -1,17 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { Link, router } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 const API_URL = Constants.expoConfig.extra.apiBaseUrl;
@@ -31,7 +32,7 @@ export default function LoginWithUsername() {
     setLoading(true);
 
     try {
-     const res = await axios.post(`${API_URL}/auth/login`, {
+     const res = await axios.post(`${API_URL}/api/auth/login`, {
   username,
   password,
 });
@@ -41,10 +42,10 @@ export default function LoginWithUsername() {
       Alert.alert("Success", "Login successful");
 
       // Store token (AsyncStorage)
-      // await AsyncStorage.setItem("token", res.data.token);
+      await AsyncStorage.setItem("token", res.data.token);
 
       // Redirect to home (modify as needed)
-      router.push("/home");
+      router.push("/profile");
 
     } catch (err) {
       setLoading(false);
@@ -107,13 +108,18 @@ export default function LoginWithUsername() {
 
       <TouchableOpacity>
         <Text style={styles.forgotText}>
-          Forgot password? <Text style={styles.resetText}>Reset</Text>
+            <Link href="/(auth)/forgot-password">
+                 Forgot password? <Text style={styles.resetText}>Reset</Text>
+            </Link>
         </Text>
       </TouchableOpacity>
 
       <Text style={styles.footer}>
         Don't have an account?{" "}
-        <Text style={styles.signupText}>Sign up</Text>
+        <Link href="/(auth)/signup" style={styles.signupText}>
+                  Sign up
+        </Link>
+        {/* <Text style={styles.signupText}>Sign up</Text> */}
       </Text>
     </View>
   );

@@ -1,20 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
+import * as Google from "expo-auth-session/providers/google";
+import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import * as WebBrowser from "expo-web-browser";
+import { useEffect, useState } from "react";
 import {
-    FlatList,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import axios from "axios";
-import Constants from "expo-constants";
+
+WebBrowser.maybeCompleteAuthSession();
 
 // Create axios instance with base URL
 // const API_URL = process.env.EXPO_PUBLIC_API_URL ;
@@ -34,11 +38,20 @@ const COUNTRY_CODES = [
   { code: "CA", dial: "+1", flag: "🇨🇦" }
 ];
 
+
+
 const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
 const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const years = Array.from({ length: 90 }, (_, i) => (2024 - i).toString());
 
 export default function SignupScreen() {
+  const [request, response, promptAsync] = Google.useAuthRequest({
+  webClientId: "836704104886-o8pslkdrbufj18ffq6di46n3935vclhs.apps.googleusercontent.com",
+  expoClientId: "836704104886-o8pslkdrbufj18ffq6di46n3935vclhs.apps.googleusercontent.com",
+  androidClientId: "836704104886-gi3cd3vnp6ccjndc7q6mh1pdem0e9iue.apps.googleusercontent.com",
+  // iosClientId: "836704104886-tngtqtpp2fs14ipu73i0ltu27ojlrk3t.apps.googleusercontent.com",
+  // expoClientId: "836704104886-ps1rab6u5q89tie5ltfi9edbbeqeqfs6.apps.googleusercontent.com"
+});
   const router = useRouter();
 
   // Form states
@@ -67,6 +80,11 @@ export default function SignupScreen() {
   const [showYearDropdown, setShowYearDropdown] = useState(false);
 
   const [loading, setLoading] = useState(false);
+useEffect(() => {
+  if (response?.type === "success") {
+    handleGoogleLogin(response.authentication.accessToken);
+  }
+}, [response]);
 
   // ---------------------- SIGNUP HANDLER ----------------------
   const handleSignup = async () => {
@@ -86,7 +104,7 @@ export default function SignupScreen() {
     setLoading(true);
 
     try {
-      const response = await api.post("/auth/register", {
+      const response = await api.post("/api/auth/register", {
         username,
         email,
         password,
@@ -119,6 +137,43 @@ export default function SignupScreen() {
       setLoading(false);
     }
   };
+const handleGoogleLogin = async (accessToken) => {
+  try {
+    const googleUser = await axios.get(
+      "https://www.googleapis.com/userinfo/v2/me",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const { email, name, id, picture } = googleUser.data;
+
+    // 🔥 Call YOUR backend
+    const res = await api.post("/api/auth/google", {
+      email,
+      name,
+      googleId: id,
+      photo: picture,
+    });
+
+    const { token, user } = res.data;
+
+    // Save token (AsyncStorage / SecureStore)
+    // await SecureStore.setItemAsync("token", token);
+
+    // Redirect based on profile status
+    if (!user.profileCompleted) {
+      router.replace("/complete-profile");
+    } else {
+      router.replace("/home");
+    }
+  } catch (err) {
+    console.log("Google login error:", err.response?.data || err.message);
+    alert("Google login failed");
+  }
+};
 
   // ---------------------- DROPDOWN UI ----------------------
   const renderDropdown = (data, visible, onSelect, onClose, selectedValue) => (
@@ -152,6 +207,19 @@ export default function SignupScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Image source={require("../assets/images/logoblack.png")} style={styles.logo} />
+
+       <TouchableOpacity
+  style={styles.googleBtn}
+  disabled={!request}
+  // onPress={() => promptAsync()}
+onPress={() => promptAsync({ useProxy: true })}
+
+>
+  <Ionicons name="logo-google" size={20} color="#111" />
+  <Text style={styles.googleText}>Continue with Google</Text>
+  
+</TouchableOpacity>
+      <Text style={styles.orText}>OR</Text>
 
       {/* USERNAME */}
       <Text style={styles.label}>Username</Text>
@@ -288,13 +356,10 @@ export default function SignupScreen() {
         </LinearGradient>
       </TouchableOpacity>
 
-      <Text style={styles.orText}>OR</Text>
 
       {/* GOOGLE SIGNUP */}
-      <TouchableOpacity style={styles.googleBtn}>
-        <Ionicons name="logo-google" size={20} color="#111" />
-        <Text style={styles.googleText}>Signup using Google</Text>
-      </TouchableOpacity>
+    
+
       
       <Link href="/login-options" asChild>
         <Text style={styles.footer}>
@@ -317,7 +382,9 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     alignSelf: "center",
-    resizeMode: "contain"
+    resizeMode: "contain",
+    marginTop: 25,
+
   },
   label: {
     fontSize: 14,
@@ -327,12 +394,15 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#F9FAFB",
     padding: 14,
+    marginBottom: 10,
     borderRadius: 25,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   passwordContainer: {
     flexDirection: "row",
+    marginBottom: 10,
+
     alignItems: "center",
     backgroundColor: "#F9FAFB",
     borderWidth: 1,
@@ -344,6 +414,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   genderRow: {
+    marginBottom: 10,
+
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -378,6 +450,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     position: "relative",
+    marginBottom: 10,
+
   },
   countryBtn: {
     flexDirection: "row",
