@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -15,6 +16,10 @@ import {
 } from "react-native";
 import api from "../api/api";
 import { useSavedItems } from "../context/SavedItemsContext";
+
+import { useFollow } from "../context/FollowContext";
+
+
 const { width } = Dimensions.get('window');
 const BASE_URL = "https://api.digiwardrobe.com";
 
@@ -22,13 +27,13 @@ interface CommentType {
   _id: string;
   text: string;
   user:
-    | string
-    | {
-        _id?: string;
-        id?: string;
-        username: string;
-        photo?: string;
-      };
+  | string
+  | {
+    _id?: string;
+    id?: string;
+    username: string;
+    photo?: string;
+  };
   createdAt: string;
 }
 
@@ -45,12 +50,23 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [selectedComment, setSelectedComment] = useState<CommentType | null>(null);
-const [showCommentActions, setShowCommentActions] = useState(false);
+  const [showCommentActions, setShowCommentActions] = useState(false);
+  const [justFollowed, setJustFollowed] = useState(false);
   // const [saved, setSaved] = useState(false);
   // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // Debug log
-  const { savedItemIds, toggleSave } = useSavedItems();
+  const { isFollowing, toggleFollow } = useFollow();
+  const ownerId =
+    typeof item.user === "string" ? item.user : item.user?._id;
 
+  const followed = ownerId ? isFollowing(String(ownerId)) : false;
+
+  const isOwner = currentUserId && ownerId && String(currentUserId) === String(ownerId);
+
+  const showFollowPlus = !isOwner && ownerId && !followed && !justFollowed;
+
+  const showTick = !isOwner && ownerId && justFollowed;
+  const { savedItemIds, toggleSave, isReady } = useSavedItems();
   const saved = savedItemIds.includes(item._id);
   console.log("ItemPostCard received item:", {
     id: item._id,
@@ -79,45 +95,46 @@ const [showCommentActions, setShowCommentActions] = useState(false);
   };
 
 
+
   const canDeleteComment = (comment: CommentType) => {
-  if (!currentUserId || !item) return false;
+    if (!currentUserId || !item) return false;
 
-  const currentId = String(currentUserId);
+    const currentId = String(currentUserId);
 
-  const commentUserId =
-    typeof comment.user === "string"
-      ? String(comment.user)
-      : String(comment.user?._id || comment.user?.id || "");
+    const commentUserId =
+      typeof comment.user === "string"
+        ? String(comment.user)
+        : String(comment.user?._id || comment.user?.id || "");
 
-  const itemOwnerId =
-    typeof item.user === "string" ? String(item.user) : String(item.user?._id || "");
+    const itemOwnerId =
+      typeof item.user === "string" ? String(item.user) : String(item.user?._id || "");
 
-  return commentUserId === currentId || itemOwnerId === currentId;
-};
+    return commentUserId === currentId || itemOwnerId === currentId;
+  };
 
-const handleDeleteComment = async () => {
-  if (!selectedComment?._id) return;
+  const handleDeleteComment = async () => {
+    if (!selectedComment?._id) return;
 
-  try {
-    const token = await AsyncStorage.getItem("token");
-    if (!token) {
-      Alert.alert("Login Required", "Please login to delete comments");
-      return;
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Login Required", "Please login to delete comments");
+        return;
+      }
+
+      await api.delete(`/api/comment/${selectedComment._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setComments((prev) => prev.filter((c) => c._id !== selectedComment._id));
+      setCommentCount((prev) => Math.max(0, prev - 1));
+
+      setShowCommentActions(false);
+      setSelectedComment(null);
+    } catch (err) {
+      Alert.alert("Error", "Unable to delete comment");
     }
-
-    await api.delete(`/api/comment/${selectedComment._id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    setComments((prev) => prev.filter((c) => c._id !== selectedComment._id));
-    setCommentCount((prev) => Math.max(0, prev - 1));
-
-    setShowCommentActions(false);
-    setSelectedComment(null);
-  } catch (err) {
-    Alert.alert("Error", "Unable to delete comment");
-  }
-};
+  };
   /* ======================================================
      CHECK IF ITEM IS SAVED
   ====================================================== */
@@ -127,14 +144,40 @@ const handleDeleteComment = async () => {
      TOGGLE SAVE
   ====================================================== */
 
-
+  const handleSave = () => {
+    if (!isReady) {
+      Alert.alert("Please wait", "Loading your profile…");
+      return;
+    }
+    toggleSave(item._id);
+  };
 
   useEffect(() => {
+    fetchLikeStatus();   // 👈 IMPORTANT
     fetchLikeCount();
     fetchComments();
+    // checkFollowStatus();
+  }, [item._id]);
 
-    // AsyncStorage.getItem("userId").then(setCurrentUserId);
-  }, []);
+
+
+  const fetchLikeStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      const res = await api.get(
+        `/api/like/item/${item._id}/me`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setLiked(Boolean(res.data.liked));
+    } catch (err) {
+      console.log("Like status fetch failed", err);
+    }
+  };
 
   // const isOwner = currentUserId === item.user?._id;
   const fetchLikeCount = async () => {
@@ -165,6 +208,7 @@ const handleDeleteComment = async () => {
       }
 
       setLoading(true);
+
       const res = await api.post(
         "/api/like/toggle",
         {
@@ -176,15 +220,27 @@ const handleDeleteComment = async () => {
         }
       );
 
-      setLiked(res.data.liked);
-      setLikeCount((prev: number) => (res.data.liked ? prev + 1 : prev - 1));
+      const isNowLiked = res.data.liked;
+
+      setLiked(isNowLiked);
+      setLikeCount((prev: number) =>
+        isNowLiked ? prev + 1 : Math.max(0, prev - 1)
+      );
     } catch (error: any) {
       console.error("Like error:", error);
-      Alert.alert("Error", error.response?.data?.message || "Failed to like");
+      Alert.alert("Error", "Failed to like");
     } finally {
       setLoading(false);
     }
   };
+
+
+  const handlePostOwnerPress = () => {
+    if (!item.user?._id) return;
+    router.push(`/profile/${item.user._id}`);
+  };
+
+
 
   const handleComment = async () => {
     if (!commentText.trim()) return;
@@ -219,14 +275,6 @@ const handleDeleteComment = async () => {
   const openComments = () => {
     setShowComments(true);
   };
-  const itemOwnerId =
-    typeof item.user === "string"
-      ? item.user
-      : item.user?._id;
-
-  const isOwner =
-    Boolean(currentUserId && itemOwnerId) &&
-    String(currentUserId) === String(itemOwnerId);
 
   // Helper function to get image URL
   const getImageUrl = () => {
@@ -265,93 +313,170 @@ const handleDeleteComment = async () => {
 
     return `${BASE_URL}/${photoPath}`;
   };
-const formatCommentTime = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-};
+  const formatCommentTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+  useEffect(() => {
+    console.log("Saved IDs from context:", savedItemIds);
+  }, [savedItemIds]);
+  const renderComment = ({ item: comment }: { item: CommentType }) => {
+    const userObj = typeof comment.user === "string" ? null : comment.user;
 
-const renderComment = ({ item: comment }: { item: CommentType }) => {
-  const userObj = typeof comment.user === "string" ? null : comment.user;
 
-  return (
-    <View style={styles.commentItem}>
-      <View style={styles.commentUser}>
-        {userObj?.photo ? (
-          <Image
-            source={{ uri: `${BASE_URL}${userObj.photo}` }}
-            style={styles.commentAvatar}
-          />
-        ) : (
-          <View style={styles.commentAvatarPlaceholder}>
-            <Text style={styles.commentInitial}>
-              {userObj?.username?.charAt(0).toUpperCase() || "U"}
+    const handleUserPress = () => {
+      if (!userObj?._id && !userObj?.id) return;
+
+      const userId = userObj._id || userObj.id;
+      router.push(`/profile/${userId}`);
+    };
+
+
+
+
+
+
+
+    return (
+      <View style={styles.commentItem}>
+        <View style={styles.commentUser}>
+          {userObj?.photo ? (
+            <TouchableOpacity onPress={handleUserPress}>
+              <Image
+                source={{ uri: `${BASE_URL}${userObj.photo}` }}
+                style={styles.commentAvatar}
+              />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.commentAvatarPlaceholder}
+              onPress={handleUserPress}
+            >
+              <Text style={styles.commentInitial}>
+                {userObj?.username?.charAt(0).toUpperCase() || "U"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.commentContent}>
+            <View style={styles.commentHeaderRow}>
+              <TouchableOpacity onPress={handleUserPress}>
+                <Text style={styles.commentUsername}>
+                  {userObj?.username || "User"}
+                </Text>
+              </TouchableOpacity>
+
+
+              {canDeleteComment(comment) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedComment(comment);
+                    setShowCommentActions(true);
+                  }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={16} color="#000" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <Text style={styles.commentText}>{comment.text}</Text>
+
+            <Text style={styles.commentTime}>
+              {formatCommentTime(comment.createdAt)}
             </Text>
           </View>
-        )}
-
-        <View style={styles.commentContent}>
-          <View style={styles.commentHeaderRow}>
-            <Text style={styles.commentUsername}>{userObj?.username || "User"}</Text>
-
-            {canDeleteComment(comment) && (
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedComment(comment);
-                  setShowCommentActions(true);
-                }}
-              >
-                <Ionicons name="ellipsis-vertical" size={16} color="#000" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <Text style={styles.commentText}>{comment.text}</Text>
-
-          <Text style={styles.commentTime}>
-            {formatCommentTime(comment.createdAt)}
-          </Text>
         </View>
       </View>
-    </View>
-  );
-};
-
+    );
+  };
+useEffect(() => {
+  // Whenever a new post/user renders, reset local UI state
+  setJustFollowed(false);
+}, [ownerId]);
 
   const imageUrl = getImageUrl();
   const avatarUrl = getUserAvatarUrl();
+
+
+  const handleFollowPress = async () => {
+    if (!ownerId) return;
+
+    // 1️⃣ Trigger follow (global)
+    await toggleFollow(String(ownerId));
+
+    // 2️⃣ Show confirmation tick
+    setJustFollowed(true);
+
+    // 3️⃣ Hide tick after short delay
+    setTimeout(() => {
+      setJustFollowed(false);
+    }, 1200);
+  };
 
   return (
     <>
       <View style={styles.card}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.avatar}>
-            {avatarUrl ? (
-              <Image
-                source={{ uri: avatarUrl }}
-                style={styles.avatarImg}
-              />
-            ) : (
-              <Text style={styles.avatarText}>
-                {item.user?.username?.[0]?.toUpperCase() || "U"}
-              </Text>
-            )}
-          </View>
-
-          <View>
-            <Text style={styles.username}>{item.user?.username || "User"}</Text>
-            <Text style={styles.handle}>@{item.user?.username?.toLowerCase() || "user"}</Text>
-          </View>
-
           <TouchableOpacity
-            style={{ marginLeft: "auto" }}
-            onPress={() => setMenuVisible(v => !v)}
+            style={{ flexDirection: "row", alignItems: "center" }}
+            onPress={handlePostOwnerPress}
           >
-            <Ionicons name="ellipsis-vertical" size={18} color="#666" />
+            <View style={styles.avatar}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {item.user?.username?.[0]?.toUpperCase() || "U"}
+                </Text>
+              )}
+            </View>
+
+            <View>
+              <Text style={styles.username}>{item.user?.username}</Text>
+              <Text style={styles.handle}>
+                @{item.user?.username?.toLowerCase()}
+              </Text>
+            </View>
           </TouchableOpacity>
 
+          <View style={{ flexDirection: "row", alignItems: "center", marginLeft: "auto" }}>
+
+            {/* FOLLOW ICON */}
+            {/* FOLLOW UI */}
+            {showFollowPlus && (
+              <TouchableOpacity
+                onPress={handleFollowPress}
+                style={styles.followIcon}
+              >
+                <Ionicons
+                  name="person-add-outline"
+                  size={22}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            )}
+
+            {showTick && (
+              <View style={styles.followIcon}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={22}
+                  color="#A855F7"
+                />
+              </View>
+            )}
+
+
+            {/* MENU */}
+            <TouchableOpacity onPress={() => setMenuVisible(v => !v)}>
+              <Ionicons name="ellipsis-vertical" size={18} color="#666" />
+            </TouchableOpacity>
+
+          </View>
 
         </View>
+
 
         {/* Image */}
         <View style={styles.imageContainer}>
@@ -408,7 +533,7 @@ const renderComment = ({ item: comment }: { item: CommentType }) => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => toggleSave(item._id)}>
+          <TouchableOpacity onPress={handleSave}>
             <Image
               source={
                 saved
@@ -531,35 +656,35 @@ const renderComment = ({ item: comment }: { item: CommentType }) => {
         </View>
       </Modal>
       <Modal
-  transparent
-  visible={showCommentActions}
-  animationType="fade"
-  onRequestClose={() => setShowCommentActions(false)}
->
-  <TouchableOpacity
-    style={styles.overlay}
-    onPress={() => setShowCommentActions(false)}
-    activeOpacity={1}
-  >
-    <View style={styles.actionSheet}>
-      <TouchableOpacity
-        style={styles.deleteBtn}
-        onPress={() => {
-          Alert.alert(
-            "Delete Comment",
-            "Are you sure you want to delete this comment?",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Delete", style: "destructive", onPress: handleDeleteComment },
-            ]
-          );
-        }}
+        transparent
+        visible={showCommentActions}
+        animationType="fade"
+        onRequestClose={() => setShowCommentActions(false)}
       >
-        <Text style={styles.deleteText}>Delete</Text>
-      </TouchableOpacity>
-    </View>
-  </TouchableOpacity>
-</Modal>
+        <TouchableOpacity
+          style={styles.overlay}
+          onPress={() => setShowCommentActions(false)}
+          activeOpacity={1}
+        >
+          <View style={styles.actionSheet}>
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={() => {
+                Alert.alert(
+                  "Delete Comment",
+                  "Are you sure you want to delete this comment?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Delete", style: "destructive", onPress: handleDeleteComment },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.deleteText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {menuVisible && (
         <TouchableOpacity
@@ -610,35 +735,35 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 99,
   },
-commentHeaderRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-},
+  commentHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
 
-overlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.4)",
-  justifyContent: "flex-end",
-},
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
 
-actionSheet: {
-  backgroundColor: "#fff",
-  padding: 16,
-  borderTopLeftRadius: 16,
-  borderTopRightRadius: 16,
-},
+  actionSheet: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
 
-deleteBtn: {
-  paddingVertical: 14,
-},
+  deleteBtn: {
+    paddingVertical: 14,
+  },
 
-deleteText: {
-  color: "#EF4444",
-  fontSize: 16,
-  fontWeight: "600",
-  textAlign: "center",
-},
+  deleteText: {
+    color: "#EF4444",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
 
   menuBox: {
     position: "absolute",
@@ -744,13 +869,18 @@ deleteText: {
   },
 
   imageContainer: {
-    position: 'relative',
+    width: "100%",
+    height: 260,                 // fixed height (important)
+    backgroundColor: "#F9FAFB",  // light neutral background
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 12,                 // 👈 padding for all images
   },
 
   image: {
     width: "100%",
-    height: 260,
-    backgroundColor: "#f5f5f5",
+    height: "100%",
+    resizeMode: "contain",
   },
 
   noImage: {
@@ -1000,5 +1130,9 @@ deleteText: {
   modalSendButton: {
     paddingLeft: 12,
     paddingRight: 4,
+  },
+  followIcon: {
+    marginRight: 12,
+    padding: 4,
   },
 });

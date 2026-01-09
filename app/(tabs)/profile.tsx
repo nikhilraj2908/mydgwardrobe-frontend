@@ -13,9 +13,10 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import SavedGridCard from "../../components/SavedGridCard";
 import api from "../../api/api";
+import SavedGridCard from "../../components/SavedGridCard";
 import { useSavedItems } from "../../context/SavedItemsContext";
+
 // Define types
 const baseURL = api.defaults.baseURL;
 
@@ -67,8 +68,8 @@ interface SavedItem {
       username: string;
       photo?: string;
     };
-    brand:string,
-    name:string
+    brand: string,
+    name: string
   };
 }
 
@@ -87,56 +88,71 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
-  const { toggleSave, savedItemIds, refreshSaved } = useSavedItems();
-const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
-const fetchLikeCount = async (itemId: string) => {
-  try {
-    const res = await api.get(`/api/like/item/${itemId}/count`);
-    return res.data.count || 0;
-  } catch (err) {
-    console.log("Like count fetch failed", err);
-    return 0;
-  }
-};
-  const fetchSavedItems = async () => {
+  // const { savedItemIds, refreshSaved } = useSavedItems();
+  const { savedItemIds } = useSavedItems();
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const { resetSaved } = useSavedItems();
+
+  const fetchLikeCount = async (itemId: string) => {
     try {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) return;
-
-      const res = await api.get("/api/saved/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log("Saved items response:", res.data);
-      setSavedItems(res.data || []);
-    } catch (error) {
-      console.error("Error fetching saved items:", error);
-      setSavedItems([]);
+      const res = await api.get(`/api/like/item/${itemId}/count`);
+      return res.data.count || 0;
+    } catch (err) {
+      console.log("Like count fetch failed", err);
+      return 0;
     }
   };
- useEffect(() => {
-  if (activeTab !== "savedItems") return;
 
-  const loadLikes = async () => {
-    const counts: Record<string, number> = {};
 
-    for (const saved of savedItems) {
-      const itemId = saved.item._id;
-      counts[itemId] = await fetchLikeCount(itemId);
-    }
+  useEffect(() => {
+    if (activeTab !== "savedItems") return;
 
-    setLikeCounts(counts);
-  };
+    const loadSavedItems = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) return;
 
-  loadLikes();
-}, [savedItems, activeTab]);
+        const res = await api.get("/api/saved/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const cleanSavedItems = (res.data || []).filter(
+          (s: any) => s && s.item && s.item._id
+        );
+        setSavedItems(cleanSavedItems);
+      } catch (err) {
+        console.log("Failed to load saved items", err);
+        setSavedItems([]);
+      }
+    };
+
+    loadSavedItems();
+  }, [activeTab, savedItemIds]);
+  useEffect(() => {
+    if (activeTab !== "savedItems") return;
+
+    const loadLikes = async () => {
+      const counts: Record<string, number> = {};
+
+      for (const saved of savedItems) {
+        const itemId = saved.item._id;
+        counts[itemId] = await fetchLikeCount(itemId);
+      }
+
+      setLikeCounts(counts);
+    };
+
+    loadLikes();
+  }, [savedItems, activeTab]);
 
 
   // Helper function to get full image URL
   const DEFAULT_AVATAR =
     'https://ui-avatars.com/api/?name=User&background=random';
 
- 
+
 
 
   // Fetch user profile and wardrobes data
@@ -157,7 +173,13 @@ const fetchLikeCount = async (itemId: string) => {
       console.log("User profile response:", userResponse.data);
       const user = userResponse.data;
       setUser(user);
+      // 🔥 Fetch followers & following counts
+      const followCountRes = await api.get(
+        `/api/follow/counts/${user._id}`
+      );
 
+      setFollowersCount(followCountRes.data.followers || 0);
+      setFollowingCount(followCountRes.data.following || 0);
       // 2. Fetch user's wardrobe collections
       const wardrobesResponse = await api.get("/api/wardrobe/list", {
         headers: { Authorization: `Bearer ${token}` },
@@ -217,7 +239,7 @@ const fetchLikeCount = async (itemId: string) => {
       const userBio = user.bio || createUserBio(user);
 
       // Default followers count
-      const followersCount = 0;
+
 
       // Set user data with the correct wardrobe count
       setUserData({
@@ -225,7 +247,7 @@ const fetchLikeCount = async (itemId: string) => {
         handle: userHandle,
         bio: userBio,
         collectionWorth: formattedWorth,
-        followers: formatNumber(followersCount),
+        followers: formatNumber(followCountRes.data.followers || 0),
         wardrobeCount: wardrobesList.length, // Use wardrobesList.length instead of wardrobes.length
       });
 
@@ -293,13 +315,13 @@ const fetchLikeCount = async (itemId: string) => {
 
   useEffect(() => {
     fetchProfileData();
-    fetchSavedItems();
+
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchProfileData();
-    fetchSavedItems();
+
   };
 
   const handleWardrobePress = (wardrobe: Wardrobe) => {
@@ -336,6 +358,7 @@ const fetchLikeCount = async (itemId: string) => {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem("token");
+      resetSaved();
       router.replace("/");
     } catch (error) {
       console.error("Error logging out:", error);
@@ -374,17 +397,17 @@ const fetchLikeCount = async (itemId: string) => {
         <View style={styles.userCard}>
           <View style={styles.avatarContainer}>
             {user?.photo ? (
-             <Image
-  source={{
-    uri: user.photo
-      ? `${baseURL}${user.photo}`
-      : "https://ui-avatars.com/api/?name=User"
-  }}
-  style={styles.avatarImage}
-  onError={(e) =>
-    console.log("Profile image load error:", e.nativeEvent.error)
-  }
-/>
+              <Image
+                source={{
+                  uri: user.photo
+                    ? `${baseURL}${user.photo}`
+                    : "https://ui-avatars.com/api/?name=User"
+                }}
+                style={styles.avatarImage}
+                onError={(e) =>
+                  console.log("Profile image load error:", e.nativeEvent.error)
+                }
+              />
 
             ) : (
               <View style={styles.avatar}>
@@ -424,12 +447,19 @@ const fetchLikeCount = async (itemId: string) => {
             </Text>
             <Text style={styles.statLabel}>Collection Worth</Text>
           </View>
-          <View style={styles.statBox}>
+          <TouchableOpacity
+            style={styles.statBox}
+            onPress={() =>
+              router.push(
+                `/profile/followers?userId=${user?._id}&tab=followers`
+              )
+            }
+          >
             <Text style={styles.statValue}>
-              {userData?.followers || "0"}
+              {followersCount}
             </Text>
             <Text style={styles.statLabel}>Followers</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{userData?.wardrobeCount || 0}</Text>
             <Text style={styles.statLabel}>Wardrobes</Text>
@@ -566,13 +596,14 @@ const fetchLikeCount = async (itemId: string) => {
                 ) : (
                   <View style={styles.gridContainer}>
                     {savedItems.map((saved) => {
-                      // Extract item data
+                      if (!saved.item) return null; // 🛡️ safety guard
+
                       const itemData = {
                         _id: saved.item._id,
-                        name: saved.item.name || 'Item Name',
-                        brand: saved.item.brand || saved.item.user?.username || 'Brand',
+                        name: saved.item.name || "Item",
+                        brand: saved.item.brand || saved.item.user?.username || "Brand",
                         price: saved.item.price || 0,
-                        likes: likeCounts[saved.item._id] || 0, // fallback for demo
+                        likes: likeCounts[saved.item._id] || 0,
                         imageUrl: saved.item.imageUrl,
                       };
 
@@ -580,14 +611,14 @@ const fetchLikeCount = async (itemId: string) => {
                         <View key={saved._id} style={styles.gridItem}>
                           <SavedGridCard
                             item={itemData}
-                            onPress={() => {
-                              // Navigate to item detail if needed
-                              console.log('Pressed item:', saved.item._id);
-                            }}
+                            onPress={() =>
+                              console.log("Pressed item:", saved.item._id)
+                            }
                           />
                         </View>
                       );
                     })}
+
                   </View>
                 )}
               </View>
@@ -903,9 +934,9 @@ const styles = StyleSheet.create({
   logoutText: {
     color: "#ef4444",
   },
-  
 
- savedContainer: {
+
+  savedContainer: {
     flex: 1,
   },
 

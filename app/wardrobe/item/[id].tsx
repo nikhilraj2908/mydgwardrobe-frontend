@@ -16,7 +16,8 @@ import {
 } from "react-native";
 import api from "../../../api/api";
 import { useSavedItems } from "../../../context/SavedItemsContext";
-
+import { useFollow } from "../../../context/FollowContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 const baseURL = api.defaults.baseURL;
 
 export default function ItemDetails() {
@@ -36,6 +37,19 @@ export default function ItemDetails() {
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [selectedComment, setSelectedComment] = useState<any>(null);
     const [showCommentActions, setShowCommentActions] = useState(false);
+    const { isFollowing, toggleFollow, ready } = useFollow();
+
+  
+    // const [isFollowing, setIsFollowing] = useState(false);
+    // const [followLoading, setFollowLoading] = useState(false);
+    // const [isSelf, setIsSelf] = useState(false);
+
+const handleFollowToggle = async () => {
+  if (!ownerId || isSelf) return;
+  await toggleFollow(String(ownerId));
+};
+
+
     const fetchCurrentUser = async () => {
         try {
             const res = await api.get("/api/auth/me");
@@ -131,6 +145,26 @@ export default function ItemDetails() {
         }
     };
 
+    const fetchLikeStatus = async () => {
+        try {
+            const token = await AsyncStorage.getItem("token");
+            if (!token) return;
+
+            const res = await api.get(
+                `/api/like/item/${id}/me`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            setLiked(Boolean(res.data.liked));
+        } catch (err) {
+            console.log("Like status fetch failed", err);
+        }
+    };
+
+
+
 
     const fetchItemDetails = async () => {
         await fetchComments();
@@ -141,8 +175,7 @@ export default function ItemDetails() {
             const likeRes = await api.get(`/api/like/item/${id}/count`);
             setLikes(likeRes.data.count || 0);
 
-            const statusRes = await api.get(`/api/like/item/${id}/status`);
-            setLiked(statusRes.data.liked || false);
+            await fetchLikeStatus(); // ✅ ADD THIS
         } catch (err) {
             console.log("Item fetch failed", err);
         } finally {
@@ -166,6 +199,28 @@ export default function ItemDetails() {
         }
     };
 
+    const handleOwnerPress = async () => {
+        if (!item?.user?._id) return;
+
+        try {
+            const token = await AsyncStorage.getItem("token");
+
+            if (token) {
+                const meRes = await api.get("/api/user/me", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (meRes.data?._id === item.user._id) {
+                    router.push("/profile");
+                    return;
+                }
+            }
+
+            router.push(`/profile/${item.user._id}`);
+        } catch {
+            router.push(`/profile/${item.user._id}`);
+        }
+    };
 
 
 
@@ -184,7 +239,18 @@ export default function ItemDetails() {
             </View>
         );
     }
+const ownerId =
+  typeof item.user === "string"
+    ? item.user
+    : item.user?._id;
 
+const isSelf =
+  currentUser?._id &&
+  ownerId &&
+  String(currentUser._id) === String(ownerId);
+
+const followed =
+  ready && ownerId ? isFollowing(String(ownerId)) : false;
     // ✅ SAFE — item exists here
     const saved = savedItemIds.includes(item._id);
 
@@ -197,16 +263,73 @@ export default function ItemDetails() {
         });
     };
 
+
+
+    
+
+
+
+
     return (
         <View style={styles.container}>
             <WardrobeHeader title="Item Details" onBack={() => router.back()} />
 
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* IMAGE */}
+                {/* OWNER */}
+                <View style={styles.itemHeaderContainer}>
+                    <View style={styles.ownerTopRow}>
+                        <TouchableOpacity
+                            style={styles.ownerLeft}
+                            onPress={handleOwnerPress}
+                        >
+                            {item.user?.photo ? (
+                                <Image
+                                    source={{ uri: `${baseURL}${item.user.photo}` }}
+                                    style={styles.ownerAvatar}
+                                />
+                            ) : (
+                                <View style={styles.ownerAvatarFallback}>
+                                    <Text style={styles.ownerInitial}>
+                                        {item.user?.username?.[0]?.toUpperCase() || "U"}
+                                    </Text>
+                                </View>
+                            )}
+
+                            <View>
+                                <Text style={styles.ownerUsername}>@{item.user?.username}</Text>
+                                <Text style={styles.ownerSub}>Item Owner</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* FOLLOW BUTTON */}
+                        {ready && (
+  <TouchableOpacity
+    style={[
+      styles.followBtn,
+      followed && styles.followingBtn,
+      isSelf && styles.disabledBtn,
+    ]}
+    onPress={handleFollowToggle}
+    disabled={isSelf}
+  >
+    <Ionicons
+      name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
+      size={16}
+      color="#fff"
+    />
+    <Text style={styles.followText}>
+      {isSelf ? "You" : followed ? "Following" : "Follow"}
+    </Text>
+  </TouchableOpacity>
+)}
+                    </View>
+                </View>
                 <Image
-                    source={{ uri: `${baseURL}${item.imageUrl}` }}
+                    source={{ uri: `${baseURL}/${item.imageUrl}` }}
                     style={styles.image}
                 />
+
 
                 {/* ACTIONS */}
                 <View style={styles.actionRow}>
@@ -255,14 +378,14 @@ export default function ItemDetails() {
                 {/* DETAILS */}
                 <View style={styles.details}>
                     <Text style={styles.brand}>{item.brand}</Text>
-                    <Text style={styles.title}>{item.title || item.wardrobe}</Text>
+                    <Text style={styles.title}>{item.title || item.wardrobe?.name}</Text>
                     <Text style={styles.price}>₹{item.price}</Text>
 
                     <Text style={styles.descTitle}>Description</Text>
                     <Text style={styles.desc}>{item.description}</Text>
 
                     <View style={styles.metaRow}>
-                        <Text style={styles.meta}>Wardrobe: {item.wardrobe}</Text>
+                        <Text style={styles.meta}>Wardrobe: {item.wardrobe?.name}</Text>
                         <Text style={styles.meta}>
                             Added: {new Date(item.createdAt).toDateString()}
                         </Text>
@@ -383,6 +506,18 @@ export default function ItemDetails() {
 } const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
     center: { flex: 1, justifyContent: "center", alignItems: "center" },
+    itemHeaderContainer: {
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        paddingBottom: 6,
+    },
+    followingBtn: {
+        backgroundColor: "#7C3AED",
+    },
+
+    disabledBtn: {
+        opacity: 0.6,
+    },
 
     image: {
         width: "100%",
@@ -620,6 +755,69 @@ export default function ItemDetails() {
         fontSize: 16,
         fontWeight: "600",
         textAlign: "center",
+    },
+
+    /* OWNER ROW */
+    ownerTopRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+
+    ownerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+
+    ownerAvatar: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+    },
+
+    ownerAvatarFallback: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: "#A855F7",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    ownerInitial: {
+        color: "#fff",
+        fontWeight: "700",
+        fontSize: 16,
+    },
+
+    ownerUsername: {
+        fontWeight: "700",
+        fontSize: 14,
+        color: "#000",
+    },
+
+    ownerSub: {
+        fontSize: 12,
+        color: "#777",
+    },
+
+    /* FOLLOW */
+    followBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#A855F7",
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 6,
+    },
+
+    followText: {
+        color: "#fff",
+        fontWeight: "600",
+        fontSize: 13,
     },
 
 });

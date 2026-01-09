@@ -353,22 +353,52 @@ export default function AddWardrobe() {
       formData.append("brand", brand);
       formData.append("visibility", visibility);
 
-      const res = await api.post("/api/wardrobe/add", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await fetch(
+  "https://api.digiwardrobe.com/api/wardrobe/add",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // 🚫 DO NOT set Content-Type
+    },
+    body: formData,
+  }
+);
 
-      Alert.alert("Success", res.data?.message || "Item added to wardrobe");
-      router.back();
+const data = await res.json();
+
+if (!res.ok) {
+  throw new Error(data.message || "Upload failed");
+}
+
+Alert.alert("Success", data.message || "Item added to wardrobe");
+router.back();
+
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Upload failed. Please try again.";
-      Alert.alert("Error", msg);
-    } finally {
+  console.log("❌ UPLOAD ERROR FULL:", err);
+
+  if (err.response) {
+    // Server responded (4xx / 5xx)
+    console.log("📦 RESPONSE DATA:", err.response.data);
+    console.log("📡 STATUS:", err.response.status);
+    console.log("📄 HEADERS:", err.response.headers);
+  } else if (err.request) {
+    // Request sent but no response
+    console.log("📭 NO RESPONSE RECEIVED");
+    console.log("📨 REQUEST:", err.request);
+  } else {
+    // Something else failed
+    console.log("⚠️ ERROR MESSAGE:", err.message);
+  }
+
+  Alert.alert(
+    "Upload Error",
+    err.response?.data?.message ||
+      err.message ||
+      "Network request failed"
+  );
+}
+ finally {
       setLoading(false);
     }
   };

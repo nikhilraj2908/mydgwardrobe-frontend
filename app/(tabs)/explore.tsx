@@ -37,7 +37,6 @@ interface SortOption {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }
-
 interface ExploreItem {
   _id: string;
   imageUrl: string;
@@ -46,9 +45,13 @@ interface ExploreItem {
   price?: number;
   category?: string;
   brand?: string;
-  wardrobe?: string;
+  wardrobe?: {
+    _id: string;
+    name: string;
+  };
   title?: string;
 }
+
 
 type SortId = "newest" | "popular" | "price-low" | "price-high";
 const baseURL = api.defaults.baseURL;
@@ -84,18 +87,18 @@ export default function Explore() {
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [likedItems, setLikedItems] = useState<Record<string, boolean>>({});
   const [categories, setCategories] = useState<CategoryItem[]>([]);
-const params = useLocalSearchParams();
+  const params = useLocalSearchParams();
 
-useEffect(() => {
-  if (params.search && typeof params.search === "string") {
-    setSearch(params.search);
-  }
-}, [params.search]);
-useEffect(() => {
-  if (search.trim()) {
-    fetchExploreItems(1, true);
-  }
-}, [search]);
+  useEffect(() => {
+    if (params.search && typeof params.search === "string") {
+      setSearch(params.search);
+    }
+  }, [params.search]);
+  useEffect(() => {
+    if (search.trim()) {
+      fetchExploreItems(1, true);
+    }
+  }, [search]);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toggleSave, savedItemIds } = useSavedItems();
@@ -142,7 +145,7 @@ useEffect(() => {
     if (items.length > 0) {
       loadLikes();
     }
-    
+
   }, [items]);
 
   /* =========================
@@ -211,10 +214,10 @@ useEffect(() => {
   /* =========================
      HANDLE CATEGORY CHANGE
   ========================= */
- const handleCategoryChange = (categoryName: string) => {
-  setActiveCategory(categoryName);
-  setPage(1);
-};
+  const handleCategoryChange = (categoryName: string) => {
+    setActiveCategory(categoryName);
+    setPage(1);
+  };
 
   /* =========================
      HANDLE SORT CHANGE
@@ -251,42 +254,42 @@ useEffect(() => {
     setSearch("");
     setPage(1);
   };
-useEffect(() => {
-  fetchCategories();
-}, []);
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
-const fetchCategories = async () => {
-  try {
-    const res = await api.get("/api/categories");
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get("/api/categories");
 
-    const formatted: CategoryItem[] = [
-  {
-    _id: "all",
-    name: "All",
-    type: "unisex",
-    icon: "grid-outline",
-  },
-  ...res.data.map((cat: any) => ({
-    _id: cat._id,               // ✅ UNIQUE KEY
-    name: cat.name,
-    type: cat.type,             // ✅ KEEP TYPE
-    icon: cat.icon || "pricetag-outline",
-  })),
-];
+      const formatted: CategoryItem[] = [
+        {
+          _id: "all",
+          name: "All",
+          type: "unisex",
+          icon: "grid-outline",
+        },
+        ...res.data.map((cat: any) => ({
+          _id: cat._id,               // ✅ UNIQUE KEY
+          name: cat.name,
+          type: cat.type,             // ✅ KEEP TYPE
+          icon: cat.icon || "pricetag-outline",
+        })),
+      ];
 
-setCategories(formatted);
+      setCategories(formatted);
 
-    setCategories(formatted);
-  } catch (err) {
-    console.log("Category fetch error", err);
-  }
-};
+      setCategories(formatted);
+    } catch (err) {
+      console.log("Category fetch error", err);
+    }
+  };
   /* =========================
      EFFECTS
   ========================= */
   useEffect(() => {
     fetchExploreItems(1, true);
-    
+
   }, [activeCategory, sortBy]);
 
   /* =========================
@@ -295,13 +298,13 @@ setCategories(formatted);
   const handleLike = async (itemId: string) => {
     try {
       const wasLiked = likedItems[itemId] || false;
-      
+
       // Optimistic update
       setLikedItems(prev => ({
         ...prev,
         [itemId]: !wasLiked
       }));
-      
+
       setLikeCounts(prev => ({
         ...prev,
         [itemId]: wasLiked ? Math.max(0, (prev[itemId] || 0) - 1) : (prev[itemId] || 0) + 1
@@ -325,7 +328,7 @@ setCategories(formatted);
   ========================= */
   const renderCategoryItem = ({ item }: ListRenderItemInfo<CategoryItem>) => (
     <TouchableOpacity
-     onPress={() => handleCategoryChange(item.name)}
+      onPress={() => handleCategoryChange(item.name)}
       style={[
         styles.categoryBtn,
         activeCategory === item._id && styles.activeCategory,
@@ -354,7 +357,7 @@ setCategories(formatted);
   const renderItemCard = ({ item }: ListRenderItemInfo<ExploreItem>) => {
     const isLiked = likedItems[item._id] || false;
     const isSaved = savedItemIds.includes(item._id);
-    
+
     return (
       <TouchableOpacity
         style={styles.card}
@@ -364,15 +367,15 @@ setCategories(formatted);
         }}
       >
         <Image
-          source={{ uri: `${baseURL}${item.imageUrl}` }}
+          source={{ uri: `${baseURL}/${item.imageUrl}` }}
           style={styles.image}
           resizeMode="cover"
         />
 
         {/* Top Overlay - Like & Bookmark */}
         <View style={styles.cardTopOverlay}>
-          <TouchableOpacity 
-            style={styles.iconRow} 
+          <TouchableOpacity
+            style={styles.iconRow}
             onPress={(e) => {
               e.stopPropagation();
               handleLike(item._id);
@@ -388,7 +391,7 @@ setCategories(formatted);
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={(e) => {
               e.stopPropagation();
               toggleSave(item._id);
@@ -406,7 +409,7 @@ setCategories(formatted);
         <View style={styles.cardBottomOverlay}>
           <View style={styles.itemInfo}>
             <Text style={styles.itemTitle} numberOfLines={1}>
-              {item.wardrobe || item.title || "Untitled"}
+              {item.wardrobe?.name || item.title || "Untitled"}
             </Text>
             <View style={styles.itemMeta}>
               <Text style={styles.itemCategory}>{item.category || "Category"}</Text>
@@ -609,6 +612,7 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     backgroundColor: "#fff",
+    paddingTop: 15,
   },
   container: {
     flex: 1,

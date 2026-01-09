@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import api from "../../api/api";
 
+const SERVER_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
+
 interface WardrobeItem {
   _id: string;
   wardrobe: string;
@@ -60,14 +62,17 @@ export default function AllWardrobeItemsScreen() {
 const getItemImageUrl = (url?: string): string => {
   if (!url) return DEFAULT_IMAGE;
 
+  // already absolute
   if (url.startsWith("http")) return url;
 
-  const baseURL = api.defaults.baseURL;
-  const cleanPath = url.startsWith("/") ? url.substring(1) : url;
-  const serverBase = baseURL?.replace("/api", "") || "https://api.digiwardrobe.com";
+  // relative path from backend
+  if (url.startsWith("/")) {
+    return `${SERVER_URL}${url}`;
+  }
 
-  return `${serverBase}/${cleanPath}`;
+  return `${SERVER_URL}/${url}`;
 };
+
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>

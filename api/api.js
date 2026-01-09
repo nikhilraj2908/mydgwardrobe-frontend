@@ -16,11 +16,9 @@ api.interceptors.request.use(
   async (config) => {
     let token = null;
 
-    // Mobile
-    token = await AsyncStorage.getItem("token");
-
-    // Web fallback
-    if (!token && Platform.OS === "web") {
+    if (Platform.OS !== "web") {
+      token = await AsyncStorage.getItem("token");
+    } else {
       token = localStorage.getItem("token");
     }
 
@@ -28,9 +26,16 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // 🔥🔥🔥 REAL FIX (HANDLE BOTH CASES)
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
+
 
 export default api;

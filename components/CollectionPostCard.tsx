@@ -25,7 +25,7 @@ interface WardrobeSummary {
   coverImage?: string;
   totalItems: number;
   totalWorth: number;
-  hasPrivateItems?:boolean;
+  hasPrivateItems?: boolean;
 }
 
 interface CollectionPostCardProps {
@@ -53,10 +53,8 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [wardrobes, setWardrobes] = useState<WardrobeSummary[]>([]);
-const [liked, setLiked] = useState(false);
-const [likeCount, setLikeCount] = useState(0);
-const [viewCount, setViewCount] = useState(0);
-const [viewTracked, setViewTracked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [viewCount, setViewCount] = useState(0);
 
   /* ===== Gate animation ===== */
 
@@ -71,52 +69,40 @@ const [viewTracked, setViewTracked] = useState(false);
     if (price >= 1000) return `₹${(price / 1000).toFixed(1)}K`;
     return `₹${price}`;
   };
-useEffect(() => {
-  fetchLikeCount();
-}, []);
+  useEffect(() => {
+    fetchLikeCount();
+  }, []);
 
-const fetchLikeCount = async () => {
-  try {
-    const res = await api.get(
-      `/api/like/count/collection/${item.user._id}`
-    );
-    setLikeCount(res.data.count);
-  } catch (err) {
-    console.log("Like count error");
-  }
-};
-const toggleLike = async () => {
-  try {
-    const res = await api.post("/api/like/toggle", {
-      postType: "collection",
-      postId: item.user._id,
-    });
+  const fetchLikeCount = async () => {
+    try {
+      const res = await api.get(
+        `/api/collections/${item.user._id}/likes`
+      );
+      setLikeCount(res.data.totalLikes);
+    } catch (err) {
+      console.log("Like count error", err);
+    }
+  };
 
-    setLiked(res.data.liked);
-    setLikeCount((prev) =>
-      res.data.liked ? prev + 1 : prev - 1
-    );
-  } catch (err) {
-    console.log("Toggle like error");
-  }
-};
-const fetchViewCount = async () => {
-  try {
-    const res = await api.get(
-      `/api/view/count/collection/${item.user._id}`
-    );
-    setViewCount(res.data.count);
-  } catch (err) {
-    console.log("View count error");
-  }
-};
 
-useEffect(() => {
-  fetchViewCount();
-}, []);
+  const fetchViewCount = async () => {
+    try {
+      const res = await api.get(
+        `/api/collections/${item.user._id}/view`
+      );
+      setViewCount(res.data.totalViews);
+    } catch (err) {
+      console.log("View count error", err);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchViewCount();
+  }, []);
 
   /* ================= LOAD WARDROBES ================= */
-const [isOwner, setIsOwner] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   const loadWardrobes = async () => {
     if (wardrobes.length > 0) return;
@@ -136,21 +122,28 @@ const [isOwner, setIsOwner] = useState(false);
   };
 
   /* ================= ANIMATIONS ================= */
+  const trackView = async () => {
+    try {
+      const res = await api.post(
+        `/api/collections/${item.user._id}/view`
+      );
+      if (res.data?.totalViews !== undefined) {
+        setViewCount(res.data.totalViews);
+      }
+    } catch (err) {
+      console.log("View track error", err);
+    }
+  };
+
 
   const openGate = async () => {
-     if (!viewTracked) {
-    try {
-      await api.post("/api/view", {
-        postType: "collection",
-        postId: item.user._id,
-      });
-      setViewCount((v) => v + 1);
-      setViewTracked(true);
-    } catch (err) {
-      console.log("View track error");
+    if (!isOpen) {
+      // track view (backend decides if counted or not)
+      await trackView();
+
+      // load wardrobes once
+      await loadWardrobes();
     }
-  }
-    await loadWardrobes();
 
     Animated.parallel([
       Animated.timing(leftDoorAnim, {
@@ -175,6 +168,7 @@ const [isOwner, setIsOwner] = useState(false);
 
     setIsOpen(true);
   };
+
 
   const closeGate = () => {
     Animated.parallel([
@@ -211,7 +205,7 @@ const [isOwner, setIsOwner] = useState(false);
       {/* ===== Header ===== */}
       <View style={styles.header}>
         <View style={styles.userRow}>
-          
+
         </View>
       </View>
 
@@ -246,19 +240,19 @@ const [isOwner, setIsOwner] = useState(false);
             </View>
 
             <View style={styles.overlay}>
-                  
 
-                  <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>
-                        {item.user.username.charAt(0).toUpperCase()}
-                      </Text>
-                      </View>
-                      <View>
-                      <Text style={styles.username}>{item.user.username}</Text>
-                      <Text style={styles.handle}>
-                        @{item.user.username.toLowerCase()}
-                      </Text>
-                  </View>
+
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {item.user.username.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View>
+                <Text style={styles.username}>{item.user.username}</Text>
+                <Text style={styles.handle}>
+                  @{item.user.username.toLowerCase()}
+                </Text>
+              </View>
 
               <View style={styles.statsRow}>
                 <Stat
@@ -274,23 +268,19 @@ const [isOwner, setIsOwner] = useState(false);
                   value={`${item.stats.totalItems} items`}
                 />
               </View>
-<View style={styles.socialRow}>
-  {/* Likes */}
-  <TouchableOpacity onPress={toggleLike} style={styles.socialItem}>
-    <Ionicons
-      name={liked ? "heart" : "heart-outline"}
-      size={18}
-      color={liked ? "#F43F5E" : "#fff"}
-    />
-    <Text style={styles.countText}>{likeCount}</Text>
-  </TouchableOpacity>
+              <View style={styles.socialRow}>
+                {/* Likes */}
+                <View style={styles.socialItem}>
+                  <Ionicons name="heart-outline" size={18} color="#fff" />
+                  <Text style={styles.countText}>{likeCount}</Text>
+                </View>
 
-  {/* Views */}
-  <View style={styles.socialItem}>
-    <Ionicons name="eye-outline" size={18} color="#fff" />
-    <Text style={styles.countText}>{viewCount}</Text>
-  </View>
-</View>
+                {/* Views */}
+                <View style={styles.socialItem}>
+                  <Ionicons name="eye-outline" size={18} color="#fff" />
+                  <Text style={styles.countText}>{viewCount}</Text>
+                </View>
+              </View>
 
 
 
@@ -333,46 +323,47 @@ const [isOwner, setIsOwner] = useState(false);
             ) : (
               <View style={styles.wardrobeGrid}>
                 {wardrobes.map((w) => (
-  <TouchableOpacity
-    key={w._id}
-    disabled={!isOwner && w.totalItems === 0}
-    style={[
-      styles.wardrobeCard,
-      !isOwner && w.totalItems === 0 && { opacity: 0.6 },
-    ]}
-    onPress={() =>
-  router.push(
-    `/wardrobe/${item.user._id}?name=${encodeURIComponent(w.name)}`
-  )
-}
-  >
-    <Image
-      source={
-        w.coverImage
-          ? { uri: `${BASE_URL}${w.coverImage}` }
-          : require("../assets/images/icon.png")
-      }
-      style={styles.wardrobeImage}
-    />
+                  <TouchableOpacity
+                    key={w._id}
+                    disabled={!isOwner && w.totalItems === 0}
+                    style={[
+                      styles.wardrobeCard,
+                      !isOwner && w.totalItems === 0 && { opacity: 0.6 },
+                    ]}
+                    onPress={() =>
+                      router.push(
+                        `/wardrobe/${w._id}?name=${encodeURIComponent(w.name)}`
+                      )
 
-    <Text style={styles.wardrobeName}>{w.name}</Text>
+                    }
+                  >
+                    <Image
+                      source={
+                        w.coverImage
+                          ? { uri: `${BASE_URL}/${w.coverImage}` }
+                          : require("../assets/images/icon.png")
+                      }
+                      style={styles.wardrobeImage}
+                    />
 
-    <Text style={styles.wardrobeMeta}>
-      {w.totalItems > 0
-        ? `${w.totalItems} items · ${formatPrice(w.totalWorth)}`
-        : isOwner
-        ? "Only private items"
-        : "No public items"}
-    </Text>
+                    <Text style={styles.wardrobeName}>{w.name}</Text>
 
-    {/* ✅ ADD PRIVATE BADGE HERE */}
-    {isOwner && w.hasPrivateItems && (
-      <View style={styles.privateBadge}>
-        <Text style={styles.privateText}>Private items inside</Text>
-      </View>
-    )}
-  </TouchableOpacity>
-))}
+                    <Text style={styles.wardrobeMeta}>
+                      {w.totalItems > 0
+                        ? `${w.totalItems} items · ${formatPrice(w.totalWorth)}`
+                        : isOwner
+                          ? "Only private items"
+                          : "No public items"}
+                    </Text>
+
+                    {/* ✅ ADD PRIVATE BADGE HERE */}
+                    {isOwner && w.hasPrivateItems && (
+                      <View style={styles.privateBadge}>
+                        <Text style={styles.privateText}>Private items inside</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
 
               </View>
             )}
@@ -417,39 +408,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-socialRow: {
-  flexDirection: "row",
-  marginTop: 8,
-  marginBottom: 8,
-  justifyContent: "center",
-  gap: 16,
-},
+  socialRow: {
+    flexDirection: "row",
+    marginTop: 8,
+    marginBottom: 8,
+    justifyContent: "center",
+    gap: 16,
+  },
 
-socialItem: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
-},
+  socialItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
 
-countText: {
-  color: "#fff",
-  fontSize: 12,
-  fontWeight: "600",
-},
-privateBadge: {
-  marginTop: 6,
-  paddingHorizontal: 8,
-  paddingVertical: 2,
-  borderRadius: 10,
-  backgroundColor: "#FEF3C7",
-  alignSelf: "flex-start",
-},
+  countText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  privateBadge: {
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: "#FEF3C7",
+    alignSelf: "flex-start",
+  },
 
-privateText: {
-  fontSize: 10,
-  color: "#92400E",
-  fontWeight: "600",
-},
+  privateText: {
+    fontSize: 10,
+    color: "#92400E",
+    fontWeight: "600",
+  },
 
   avatar: {
     width: 42,
@@ -458,26 +449,26 @@ privateText: {
     backgroundColor: "#E9D5FF",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom:10,
+    marginBottom: 10,
   },
 
   avatarText: {
     fontSize: 18,
     fontWeight: "700",
     color: "#6B21A8",
-    
+
   },
 
   username: {
     fontWeight: "700",
     fontSize: 14,
-    color:"#fff",
+    color: "#fff",
   },
 
   handle: {
     fontSize: 12,
     color: "#ccc6c6ff",
-    marginBottom:20
+    marginBottom: 20
 
   },
 

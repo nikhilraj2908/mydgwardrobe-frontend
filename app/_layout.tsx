@@ -2,6 +2,7 @@ import { Slot } from "expo-router";
 import * as Linking from "expo-linking";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SavedItemsProvider } from "../context/SavedItemsContext";
+import { FollowProvider } from "@/context/FollowContext";
 
 export const linking = {
   prefixes: ["mydgwardrobe://"], // 🔥 Deep link prefix
@@ -19,9 +20,11 @@ export const linking = {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <SavedItemsProvider>
-        <Slot />
-      </SavedItemsProvider>
+      <FollowProvider>
+        <SavedItemsProvider>
+          <Slot />
+        </SavedItemsProvider>
+      </FollowProvider>
     </SafeAreaProvider>
   );
 }

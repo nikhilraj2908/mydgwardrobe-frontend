@@ -1,12 +1,15 @@
 // app/wardrobe/[id].tsx
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter, useLocalSearchParams  } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { 
-  Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator 
+import {
+  ActivityIndicator,
+  Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View
 } from "react-native";
 import api from "../../api/api";
+
+const SERVER_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
 
 interface WardrobeItem {
   _id: string;
@@ -26,7 +29,8 @@ interface Wardrobe {
 export default function WardrobeDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const wardrobeName = params.name as string;
+  const wardrobeId = params.id as string;
+  const wardrobeName = params.name as string; // only for UI title
 
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -35,26 +39,32 @@ export default function WardrobeDetailsScreen() {
   const [loading, setLoading] = useState(true);
 
   const fetchItems = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      const res = await api.get("/api/wardrobe/my", { headers: { Authorization: `Bearer ${token}` } });
-      // filter items for the clicked wardrobe
-      const wardrobeItems = res.data.filter((item: WardrobeItem) => 
-        item.wardrobe.toLowerCase() === wardrobeName.toLowerCase()
-      );
-      setItems(wardrobeItems);
-    } catch (err) {
-      console.error("Error fetching wardrobe items:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const token = await AsyncStorage.getItem("token");
+
+    const res = await api.get(
+      `/api/wardrobe/${wardrobeId}/items`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    setItems(res.data);
+    console.log("API DATA:", res.data);
+console.log("Array?", Array.isArray(res.data));
+  } catch (err) {
+    console.error("Error fetching wardrobe items:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => { fetchItems(); }, []);
 
   const sortedItems = [...items].sort((a, b) => {
-    switch(sortBy) {
+    switch (sortBy) {
       case "dateOldest": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       case "priceHigh": return b.price - a.price;
       case "priceLow": return a.price - b.price;
@@ -63,21 +73,22 @@ export default function WardrobeDetailsScreen() {
       default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
   });
+  const DEFAULT_IMAGE =
+    "https://ui-avatars.com/api/?name=Item&background=random";
 
-const DEFAULT_IMAGE =
-  "https://ui-avatars.com/api/?name=Item&background=random";
+  const getItemImageUrl = (url?: string): string => {
+    if (!url) return DEFAULT_IMAGE;
 
-const getItemImageUrl = (url?: string): string => {
-  if (!url) return DEFAULT_IMAGE;
+    // already absolute URL
+    if (url.startsWith("http")) return url;
 
-  if (url.startsWith("http")) return url;
+    // relative backend path
+    if (url.startsWith("/")) {
+      return `${SERVER_URL}${url}`;
+    }
 
-  const baseURL = api.defaults.baseURL;
-  const cleanPath = url.startsWith("/") ? url.substring(1) : url;
-  const serverBase = baseURL?.replace("/api", "") || "https://api.digiwardrobe.com";
-
-  return `${serverBase}/${cleanPath}`;
-};
+    return `${SERVER_URL}/${url}`;
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -176,7 +187,7 @@ const getItemImageUrl = (url?: string): string => {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16 ,paddingTop:35},
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, paddingTop: 35 },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   itemCountText: { marginLeft: 16, color: "#666", marginBottom: 8 },
   gridContainer: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
