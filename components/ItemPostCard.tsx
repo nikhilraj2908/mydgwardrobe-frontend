@@ -55,17 +55,20 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   // const [saved, setSaved] = useState(false);
   // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // Debug log
-  const { isFollowing, toggleFollow } = useFollow();
+ const { isFollowing, toggleFollow, ready } = useFollow();
   const ownerId =
     typeof item.user === "string" ? item.user : item.user?._id;
 
-  const followed = ownerId ? isFollowing(String(ownerId)) : false;
+  const followed = ready && ownerId ? isFollowing(String(ownerId)) : false;
 
   const isOwner = currentUserId && ownerId && String(currentUserId) === String(ownerId);
 
-  const showFollowPlus = !isOwner && ownerId && !followed && !justFollowed;
+const showFollowPlus =
+  ready && !isOwner && ownerId && !followed && !justFollowed;
 
-  const showTick = !isOwner && ownerId && justFollowed;
+const showTick =
+  ready && !isOwner && ownerId && justFollowed;
+
   const { savedItemIds, toggleSave, isReady } = useSavedItems();
   const saved = savedItemIds.includes(item._id);
   console.log("ItemPostCard received item:", {
@@ -398,20 +401,14 @@ useEffect(() => {
   const avatarUrl = getUserAvatarUrl();
 
 
-  const handleFollowPress = async () => {
-    if (!ownerId) return;
+const handleFollowPress = async () => {
+  if (!ready || !ownerId) return;
 
-    // 1️⃣ Trigger follow (global)
-    await toggleFollow(String(ownerId));
+  await toggleFollow(String(ownerId));
 
-    // 2️⃣ Show confirmation tick
-    setJustFollowed(true);
-
-    // 3️⃣ Hide tick after short delay
-    setTimeout(() => {
-      setJustFollowed(false);
-    }, 1200);
-  };
+  setJustFollowed(true);
+  setTimeout(() => setJustFollowed(false), 1200);
+};
 
   return (
     <>
@@ -517,7 +514,7 @@ useEffect(() => {
                 source={require("../assets/icons/like.png")}
                 style={[
                   styles.actionImageIcon,
-                  liked && { tintColor: "#FF0000" } // only when liked
+                  liked && { tintColor: "#A855F7" } // only when liked
                 ]}
               />
             </TouchableOpacity>

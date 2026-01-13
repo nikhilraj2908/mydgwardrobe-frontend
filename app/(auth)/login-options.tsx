@@ -14,7 +14,7 @@ export default function LoginOptionsScreen() {
 
       {/* Logo */}
       <Image
-        source={require("../../assets/images/logoblack.png")}
+        source={require("../../assets/images/logo.png")}
         style={styles.logo}
       />
 

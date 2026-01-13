@@ -1,6 +1,8 @@
 import WardrobeHeader from "@/components/WardrobeHeader";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
+
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -15,9 +17,8 @@ import {
     View
 } from "react-native";
 import api from "../../../api/api";
-import { useSavedItems } from "../../../context/SavedItemsContext";
 import { useFollow } from "../../../context/FollowContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSavedItems } from "../../../context/SavedItemsContext";
 const baseURL = api.defaults.baseURL;
 
 export default function ItemDetails() {
@@ -43,6 +44,9 @@ export default function ItemDetails() {
     // const [isFollowing, setIsFollowing] = useState(false);
     // const [followLoading, setFollowLoading] = useState(false);
     // const [isSelf, setIsSelf] = useState(false);
+
+
+    
 
 const handleFollowToggle = async () => {
   if (!ownerId || isSelf) return;
@@ -227,7 +231,7 @@ const handleFollowToggle = async () => {
     if (loading) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#9b5cff" />
+                <ActivityIndicator size="large" color="#A855F7" />
             </View>
         );
     }
@@ -340,7 +344,7 @@ const followed =
                                 source={require("../../../assets/icons/like.png")}
                                 style={[
                                     styles.actionImageIcon,
-                                    liked && { tintColor: "#FF0000" },
+                                    liked && { tintColor: "#A855F7" },
                                 ]}
                             />
                             <Text>{likes}</Text>

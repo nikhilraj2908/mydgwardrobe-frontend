@@ -7,7 +7,7 @@ export default function ResetSuccess() {
     <View style={styles.container}>
       {/* Success Icon */}
       <Image
-        source={require("../../assets/images/logoblack.png")}
+        source={require("../../assets/images/logo.png")}
         style={styles.icon}
       />
       

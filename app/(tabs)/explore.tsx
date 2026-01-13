@@ -1,7 +1,9 @@
 import WardrobeHeader from "@/components/WardrobeHeader";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import {
   ActivityIndicator,
   Dimensions,
@@ -19,7 +21,6 @@ import {
 } from "react-native";
 import api from "../../api/api";
 import { useSavedItems } from "../../context/SavedItemsContext";
-import { useLocalSearchParams } from "expo-router";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - 40) / 2;
@@ -31,6 +32,12 @@ interface CategoryItem {
   icon: keyof typeof Ionicons.glyphMap;
 }
 
+interface SearchUser {
+  _id: string;
+  username: string;
+  photo?: string;
+  bio?: string;
+}
 
 interface SortOption {
   id: string;
@@ -88,17 +95,28 @@ export default function Explore() {
   const [likedItems, setLikedItems] = useState<Record<string, boolean>>({});
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const params = useLocalSearchParams();
+  const [searchUsers, setSearchUsers] = useState<SearchUser[]>([]);
+  const getAvatarUrl = (photo?: string, username?: string) => {
+    if (photo && photo.trim() && photo !== "null") {
+      if (photo.startsWith("http")) return photo;
 
+      // 🔑 ENSURE leading slash
+      if (!photo.startsWith("/")) {
+        return `https://api.digiwardrobe.com/${photo}`;
+      }
+
+      return `https://api.digiwardrobe.com${photo}`;
+    }
+
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      username || "User"
+    )}&background=E9D5FF&color=6B21A8&size=128`;
+  };
   useEffect(() => {
     if (params.search && typeof params.search === "string") {
       setSearch(params.search);
     }
   }, [params.search]);
-  useEffect(() => {
-    if (search.trim()) {
-      fetchExploreItems(1, true);
-    }
-  }, [search]);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toggleSave, savedItemIds } = useSavedItems();
@@ -148,6 +166,32 @@ export default function Explore() {
 
   }, [items]);
 
+
+
+  const handleUserPress = async (userId: string) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (token) {
+        const meRes = await api.get("/api/user/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // ✅ If clicked user is current user
+        if (String(meRes.data?._id) === String(userId)) {
+          router.push("/profile");
+          return;
+        }
+      }
+
+      // ✅ Other user's profile
+      router.push(`/profile/${userId}`);
+    } catch {
+      router.push(`/profile/${userId}`);
+    }
+  };
+
+
   /* =========================
      FETCH EXPLORE ITEMS
   ========================= */
@@ -169,7 +213,22 @@ export default function Explore() {
 
       if (search.trim()) {
         params.search = search.trim();
+
+        // ✅ Fetch users ONLY on first page
+        if (pageNum === 1) {
+          try {
+            const userRes = await api.get("/api/user/search", {
+              params: { q: search.trim() },
+            });
+            setSearchUsers(userRes.data.users || []);
+          } catch {
+            setSearchUsers([]);
+          }
+        }
+      } else {
+        setSearchUsers([]);
       }
+
 
       console.log("Fetching with params:", params);
 
@@ -328,7 +387,7 @@ export default function Explore() {
   ========================= */
   const renderCategoryItem = ({ item }: ListRenderItemInfo<CategoryItem>) => (
     <TouchableOpacity
-      onPress={() => handleCategoryChange(item.name)}
+      onPress={() => handleCategoryChange(item._id)}
       style={[
         styles.categoryBtn,
         activeCategory === item._id && styles.activeCategory,
@@ -363,7 +422,13 @@ export default function Explore() {
         style={styles.card}
         activeOpacity={0.9}
         onPress={() => {
-          router.push(`/wardrobe/item/${item._id}`);
+          router.push({
+            pathname: "/wardrobe/item/[id]",
+            params: {
+              id: item._id,
+              from: "explore",
+            },
+          });
         }}
       >
         <Image
@@ -519,12 +584,10 @@ export default function Explore() {
           onChangeText={handleSearchChange}
           returnKeyType="search"
         />
-        {search.trim() && (
-          <TouchableOpacity onPress={() => setSearch("")}>
-            <Ionicons name="close-circle" size={18} color="#999" />
-          </TouchableOpacity>
-        )}
+
+
       </View>
+
 
       <View style={styles.categoryContainer}>
         <FlatList
@@ -539,7 +602,9 @@ export default function Explore() {
 
       <View style={styles.filterRow}>
         <Text style={styles.resultsText}>
-          {totalItems} {totalItems === 1 ? "item" : "items"} found
+          {search.trim()
+            ? `${totalItems} items • ${searchUsers.length} people`
+            : `${totalItems} ${totalItems === 1 ? "item" : "items"} found`}
         </Text>
         <TouchableOpacity
           style={styles.sortButton}
@@ -562,7 +627,38 @@ export default function Explore() {
 
       <View style={styles.container}>
         {renderHeader()}
+        {search.trim() && searchUsers.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Users</Text>
 
+            {searchUsers.map(user => (
+              <TouchableOpacity
+                key={user._id}
+                style={styles.userCard}
+                activeOpacity={0.85}
+                onPress={() => handleUserPress(user._id)}
+              >
+                <Image
+                  source={{ uri: getAvatarUrl(user.photo, user.username) }}
+                  style={styles.userAvatar}
+                  resizeMode="cover"
+                  onError={() => {
+                    console.log("Avatar failed for:", user.username, user.photo);
+                  }}
+                />
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.userName}>{user.username}</Text>
+                  <Text style={styles.userMeta}>@{user.username}</Text>
+                </View>
+
+                <TouchableOpacity style={styles.followBtn}>
+                  <Text style={styles.followText}>Follow</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         {loading && page === 1 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#9b5cff" />
@@ -590,7 +686,11 @@ export default function Explore() {
             }
             onEndReached={loadMoreItems}
             onEndReachedThreshold={0.5}
-            ListEmptyComponent={renderEmptyState()}
+            ListEmptyComponent={
+              search.trim() && searchUsers.length > 0
+                ? null
+                : renderEmptyState()
+            }
             ListFooterComponent={
               loading && page > 1 ? (
                 <ActivityIndicator size="small" color="#9b5cff" style={{ marginVertical: 20 }} />
@@ -893,4 +993,85 @@ const styles = StyleSheet.create({
     color: "#9b5cff",
     fontWeight: "600",
   },
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    margin: 10,
+
+  },
+
+  // USERS
+  userCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 10,
+    elevation: 2,
+    margin: 14,
+  },
+  userAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    marginRight: 12,
+  },
+  userName: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  userMeta: {
+    fontSize: 13,
+    color: "#888",
+  },
+  followBtn: {
+    backgroundColor: "#9b5cff",
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  followText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
+  // SEARCH ITEM
+  searchItemCard: {
+    height: 220,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 16,
+  },
+  searchItemImage: {
+    width: "100%",
+    height: "100%",
+  },
+  searchItemOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 14,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  searchItemTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  searchItemUser: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  searchItemUserText: {
+    color: "#fff",
+    marginLeft: 6,
+    fontSize: 13,
+  },
+
 });

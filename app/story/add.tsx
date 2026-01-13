@@ -1,8 +1,27 @@
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import api from "../../api/api";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+
+/* ================= SAFE API URL ================= */
+const API_URL =
+  Constants.expoConfig?.extra?.apiBaseUrl ??
+  Constants.manifest?.extra?.apiBaseUrl ??
+  "";
+
+if (!API_URL) {
+  console.warn("⚠️ API base URL is not defined");
+}
 
 export default function AddStory() {
   const router = useRouter();
@@ -11,11 +30,20 @@ export default function AddStory() {
   const [selectedDuration, setSelectedDuration] = useState<number>(5);
   const [uploading, setUploading] = useState(false);
 
-  // Pick image or video
+  /* ================= PICK IMAGE / VIDEO ================= */
   const pickMedia = async () => {
+    const { status } =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Media access is needed");
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      quality: 0.3,
+     mediaTypes: ImagePicker.MediaTypeOptions.All,
+      quality: 0.4,
+      videoMaxDuration: 15,
     });
 
     if (!result.canceled) {
@@ -23,93 +51,99 @@ export default function AddStory() {
     }
   };
 
-  // Upload story
-  
-const uploadStory = async () => {
-  if (!selectedMedia) return;
+  /* ================= UPLOAD STORY ================= */
+  const uploadStory = async () => {
+    if (!selectedMedia) return;
 
-  try {
-    setUploading(true);
+    try {
+      setUploading(true);
 
-    const form = new FormData();
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Not authenticated");
 
-    if (Platform.OS === "web") {
-      // WEB: blob → File
-      const response = await fetch(selectedMedia.uri);
-      const blob = await response.blob();
+      const formData = new FormData();
 
-      const file = new File([blob], "story.jpg", {
-        type: blob.type || "image/jpeg",
+      formData.append("media", {
+        uri: selectedMedia.uri,
+        name:
+          selectedMedia.fileName ||
+          `story_${Date.now()}.${
+            selectedMedia.type === "video" ? "mp4" : "jpg"
+          }`,
+        type:
+          selectedMedia.mimeType ||
+          (selectedMedia.type === "video"
+            ? "video/mp4"
+            : "image/jpeg"),
+      } as any);
+
+      formData.append("duration", String(selectedDuration));
+
+      const res = await fetch(`${API_URL}/api/story`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // ❌ DO NOT SET Content-Type
+        },
+        body: formData,
       });
 
-      form.append("media", file);
-    } else {
-      // MOBILE: file:// URI
-      form.append("media", {
-        uri: selectedMedia.uri,
-        name: selectedMedia.fileName ?? "story.jpg",
-        type: selectedMedia.mimeType ?? "image/jpeg",
-      } as any);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Story upload failed");
+      }
+
+      Alert.alert("Success", "Story uploaded");
+      router.back();
+    } catch (err: any) {
+      console.error("❌ Story upload failed:", err);
+      Alert.alert("Upload Failed", err.message || "Network error");
+    } finally {
+      setUploading(false);
     }
+  };
 
-    form.append("duration", String(selectedDuration));
-
-    await api.post("/api/story", form, {
-      headers: {
-        // ⚠️ IMPORTANT: do NOT set boundary yourself
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    router.back();
-  } catch (err) {
-    console.error("Story upload failed:", err);
-  } finally {
-    setUploading(false);
-  }
-};
+  /* ================= UI ================= */
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 12 }}>
-        Add Story
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Add Story</Text>
 
       {/* Preview */}
       <TouchableOpacity
+        style={styles.previewBox}
         onPress={pickMedia}
-        style={{
-          height: 320,
-          backgroundColor: "#F3F3F3",
-          borderRadius: 16,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
+        disabled={uploading}
       >
         {selectedMedia ? (
           <Image
             source={{ uri: selectedMedia.uri }}
-            style={{ width: "100%", height: "100%", borderRadius: 16 }}
+            style={styles.previewImage}
           />
         ) : (
-          <Text>Select Image / Video</Text>
+          <Text style={styles.placeholderText}>
+            Select Image / Video
+          </Text>
         )}
       </TouchableOpacity>
 
       {/* Duration */}
-      <View style={{ flexDirection: "row", marginTop: 16 }}>
+      <View style={styles.durationRow}>
         {[5, 10, 15].map((d) => (
           <TouchableOpacity
             key={d}
+            style={[
+              styles.durationChip,
+              selectedDuration === d && styles.durationActive,
+            ]}
             onPress={() => setSelectedDuration(d)}
-            style={{
-              padding: 10,
-              marginRight: 10,
-              borderRadius: 20,
-              backgroundColor:
-                selectedDuration === d ? "#A855F7" : "#EEE",
-            }}
           >
-            <Text style={{ color: selectedDuration === d ? "#fff" : "#000" }}>
+            <Text
+              style={[
+                styles.durationText,
+                selectedDuration === d && styles.durationTextActive,
+              ]}
+            >
               {d}s
             </Text>
           </TouchableOpacity>
@@ -118,25 +152,21 @@ const uploadStory = async () => {
 
       {/* Upload */}
       <TouchableOpacity
+        style={styles.uploadBtn}
         onPress={uploadStory}
-        disabled={uploading || !selectedMedia}
-        style={{
-          marginTop: 24,
-          backgroundColor: "#A855F7",
-          padding: 14,
-          borderRadius: 12,
-          opacity: uploading ? 0.6 : 1,
-        }}
+        disabled={!selectedMedia || uploading}
       >
-        <Text style={{ color: "#fff", textAlign: "center", fontSize: 16 }}>
-          {uploading ? "Uploading..." : "Share Story"}
-        </Text>
+        {uploading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.uploadText}>Share Story</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
 }
 
-
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -144,25 +174,19 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-
-  headerTitle: {
+  title: {
     fontSize: 18,
     fontWeight: "600",
+    marginBottom: 12,
   },
 
   previewBox: {
-    flex: 1,
+    height: 320,
     borderRadius: 16,
-    backgroundColor: "#f4f4f4",
-    overflow: "hidden",
+    backgroundColor: "#F3F3F3",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
 
   previewImage: {
@@ -171,37 +195,29 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
   },
 
-  placeholder: {
-    alignItems: "center",
-  },
-
   placeholderText: {
-    marginTop: 8,
     color: "#777",
   },
 
   durationRow: {
     flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: 16,
+    marginTop: 16,
   },
 
   durationChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    marginHorizontal: 6,
+    backgroundColor: "#EEE",
+    marginRight: 10,
   },
 
   durationActive: {
     backgroundColor: "#A855F7",
-    borderColor: "#A855F7",
   },
 
   durationText: {
-    color: "#444",
+    color: "#000",
   },
 
   durationTextActive: {
@@ -210,6 +226,7 @@ const styles = StyleSheet.create({
   },
 
   uploadBtn: {
+    marginTop: 24,
     backgroundColor: "#A855F7",
     paddingVertical: 14,
     borderRadius: 12,

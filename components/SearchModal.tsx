@@ -3,15 +3,29 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    FlatList,
-    Image,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+
+type SearchItem =
+  | {
+    type: "item";
+    _id: string;
+    label: string;
+  }
+  | {
+    type: "user";
+    _id: string;
+    username: string;
+    photo?: string;
+  };
+
 
 interface Props {
   visible: boolean;
@@ -26,7 +40,8 @@ interface SuggestionItem {
 
 export default function SearchModal({ visible, onClose }: Props) {
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [suggestions, setSuggestions] = useState<SearchItem[]>([]);
+
   const [loading, setLoading] = useState(false);
 
   /* ================= FETCH SUGGESTIONS ================= */
@@ -40,14 +55,33 @@ export default function SearchModal({ visible, onClose }: Props) {
       try {
         setLoading(true);
 
-        const res = await api.get("/api/wardrobe/explore", {
-          params: { search: query },
-        });
+        const [itemRes, userRes] = await Promise.all([
+          api.get("/api/wardrobe/explore", {
+            params: { search: query },
+          }),
+          api.get("/api/user/search", {
+            params: { q: query },
+          }),
+        ]);
 
-        // API returns array directly
-        setSuggestions(res.data || []);
+        const items: SearchItem[] = (itemRes.data || []).map((i: any) => ({
+          type: "item",
+          _id: i._id,
+          label: i.category || i.brand,
+        }));
+
+        const users: SearchItem[] = (userRes.data.users || []).map(
+          (u: any) => ({
+            type: "user",
+            _id: u._id,
+            username: u.username,
+            photo: u.photo,
+          })
+        );
+
+        setSuggestions([...users, ...items]);
       } catch (err) {
-        console.log("Search suggestion error:", err);
+        console.log("Search error:", err);
       } finally {
         setLoading(false);
       }
@@ -57,16 +91,21 @@ export default function SearchModal({ visible, onClose }: Props) {
   }, [query]);
 
   /* ================= SELECT ================= */
-  const handleSelect = (text: string) => {
+  const handleSelect = (item: SearchItem) => {
     onClose();
     setQuery("");
     setSuggestions([]);
 
-    router.push({
-      pathname: "/(tabs)/explore",
-      params: { search: text },
-    });
+    if (item.type === "user") {
+      router.push(`/profile?userId=${item._id}`);
+    } else {
+      router.push({
+        pathname: "/(tabs)/explore",
+        params: { search: item.label },
+      });
+    }
   };
+
 
   return (
     <Modal visible={visible} animationType="fade" transparent>
@@ -74,10 +113,10 @@ export default function SearchModal({ visible, onClose }: Props) {
         <View style={styles.modalContainer}>
           {/* Search Box */}
           <View style={styles.searchBox}>
-           <Image
-                        source={require("../assets/icons/search.png")}
-                        style={styles.headerIcon}
-                      />
+            <Image
+              source={require("../assets/icons/search.png")}
+              style={styles.headerIcon}
+            />
             <TextInput
               autoFocus
               placeholder="Search outfits, brands..."
@@ -97,32 +136,47 @@ export default function SearchModal({ visible, onClose }: Props) {
             keyExtractor={(item) => item._id}
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => {
-              const label =
-                item.category || item.brand || query;
+              if (item.type === "user") {
+                return (
+                  <TouchableOpacity
+                    style={styles.suggestion}
+                    onPress={() => handleSelect(item)}
+                  >
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={20}
+                      color="#A855F7"
+                      style={{ marginHorizontal: 10 }}
+                    />
+                    <Text style={styles.suggestionText}>
+                      {item.username}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }
 
               return (
                 <TouchableOpacity
                   style={styles.suggestion}
-                  onPress={() => handleSelect(label)}
+                  onPress={() => handleSelect(item)}
                 >
                   <Image
-                        source={require("../assets/icons/search.png")}
-                        style={styles.searchIcon}
-                      />
+                    source={require("../assets/icons/search.png")}
+                    style={styles.searchIcon}
+                  />
                   <Text style={styles.suggestionText}>
-                    {label}
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
               );
             }}
             ListEmptyComponent={
               query && !loading ? (
-                <Text style={styles.emptyText}>
-                  No results found
-                </Text>
+                <Text style={styles.emptyText}>No results found</Text>
               ) : null
             }
           />
+
         </View>
       </View>
     </Modal>
@@ -173,14 +227,14 @@ const styles = StyleSheet.create({
     color: "#999",
     marginTop: 30,
   },
-    headerIcon: {
+  headerIcon: {
     width: 24,
     height: 24,
     resizeMode: "contain",
   },
-  searchIcon:{
-    width:15,
-    height:15,
-    marginHorizontal:10
+  searchIcon: {
+    width: 15,
+    height: 15,
+    marginHorizontal: 10
   }
 });

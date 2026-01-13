@@ -184,7 +184,7 @@ export default function HomeScreen() {
     <>
       <View style={styles.header}>
         <Text style={styles.logoText}>
-          YOUR <Text style={styles.logoHighlight}>DIGI</Text> CLOSET
+          <Text style={styles.logoHighlight}>D</Text><Text style={styles.logoHighlight2}>W</Text>
         </Text>
 
         <View style={styles.headerIcons}>
@@ -337,13 +337,18 @@ const styles = StyleSheet.create({
 
   logoText: {
     fontSize: 22,
-    fontWeight: "700",
   },
 
   logoHighlight: {
+    fontSize: 35,
     color: "#A855F7",
+    fontFamily: "Cookie",
   },
+  logoHighlight2: {
+    fontFamily: "Cookie",
+    fontSize: 35,
 
+  },
   headerIcons: {
     flexDirection: "row",
   },
@@ -390,19 +395,19 @@ const styles = StyleSheet.create({
     color: "#444",
   },
   badge: {
-  position: "absolute",
-  top: -6,
-  right: -6,
-  backgroundColor: "#A855F7",
-  width: 18,
-  height: 18,
-  borderRadius: 9,
-  justifyContent: "center",
-  alignItems: "center",
-},
-badgeText: {
-  color: "#fff",
-  fontSize: 10,
-  fontWeight: "700",
-},
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#A855F7",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
 });

@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,7 +13,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-
+import { useAuth } from '../../context/AuthContext';
 const API_URL = Constants.expoConfig.extra.apiBaseUrl;
 
 export default function LoginWithUsername() {
@@ -22,31 +21,29 @@ export default function LoginWithUsername() {
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-
+   const { isAuthenticated, isLoading, login } = useAuth();
+ 
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert("Error", "Please enter username and password");
       return;
     }
-    console.log(username,password);
+
     setLoading(true);
 
     try {
-     const res = await axios.post(`${API_URL}/api/auth/login`, {
-  username,
-  password,
-});
+      const res = await axios.post(`${API_URL}/api/auth/login`, {
+        username,
+        password,
+      });
 
-      setLoading(false);
-
-      Alert.alert("Success", "Login successful");
-
-      // Store token (AsyncStorage)
-      await AsyncStorage.setItem("token", res.data.token);
-
-      // Redirect to home (modify as needed)
-      router.push("/profile");
-
+      // Call login to save token
+      await login(res.data.token);
+      
+      // Now navigate to profile
+      Alert.alert("Success", "Login successful!");
+      router.replace('/(tabs)/profile');
+      
     } catch (err) {
       setLoading(false);
       Alert.alert("Error", err.response?.data?.message || "Login failed");
@@ -62,7 +59,7 @@ export default function LoginWithUsername() {
       </TouchableOpacity>
 
       <Image
-        source={require("../../assets/images/logoblack.png")}
+        source={require("../../assets/images/logo.png")}
         style={styles.logo}
       />
 
@@ -108,16 +105,16 @@ export default function LoginWithUsername() {
 
       <TouchableOpacity>
         <Text style={styles.forgotText}>
-            <Link href="/(auth)/forgot-password">
-                 Forgot password? <Text style={styles.resetText}>Reset</Text>
-            </Link>
+          <Link href="/(auth)/forgot-password">
+            Forgot password? <Text style={styles.resetText}>Reset</Text>
+          </Link>
         </Text>
       </TouchableOpacity>
 
       <Text style={styles.footer}>
         Don't have an account?{" "}
         <Link href="/(auth)/signup" style={styles.signupText}>
-                  Sign up
+          Sign up
         </Link>
         {/* <Text style={styles.signupText}>Sign up</Text> */}
       </Text>

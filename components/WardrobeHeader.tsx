@@ -30,7 +30,7 @@ export default function WardrobeHeader({
           </TouchableOpacity>
 
           <Text style={styles.logoText}>
-            YOUR <Text style={styles.logoHighlight}>DIGI</Text> CLOSET
+            <Text style={styles.logoHighlight}>D</Text><Text style={styles.logoHighlight1}>W</Text>
           </Text>
         </View>
 
@@ -122,11 +122,17 @@ const styles = StyleSheet.create({
 
   logoText: {
     fontSize: 22,
-    fontWeight: "700",
   },
 
   logoHighlight: {
     color: "#A855F7",
+    fontFamily: "Cookie",
+    fontSize: 35,
+  },
+  logoHighlight1:{
+fontFamily: "Cookie",
+    fontSize: 35,
+
   },
 
   headerIcons: {

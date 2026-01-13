@@ -330,12 +330,13 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
                       styles.wardrobeCard,
                       !isOwner && w.totalItems === 0 && { opacity: 0.6 },
                     ]}
-                    onPress={() =>
-                      router.push(
-                        `/wardrobe/${w._id}?name=${encodeURIComponent(w.name)}`
-                      )
+                    onPress={() => {
+                      const url = isOwner
+                        ? `/wardrobe/${w._id}?name=${encodeURIComponent(w.name)}`
+                        : `/wardrobe/${w._id}?name=${encodeURIComponent(w.name)}&public=true`;
 
-                    }
+                      router.push(url);
+                    }}
                   >
                     <Image
                       source={

@@ -1,22 +1,24 @@
+
 import { LinearGradient } from "expo-linear-gradient";
 import { Link } from "expo-router";
 import {
-    Image,
-    ImageBackground,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-
 export default function WelcomeScreen() {
+
+
   return (
     <ImageBackground
       source={require("../assets/images/bg.jpg")} // your new background image
       style={styles.background}
       resizeMode="cover"
     >
-     <View style={styles.overlayimage} />
+      <View style={styles.overlayimage} />
       <View style={styles.overlay}>
         {/* Logo */}
         <Image
@@ -26,7 +28,7 @@ export default function WelcomeScreen() {
 
         {/* Title */}
         <Text style={styles.title}>
-          YOUR <Text style={styles.titleHighlight}>DG</Text> CLOSET
+          <Text style={styles.titleHighlight}>Digi</Text><Text style={styles.titleHighlight2}>Wardrobe</Text>
         </Text>
 
         {/* Subtitle */}
@@ -35,30 +37,30 @@ export default function WelcomeScreen() {
         </Text>
 
         {/* Create Account Button */}
-     <Link href="/(auth)/signup" asChild>
-  <TouchableOpacity style={{ margin: 20, width:'100%' }}>
-    <LinearGradient
-      colors={["#A855F7", "#EC4899"]}
-      style={{
-        paddingVertical: 15,
-        borderRadius: 30,
-        alignItems: "center",
-        width:"100%"
-      }}
-    >
-      <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "600" }}>
-        Create New Account
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-</Link>
+        <Link href="/(auth)/signup" asChild>
+          <TouchableOpacity style={{ margin: 20, width: '100%' }}>
+            <LinearGradient
+              colors={["#A855F7", "#EC4899"]}
+              style={{
+                paddingVertical: 15,
+                borderRadius: 30,
+                alignItems: "center",
+                width: "100%"
+              }}
+            >
+              <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "600" }}>
+                Create New Account
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Link>
 
 
         {/* Login Button */}
         <Link href="/login-options" asChild>
-            <TouchableOpacity style={styles.btnSecondary}>
-                <Text style={styles.btnSecondaryText}>Log into existing account</Text>
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.btnSecondary}>
+            <Text style={styles.btnSecondaryText}>Log into existing account</Text>
+          </TouchableOpacity>
         </Link>
 
         {/* Footer */}
@@ -76,14 +78,14 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-overlayimage: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.65)",  // adjust 0.3 - 0.6
-},
+  overlayimage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.65)",  // adjust 0.3 - 0.6
+  },
   overlay: {
     flex: 1,
     alignItems: "center",
@@ -94,13 +96,12 @@ overlayimage: {
   logo: {
     width: 150,
     height: 150,
-    
-    resizeMode: "contain",
+ resizeMode: "contain",
+  tintColor: "#FFFFFF",
   },
 
   title: {
-    fontSize: 28,
-    fontWeight: "900",
+    fontSize:5,
     color: "#FFF",
     marginBottom: 10,
     textAlign: "center",
@@ -108,6 +109,12 @@ overlayimage: {
 
   titleHighlight: {
     color: "#A855F7",
+    fontFamily: "Cookie",
+    fontSize: 38,
+  },
+  titleHighlight2:{
+    fontFamily: "Cookie",
+    fontSize: 38,
   },
 
   subtitle: {

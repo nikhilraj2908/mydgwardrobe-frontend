@@ -1,11 +1,11 @@
 // app/wardrobe/items.tsx
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View
+  ActivityIndicator,
+  Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View
 } from "react-native";
 import api from "../../api/api";
 
@@ -28,19 +28,37 @@ export default function AllWardrobeItemsScreen() {
   const [sortBy, setSortBy] = useState<"dateNewest" | "dateOldest" | "priceHigh" | "priceLow" | "nameAZ">("dateNewest");
   const [isGridView, setIsGridView] = useState(true);
   const [loading, setLoading] = useState(true);
-
+const { userId } = useLocalSearchParams();
   const fetchItems = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      const res = await api.get("/api/wardrobe/my", { headers: { Authorization: `Bearer ${token}` } });
+  try {
+    setLoading(true);
+    const token = await AsyncStorage.getItem("token");
+
+    let res;
+
+    if (userId) {
+      // 👤 Viewing someone else
+      res = await api.get(`/api/wardrobe/user/${userId}/items`, {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : undefined,
+      });
+
+      setItems(res.data.items);
+    } else {
+      // 👤 Viewing myself
+      res = await api.get("/api/wardrobe/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       setItems(res.data);
-    } catch (err) {
-      console.error("Error fetching wardrobe items:", err);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => { fetchItems(); }, []);
 

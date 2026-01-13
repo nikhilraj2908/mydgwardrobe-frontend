@@ -1,16 +1,16 @@
-import WardrobeHeader from "@/components/WardrobeHeader";
 import api from "@/api/api";
+import WardrobeHeader from "@/components/WardrobeHeader";
 import { useFollow } from "@/context/FollowContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const baseURL = api.defaults.baseURL;
@@ -26,10 +26,11 @@ export default function FollowersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+ useEffect(() => {
+  if (ready) {
     fetchUsers();
-  }, [activeTab]);
-
+  }
+}, [activeTab, ready]);
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -43,7 +44,7 @@ export default function FollowersPage() {
   };
 
   const renderItem = ({ item }: any) => {
-    const followed = ready && isFollowing(item._id);
+   const followed = ready ? isFollowing(item._id) : false;
 
     return (
       <TouchableOpacity

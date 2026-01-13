@@ -3,17 +3,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import api from "../../api/api"; // ✅ Axios instance
-
+import { useAuth } from '../../context/AuthContext';
 export default function OtpVerify() {
   const router = useRouter();
   const { email } = useLocalSearchParams(); // GET EMAIL
@@ -21,7 +21,7 @@ export default function OtpVerify() {
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-
+  const { login } = useAuth();
   const inputs = [useRef(null), useRef(null), useRef(null), useRef(null)];
 
   const handleChange = (text, index) => {
@@ -53,17 +53,16 @@ export default function OtpVerify() {
         otp: code,
       });
 
-      setLoading(false);
-
-      // Axios success = 200
+      // Use the auth context login function (it will redirect to profile)
+      await login(res.data.token);
+      
       Alert.alert("Success", "Logged in successfully!");
-      router.push("/(tabs)/home");
-
     } catch (err) {
       setLoading(false);
       Alert.alert("Error", err.response?.data?.message || "Invalid OTP");
     }
   };
+
 
   // -------------------------------------------------------------------
   // ✅ RESEND OTP  (Axios Version)

@@ -1,3 +1,4 @@
+import { useFollow } from "@/context/FollowContext";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -15,8 +16,8 @@ import {
 } from "react-native";
 import api from "../../api/api";
 import SavedGridCard from "../../components/SavedGridCard";
+import { useAuth } from "../../context/AuthContext";
 import { useSavedItems } from "../../context/SavedItemsContext";
-
 // Define types
 const baseURL = api.defaults.baseURL;
 
@@ -94,7 +95,7 @@ export default function ProfileScreen() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const { resetSaved } = useSavedItems();
-
+const { clearFollowing } = useFollow();
   const fetchLikeCount = async (itemId: string) => {
     try {
       const res = await api.get(`/api/like/item/${itemId}/count`);
@@ -104,7 +105,7 @@ export default function ProfileScreen() {
       return 0;
     }
   };
-
+const { logout } = useAuth();
 
   useEffect(() => {
     if (activeTab !== "savedItems") return;
@@ -161,7 +162,7 @@ export default function ProfileScreen() {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
       if (!token) {
-        router.push("/auth/login");
+        router.push("/login-username");
         return;
       }
 
@@ -359,6 +360,7 @@ export default function ProfileScreen() {
     try {
       await AsyncStorage.removeItem("token");
       resetSaved();
+      clearFollowing()
       router.replace("/");
     } catch (error) {
       console.error("Error logging out:", error);

@@ -1,16 +1,20 @@
 import { Slot } from "expo-router";
 import * as Linking from "expo-linking";
+import * as Font from "expo-font";
+import { useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+
 import { SavedItemsProvider } from "../context/SavedItemsContext";
 import { FollowProvider } from "@/context/FollowContext";
+import { AuthProvider } from "../context/AuthContext";
 
 export const linking = {
-  prefixes: ["mydgwardrobe://"], // 🔥 Deep link prefix
+  prefixes: ["mydgwardrobe://"],
   config: {
     screens: {
       "(auth)": {
         screens: {
-          "reset-password": "reset-password", // 🔥 route mapping
+          "reset-password": "reset-password",
         },
       },
     },
@@ -18,13 +22,28 @@ export const linking = {
 };
 
 export default function RootLayout() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    Font.loadAsync({
+      Cookie: require("../assets/fonts/Cookie-Regular.ttf"),
+    }).then(() => setFontsLoaded(true));
+  }, []);
+
+  // ⛔ Prevent rendering until font is ready
+  if (!fontsLoaded) {
+    return null; // or splash / loader
+  }
+
   return (
-    <SafeAreaProvider>
-      <FollowProvider>
-        <SavedItemsProvider>
-          <Slot />
-        </SavedItemsProvider>
-      </FollowProvider>
-    </SafeAreaProvider>
+    <AuthProvider>
+      <SafeAreaProvider>
+        <FollowProvider>
+          <SavedItemsProvider>
+            <Slot />
+          </SavedItemsProvider>
+        </FollowProvider>
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }

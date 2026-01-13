@@ -37,28 +37,47 @@ export default function WardrobeDetailsScreen() {
   const [sortBy, setSortBy] = useState<"dateNewest" | "dateOldest" | "priceHigh" | "priceLow" | "nameAZ">("dateNewest");
   const [isGridView, setIsGridView] = useState(true);
   const [loading, setLoading] = useState(true);
+const isPublicView = params.public === "true";
 
-  const fetchItems = async () => {
+ const fetchItems = async () => {
   try {
     setLoading(true);
+
     const token = await AsyncStorage.getItem("token");
 
-    const res = await api.get(
-      `/api/wardrobe/${wardrobeId}/items`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    // 🔹 PUBLIC VIEW (someone else's wardrobe)
+    if (isPublicView) {
+      const res = await api.get(`/api/wardrobe/${wardrobeId}/items`);
+      setItems(res.data || []);
+      return;
+    }
 
-    setItems(res.data);
-    console.log("API DATA:", res.data);
-console.log("Array?", Array.isArray(res.data));
+    // 🔹 OWN WARDROBE (logged-in user)
+    if (token) {
+      const res = await api.get("/api/wardrobe/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const filteredItems = res.data.filter(
+        (item: WardrobeItem) => item.wardrobe === wardrobeId
+      );
+
+      setItems(filteredItems);
+      return;
+    }
+
+    // 🔹 Fallback (not logged in)
+    const res = await api.get(`/api/wardrobe/${wardrobeId}/items`);
+    setItems(res.data || []);
+
   } catch (err) {
     console.error("Error fetching wardrobe items:", err);
+    setItems([]);
   } finally {
     setLoading(false);
   }
 };
+
 
 
   useEffect(() => { fetchItems(); }, []);
@@ -116,7 +135,14 @@ console.log("Array?", Array.isArray(res.data));
             <ActivityIndicator color="#A855F7" size="large" style={{ marginTop: 20 }} />
           ) : (
             sortedItems.map((item) => (
-              <View key={item._id} style={isGridView ? styles.gridItem : styles.listItem}>
+              <TouchableOpacity
+                key={item._id}
+                activeOpacity={0.9}
+                onPress={() => {
+                  router.push(`/wardrobe/item/${item._id}`);
+                }}
+                style={isGridView ? styles.gridItem : styles.listItem}
+              >
                 {item.imageUrl ? (
                   <Image source={{ uri: getItemImageUrl(item.imageUrl) }} style={isGridView ? styles.gridImage : styles.listImage} />
                 ) : (
@@ -134,7 +160,7 @@ console.log("Array?", Array.isArray(res.data));
                     </>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>

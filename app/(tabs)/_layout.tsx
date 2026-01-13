@@ -75,7 +75,7 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="add"
+        name="add-wardrobe"
         options={{
           title: "",
           tabBarIcon: () => null,

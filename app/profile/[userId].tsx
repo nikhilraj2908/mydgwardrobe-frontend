@@ -26,7 +26,7 @@ interface User {
 interface Wardrobe {
   _id: string;
   name: string;
-  itemCount: number;
+  totalItems: number;
   totalWorth: number;
 }
 
@@ -209,7 +209,7 @@ export default function OtherUserProfile() {
           <View style={styles.wardrobeInfo}>
             <Text style={styles.wardrobeName}>All Wardrobe Items</Text>
             <Text style={styles.itemsCount}>
-              {wardrobes.reduce((s, w) => s + (Number(w.itemCount) || 0), 0)} items
+              {wardrobes.reduce((s, w) => s + (Number(w.totalItems) || 0), 0)} items
 
             </Text>
           </View>
@@ -229,7 +229,7 @@ export default function OtherUserProfile() {
             <View style={styles.wardrobeInfo}>
               <Text style={styles.wardrobeName}>{w.name}</Text>
               <Text style={styles.itemsCount}>
-                {Number(w.itemCount) || 0} items
+                {Number(w.totalItems) || 0} items
               </Text>
             </View>
             <Text style={styles.price}>₹{w.totalWorth}</Text>
