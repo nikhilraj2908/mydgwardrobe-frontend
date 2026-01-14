@@ -1,8 +1,8 @@
 import WardrobeHeader from "@/components/WardrobeHeader";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   ActivityIndicator,
@@ -46,7 +46,8 @@ interface SortOption {
 }
 interface ExploreItem {
   _id: string;
-  imageUrl: string;
+  imageUrl?: string;
+  images?: string[];
   likes: number;
   isLiked?: boolean;
   price?: number;
@@ -96,6 +97,7 @@ export default function Explore() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const params = useLocalSearchParams();
   const [searchUsers, setSearchUsers] = useState<SearchUser[]>([]);
+
   const getAvatarUrl = (photo?: string, username?: string) => {
     if (photo && photo.trim() && photo !== "null") {
       if (photo.startsWith("http")) return photo;
@@ -112,9 +114,45 @@ export default function Explore() {
       username || "User"
     )}&background=E9D5FF&color=6B21A8&size=128`;
   };
+  const fetchExploreItemsWithSearch = async (searchValue: string) => {
+    try {
+      setLoading(true);
+
+      const params: Record<string, any> = {
+        page: 1,
+        limit: 20,
+        sort: sortBy,
+        search: searchValue, // ✅ DIRECT VALUE
+      };
+
+      const res = await api.get("/api/wardrobe/explore", { params });
+
+      const newItems = res.data?.items || res.data || [];
+      const total = res.data?.total || newItems.length;
+
+      setItems(newItems);
+      setTotalItems(total);
+      setHasMore(newItems.length === 20);
+      setPage(1);
+    } catch (err) {
+      console.error("Explore fetch error:", err);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (params.search && typeof params.search === "string") {
-      setSearch(params.search);
+      const incomingSearch = params.search.trim();
+
+      // 1️⃣ Sync UI state
+      setSearch(incomingSearch);
+      setActiveCategory("All");
+      setPage(1);
+
+      // 2️⃣ Fetch using the VALUE directly (not stale state)
+      fetchExploreItemsWithSearch(incomingSearch);
     }
   }, [params.search]);
 
@@ -207,8 +245,11 @@ export default function Explore() {
         sort: sortBy,
       };
 
+      // Extract category name from the formatted string (e.g., "Shirts|mens" -> "Shirts")
       if (activeCategory !== "All") {
-        params.category = activeCategory;
+        // Split the formatted string to get just the category name
+        const [categoryName] = activeCategory.split('|');
+        params.category = categoryName;
       }
 
       if (search.trim()) {
@@ -228,7 +269,6 @@ export default function Explore() {
       } else {
         setSearchUsers([]);
       }
-
 
       console.log("Fetching with params:", params);
 
@@ -260,6 +300,8 @@ export default function Explore() {
   ========================= */
   const handleSearchChange = (text: string) => {
     setSearch(text);
+    setActiveCategory("All");   // 🔥 reset category on search
+    setPage(1);
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -270,11 +312,14 @@ export default function Explore() {
     }, 500);
   };
 
+
   /* =========================
      HANDLE CATEGORY CHANGE
   ========================= */
-  const handleCategoryChange = (categoryName: string) => {
-    setActiveCategory(categoryName);
+  const handleCategoryChange = (categoryKey: string) => {
+    setSearch("");            // 🔥 reset search
+    setSearchUsers([]);
+    setActiveCategory(categoryKey);
     setPage(1);
   };
 
@@ -323,14 +368,14 @@ export default function Explore() {
 
       const formatted: CategoryItem[] = [
         {
-          _id: "all",
+          _id: "All",
           name: "All",
           type: "unisex",
           icon: "grid-outline",
         },
         ...res.data.map((cat: any) => ({
-          _id: cat._id,               // ✅ UNIQUE KEY
-          name: cat.name,
+          _id: `${cat.name}|${cat.type}`,             // ✅ UNIQUE KEY
+          name: `${cat.name} (${cat.type})`,
           type: cat.type,             // ✅ KEEP TYPE
           icon: cat.icon || "pricetag-outline",
         })),
@@ -416,6 +461,12 @@ export default function Explore() {
   const renderItemCard = ({ item }: ListRenderItemInfo<ExploreItem>) => {
     const isLiked = likedItems[item._id] || false;
     const isSaved = savedItemIds.includes(item._id);
+    const rawPath =
+      item.images?.length && item.images[0]
+        ? item.images[0]
+        : item.imageUrl;
+    
+    const imagePath = rawPath?.replace(/\\/g, "/");
 
     return (
       <TouchableOpacity
@@ -431,11 +482,18 @@ export default function Explore() {
           });
         }}
       >
+
         <Image
-          source={{ uri: `${baseURL}/${item.imageUrl}` }}
+          source={
+            imagePath
+              ? { uri: `${baseURL}/${imagePath}` }
+              : require("../../assets/images/icon.png")
+          }
           style={styles.image}
           resizeMode="cover"
         />
+
+
 
         {/* Top Overlay - Like & Bookmark */}
         <View style={styles.cardTopOverlay}>
@@ -477,8 +535,12 @@ export default function Explore() {
               {item.wardrobe?.name || item.title || "Untitled"}
             </Text>
             <View style={styles.itemMeta}>
-              <Text style={styles.itemCategory}>{item.category || "Category"}</Text>
-              <Text style={styles.itemBrand}>{item.brand || "Brand"}</Text>
+              <Text style={styles.itemCategory}>
+                {String(item.category ?? "Category")}
+              </Text>
+              <Text style={styles.itemBrand}>
+                {String(item.brand ?? "Brand")}
+              </Text>
             </View>
           </View>
 

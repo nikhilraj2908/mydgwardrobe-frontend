@@ -31,6 +31,7 @@ interface CollectionStats {
 interface FeedItem {
   _id: string;
   type: "item" | "wardrobe" | "collection";
+  images?: string[];   // ✅ ADD THIS
   imageUrl?: string;
   image?: string;
   user?: FeedUser;
@@ -133,9 +134,17 @@ export default function HomeScreen() {
 
       const processedPublic = publicItems.map((item) => ({
         ...item,
-        imageUrl: item.imageUrl || item.image,
-        image: item.imageUrl || item.image,
+
+        // ✅ backward compatibility for old items
+        images: item.images && item.images.length
+          ? item.images
+          : item.imageUrl
+            ? [item.imageUrl]
+            : item.image
+              ? [item.image]
+              : [],
       }));
+
 
       const merged = injectCollections(processedPublic, collections);
 

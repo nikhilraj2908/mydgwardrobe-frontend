@@ -52,10 +52,11 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   const [selectedComment, setSelectedComment] = useState<CommentType | null>(null);
   const [showCommentActions, setShowCommentActions] = useState(false);
   const [justFollowed, setJustFollowed] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   // const [saved, setSaved] = useState(false);
   // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // Debug log
- const { isFollowing, toggleFollow, ready } = useFollow();
+  const { isFollowing, toggleFollow, ready } = useFollow();
   const ownerId =
     typeof item.user === "string" ? item.user : item.user?._id;
 
@@ -63,11 +64,11 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
 
   const isOwner = currentUserId && ownerId && String(currentUserId) === String(ownerId);
 
-const showFollowPlus =
-  ready && !isOwner && ownerId && !followed && !justFollowed;
+  const showFollowPlus =
+    ready && !isOwner && ownerId && !followed && !justFollowed;
 
-const showTick =
-  ready && !isOwner && ownerId && justFollowed;
+  const showTick =
+    ready && !isOwner && ownerId && justFollowed;
 
   const { savedItemIds, toggleSave, isReady } = useSavedItems();
   const saved = savedItemIds.includes(item._id);
@@ -78,6 +79,22 @@ const showTick =
     image: item.image,
     price: item.price
   });
+  console.log("IMAGES DEBUG 👉", {
+    images: item.images,
+    imageUrl: item.imageUrl,
+  });
+  const images: string[] = Array.isArray(item.images)
+    ? item.images.filter(Boolean)
+    : item.images
+      ? [item.images]
+      : Array.isArray(item.imageUrl)
+        ? item.imageUrl.filter(Boolean)
+        : item.imageUrl
+          ? [item.imageUrl]
+          : item.image
+            ? [item.image]
+            : [];
+
   const handleDeleteItem = async () => {
     try {
       setDeleting(true);
@@ -280,25 +297,25 @@ const showTick =
   };
 
   // Helper function to get image URL
-  const getImageUrl = () => {
-    // Try multiple possible image fields
-    let imagePath = item.imageUrl || item.image || item.photo || item.picture;
+  // const getImageUrl = () => {
+  //   // Try multiple possible image fields
+  //   let imagePath = item.imageUrl || item.image || item.photo || item.picture;
 
-    if (!imagePath) return null;
+  //   if (!imagePath) return null;
 
-    // If already a full URL, return as is
-    if (imagePath.startsWith('http')) {
-      return imagePath;
-    }
+  //   // If already a full URL, return as is
+  //   if (imagePath.startsWith('http')) {
+  //     return imagePath;
+  //   }
 
-    // If starts with slash, prepend BASE_URL
-    if (imagePath.startsWith('/')) {
-      return `${BASE_URL}${imagePath}`;
-    }
+  //   // If starts with slash, prepend BASE_URL
+  //   if (imagePath.startsWith('/')) {
+  //     return `${BASE_URL}${imagePath}`;
+  //   }
 
-    // Otherwise, prepend BASE_URL with slash
-    return `${BASE_URL}/${imagePath}`;
-  };
+  //   // Otherwise, prepend BASE_URL with slash
+  //   return `${BASE_URL}/${imagePath}`;
+  // };
 
   // Helper function to get user avatar URL
   const getUserAvatarUrl = () => {
@@ -392,23 +409,23 @@ const showTick =
       </View>
     );
   };
-useEffect(() => {
-  // Whenever a new post/user renders, reset local UI state
-  setJustFollowed(false);
-}, [ownerId]);
+  useEffect(() => {
+    // Whenever a new post/user renders, reset local UI state
+    setJustFollowed(false);
+  }, [ownerId]);
 
-  const imageUrl = getImageUrl();
+  // const imageUrl = getImageUrl();
   const avatarUrl = getUserAvatarUrl();
 
 
-const handleFollowPress = async () => {
-  if (!ready || !ownerId) return;
+  const handleFollowPress = async () => {
+    if (!ready || !ownerId) return;
 
-  await toggleFollow(String(ownerId));
+    await toggleFollow(String(ownerId));
 
-  setJustFollowed(true);
-  setTimeout(() => setJustFollowed(false), 1200);
-};
+    setJustFollowed(true);
+    setTimeout(() => setJustFollowed(false), 1200);
+  };
 
   return (
     <>
@@ -477,16 +494,58 @@ const handleFollowPress = async () => {
 
         {/* Image */}
         <View style={styles.imageContainer}>
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.image}
-              onError={() => {
-                console.log("Image failed to load:", imageUrl);
-                setImageError(true);
-              }}
-              onLoad={() => setImageError(false)}
-            />
+          {images.length > 0 ? (
+            <>
+              <FlatList
+                data={images}
+                horizontal
+                pagingEnabled
+                snapToInterval={width}
+                decelerationRate="fast"
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(uri, index) => `${uri}-${index}`}
+                removeClippedSubviews
+                initialNumToRender={1}
+                maxToRenderPerBatch={1}
+                windowSize={2}
+                onMomentumScrollEnd={(e) => {
+                  const index = Math.round(
+                    e.nativeEvent.contentOffset.x / width
+                  );
+                  setActiveIndex(index);
+                }}
+                renderItem={({ item: uri }) => {
+                  const finalUrl = uri.startsWith("http")
+                    ? uri
+                    : `${BASE_URL}${uri.startsWith("/") ? "" : "/"}${uri}`;
+
+                  return (
+                    <View style={{ width, height: "100%" }}>
+                      <Image
+                        source={{ uri: finalUrl }}
+                        style={styles.image}
+                      />
+                    </View>
+                  );
+                }}
+              />
+
+
+              {/* Pagination dots */}
+              {images.length > 1 && (
+                <View style={styles.dotsContainer}>
+                  {images.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.dot,
+                        i === activeIndex && styles.activeDot,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
           ) : (
             <View style={[styles.image, styles.noImage]}>
               <Ionicons name="image-outline" size={50} color="#CCC" />
@@ -494,13 +553,14 @@ const handleFollowPress = async () => {
             </View>
           )}
 
-          {/* Price badge */}
+          {/* Price badge stays */}
           {item.price && (
             <View style={styles.priceBadge}>
               <Text style={styles.priceText}>₹{item.price / 1000}K</Text>
             </View>
           )}
         </View>
+
 
         {/* Actions */}
         <View style={styles.actions}>
@@ -723,6 +783,24 @@ const handleFollowPress = async () => {
 }
 
 const styles = StyleSheet.create({
+  dotsContainer: {
+    position: "absolute",
+    bottom: 10,
+    flexDirection: "row",
+    alignSelf: "center",
+  },
+
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#DDD",
+    marginHorizontal: 4,
+  },
+
+  activeDot: {
+    backgroundColor: "#A855F7",
+  },
 
   menuOverlay: {
     position: "absolute",
@@ -871,7 +949,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",  // light neutral background
     justifyContent: "center",
     alignItems: "center",
-    padding: 12,                 // 👈 padding for all images
+    padding: 0,              // 👈 padding for all images
   },
 
   image: {
