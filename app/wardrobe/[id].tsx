@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View
 } from "react-native";
 import api from "../../api/api";
@@ -18,6 +19,7 @@ interface WardrobeItem {
   price: number;
   brand?: string;
   imageUrl: string;
+  images?: string[];
   createdAt: string;
 }
 
@@ -37,46 +39,109 @@ export default function WardrobeDetailsScreen() {
   const [sortBy, setSortBy] = useState<"dateNewest" | "dateOldest" | "priceHigh" | "priceLow" | "nameAZ">("dateNewest");
   const [isGridView, setIsGridView] = useState(true);
   const [loading, setLoading] = useState(true);
-const isPublicView = params.public === "true";
+  const isPublicView = params.public === "true";
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const itemSelectionMode = selectedItemIds.length > 0;
 
- const fetchItems = async () => {
-  try {
-    setLoading(true);
+  const toggleItemSelect = (id: string) => {
+    setSelectedItemIds(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    );
+  };
 
+  const cancelItemSelection = () => {
+    setSelectedItemIds([]);
+  };
+
+  const confirmItemDelete = () => {
+    const isSingle = selectedItemIds.length === 1;
+
+    Alert.alert(
+      isSingle ? "Delete item?" : "Delete items?",
+      isSingle
+        ? "This item will be permanently deleted."
+        : "All selected items will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: isSingle
+            ? deleteSingleItem
+            : deleteMultipleItems,
+        },
+      ]
+    );
+  };
+  const deleteSingleItem = async () => {
     const token = await AsyncStorage.getItem("token");
+    await api.delete(`/api/wardrobe/item/${selectedItemIds[0]}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    cancelItemSelection();
+    fetchItems();
+  };
 
-    // 🔹 PUBLIC VIEW (someone else's wardrobe)
-    if (isPublicView) {
+  const deleteMultipleItems = async () => {
+    const token = await AsyncStorage.getItem("token");
+    await api.delete("/api/wardrobe/items/bulk-delete", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { itemIds: selectedItemIds },
+    });
+    cancelItemSelection();
+    fetchItems();
+  };
+
+
+  const getFirstItemImage = (item: WardrobeItem): string => {
+    if (Array.isArray(item.images) && item.images.length > 0) {
+      return item.images[0];
+    }
+    return item.imageUrl || "";
+  };
+
+
+
+  const fetchItems = async () => {
+    try {
+      setLoading(true);
+
+      const token = await AsyncStorage.getItem("token");
+
+      // 🔹 PUBLIC VIEW (someone else's wardrobe)
+      if (isPublicView) {
+        const res = await api.get(`/api/wardrobe/${wardrobeId}/items`);
+        setItems(res.data || []);
+        return;
+      }
+
+      // 🔹 OWN WARDROBE (logged-in user)
+      if (token) {
+        const res = await api.get("/api/wardrobe/my", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const filteredItems = res.data.filter(
+          (item: WardrobeItem) => item.wardrobe === wardrobeId
+        );
+
+        setItems(filteredItems);
+        return;
+      }
+
+      // 🔹 Fallback (not logged in)
       const res = await api.get(`/api/wardrobe/${wardrobeId}/items`);
       setItems(res.data || []);
-      return;
+
+    } catch (err) {
+      console.error("Error fetching wardrobe items:", err);
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
-
-    // 🔹 OWN WARDROBE (logged-in user)
-    if (token) {
-      const res = await api.get("/api/wardrobe/my", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const filteredItems = res.data.filter(
-        (item: WardrobeItem) => item.wardrobe === wardrobeId
-      );
-
-      setItems(filteredItems);
-      return;
-    }
-
-    // 🔹 Fallback (not logged in)
-    const res = await api.get(`/api/wardrobe/${wardrobeId}/items`);
-    setItems(res.data || []);
-
-  } catch (err) {
-    console.error("Error fetching wardrobe items:", err);
-    setItems([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
 
@@ -126,6 +191,40 @@ const isPublicView = params.public === "true";
           </TouchableOpacity>
         </View>
       </View>
+      {itemSelectionMode && (
+        <View style={styles.selectionBar}>
+          <Text style={styles.selectionText}>
+            {selectedItemIds.length} selected
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 16 }}>
+            {selectedItemIds.length === 1 && (
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/add-wardrobe",
+                    params: {
+                      mode: "edit",
+                      itemId: selectedItemIds[0],
+                    },
+                  })
+                }
+              >
+                <Ionicons name="create-outline" size={22} color="#A855F7" />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity onPress={confirmItemDelete}>
+              <Ionicons name="trash-outline" size={22} color="#EF4444" />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={cancelItemSelection}>
+              <Ionicons name="close-outline" size={24} color="#555" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
 
       <Text style={styles.itemCountText}>{items.length} items in this wardrobe</Text>
 
@@ -134,34 +233,62 @@ const isPublicView = params.public === "true";
           {loading ? (
             <ActivityIndicator color="#A855F7" size="large" style={{ marginTop: 20 }} />
           ) : (
-            sortedItems.map((item) => (
-              <TouchableOpacity
-                key={item._id}
-                activeOpacity={0.9}
-                onPress={() => {
-                  router.push(`/wardrobe/item/${item._id}`);
-                }}
-                style={isGridView ? styles.gridItem : styles.listItem}
-              >
-                {item.imageUrl ? (
-                  <Image source={{ uri: getItemImageUrl(item.imageUrl) }} style={isGridView ? styles.gridImage : styles.listImage} />
-                ) : (
-                  <View style={isGridView ? styles.gridImagePlaceholder : styles.listImagePlaceholder}>
-                    <Ionicons name="shirt-outline" size={36} color="#A855F7" />
-                  </View>
-                )}
-                <View style={isGridView ? { padding: 8 } : { flex: 1, paddingLeft: 12 }}>
-                  <Text style={styles.itemName}>{item.category}</Text>
-                  {!isGridView && (
-                    <>
-                      <Text style={styles.itemCategory}>{item.brand || item.wardrobe}</Text>
-                      <Text style={styles.itemPrice}>₹{item.price}</Text>
-                      <Text style={styles.itemDate}>Added: {new Date(item.createdAt).toLocaleDateString()}</Text>
-                    </>
+            sortedItems.map((item) => {
+              const imagePath = getFirstItemImage(item);
+              const isSelected = selectedItemIds.includes(item._id);
+              return (
+
+                <TouchableOpacity
+                  key={item._id}
+                  activeOpacity={0.9}
+                  onPress={() =>
+                    itemSelectionMode
+                      ? toggleItemSelect(item._id)
+                      : router.push(`/wardrobe/item/${item._id}`)
+                  }
+                  onLongPress={() => {
+                    if (!itemSelectionMode) {
+                      setSelectedItemIds([item._id]);
+                    }
+                  }}
+                  style={[
+                    isGridView ? styles.gridItem : styles.listItem,
+
+                    // ✅ selected highlight
+                    isSelected && styles.selectedItem,
+
+                    // ✅ dim others when in selection mode
+                    itemSelectionMode && !isSelected && styles.dimmedItem,
+                  ]}
+                >
+                  {imagePath ? (
+                    <Image
+                      source={{ uri: getItemImageUrl(imagePath) }}
+                      style={isGridView ? styles.gridImage : styles.listImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={isGridView ? styles.gridImagePlaceholder : styles.listImagePlaceholder}>
+                      <Ionicons name="shirt-outline" size={36} color="#A855F7" />
+                    </View>
                   )}
-                </View>
-              </TouchableOpacity>
-            ))
+
+                  <View style={isGridView ? { padding: 8 } : { flex: 1, paddingLeft: 12 }}>
+                    <Text style={styles.itemName}>{item.category}</Text>
+                    {!isGridView && (
+                      <>
+                        <Text style={styles.itemCategory}>{item.brand || item.wardrobe}</Text>
+                        <Text style={styles.itemPrice}>₹{item.price}</Text>
+                        <Text style={styles.itemDate}>
+                          Added: {new Date(item.createdAt).toLocaleDateString()}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+
           )}
         </View>
       </ScrollView>
@@ -239,4 +366,40 @@ const styles = StyleSheet.create({
   activeSortText: { color: "#fff", fontWeight: "600" },
   closeModalBtn: { marginTop: 12, padding: 12, alignItems: "center", backgroundColor: "#A855F7", borderRadius: 20 },
   closeModalText: { color: "#fff", fontWeight: "700" },
+  selectionBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FAF5FF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+  },
+  selectionText: {
+    fontWeight: "600",
+    color: "#444",
+  },
+  selectedItem: {
+    borderWidth: 2,
+    borderColor: "#A855F7",
+  },
+
+  dimmedItem: {
+    opacity: 0.5,
+  },
+
+  checkOverlay: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+
+
 });

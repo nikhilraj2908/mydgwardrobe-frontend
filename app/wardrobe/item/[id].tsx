@@ -19,7 +19,10 @@ import {
 import api from "../../../api/api";
 import { useFollow } from "../../../context/FollowContext";
 import { useSavedItems } from "../../../context/SavedItemsContext";
+import { Dimensions } from "react-native";
+
 const baseURL = api.defaults.baseURL;
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
 export default function ItemDetails() {
     const { id, openComments } = useLocalSearchParams<{
@@ -39,19 +42,19 @@ export default function ItemDetails() {
     const [selectedComment, setSelectedComment] = useState<any>(null);
     const [showCommentActions, setShowCommentActions] = useState(false);
     const { isFollowing, toggleFollow, ready } = useFollow();
+const [activeIndex, setActiveIndex] = useState(0);
 
-  
     // const [isFollowing, setIsFollowing] = useState(false);
     // const [followLoading, setFollowLoading] = useState(false);
     // const [isSelf, setIsSelf] = useState(false);
 
 
-    
 
-const handleFollowToggle = async () => {
-  if (!ownerId || isSelf) return;
-  await toggleFollow(String(ownerId));
-};
+
+    const handleFollowToggle = async () => {
+        if (!ownerId || isSelf) return;
+        await toggleFollow(String(ownerId));
+    };
 
 
     const fetchCurrentUser = async () => {
@@ -243,18 +246,18 @@ const handleFollowToggle = async () => {
             </View>
         );
     }
-const ownerId =
-  typeof item.user === "string"
-    ? item.user
-    : item.user?._id;
+    const ownerId =
+        typeof item.user === "string"
+            ? item.user
+            : item.user?._id;
 
-const isSelf =
-  currentUser?._id &&
-  ownerId &&
-  String(currentUser._id) === String(ownerId);
+    const isSelf =
+        currentUser?._id &&
+        ownerId &&
+        String(currentUser._id) === String(ownerId);
 
-const followed =
-  ready && ownerId ? isFollowing(String(ownerId)) : false;
+    const followed =
+        ready && ownerId ? isFollowing(String(ownerId)) : false;
     // ✅ SAFE — item exists here
     const saved = savedItemIds.includes(item._id);
 
@@ -269,10 +272,13 @@ const followed =
 
 
 
-    
 
 
 
+    const images: string[] =
+        Array.isArray(item.images) && item.images.length > 0
+            ? item.images.map((img: string) => img.replace(/\\/g, "/"))
+            : [];
 
     return (
         <View style={styles.container}>
@@ -308,31 +314,49 @@ const followed =
 
                         {/* FOLLOW BUTTON */}
                         {ready && (
-  <TouchableOpacity
-    style={[
-      styles.followBtn,
-      followed && styles.followingBtn,
-      isSelf && styles.disabledBtn,
-    ]}
-    onPress={handleFollowToggle}
-    disabled={isSelf}
-  >
-    <Ionicons
-      name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
-      size={16}
-      color="#fff"
-    />
-    <Text style={styles.followText}>
-      {isSelf ? "You" : followed ? "Following" : "Follow"}
-    </Text>
-  </TouchableOpacity>
-)}
+                            <TouchableOpacity
+                                style={[
+                                    styles.followBtn,
+                                    followed && styles.followingBtn,
+                                    isSelf && styles.disabledBtn,
+                                ]}
+                                onPress={handleFollowToggle}
+                                disabled={isSelf}
+                            >
+                                <Ionicons
+                                    name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
+                                    size={16}
+                                    color="#fff"
+                                />
+                                <Text style={styles.followText}>
+                                    {isSelf ? "You" : followed ? "Following" : "Follow"}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
-                <Image
-                    source={{ uri: `${baseURL}/${item.imageUrl}` }}
-                    style={styles.image}
-                />
+                {images.length > 0 ? (
+                    <ScrollView
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.imageSlider}
+                    >
+                        {images.map((img, index) => (
+                            <Image
+                                key={index}
+                                source={{ uri: `${baseURL}/${img}` }}
+                                style={styles.image}
+                            />
+                        ))}
+                    </ScrollView>
+                ) : (
+                    <View style={[styles.image, styles.noImage]}>
+                        <Ionicons name="image-outline" size={60} color="#ccc" />
+                        <Text style={{ color: "#999", marginTop: 8 }}>No images</Text>
+                    </View>
+                )}
+
 
 
                 {/* ACTIONS */}
@@ -524,10 +548,9 @@ const followed =
     },
 
     image: {
-        width: "100%",
+        width: SCREEN_WIDTH,
         height: 420,
-        resizeMode: "cover",
-        marginTop: 20
+          resizeMode: "contain", 
     },
 
     actionRow: {
@@ -822,6 +845,33 @@ const followed =
         color: "#fff",
         fontWeight: "600",
         fontSize: 13,
+    },
+    imageSlider: {
+        marginTop: 20,
+    },
+
+    noImage: {
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#f5f5f5",
+    },
+
+    dotsContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        marginTop: 10,
+    },
+
+    dot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "#ddd",
+        marginHorizontal: 4,
+    },
+
+    activeDot: {
+        backgroundColor: "#A855F7",
     },
 
 });

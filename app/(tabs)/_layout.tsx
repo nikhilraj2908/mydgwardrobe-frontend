@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Image, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Image, Platform, StyleSheet, TouchableOpacity, View ,ImageBackground} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
@@ -26,7 +26,7 @@ export default function TabsLayout() {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
-          backgroundColor: "#fff",
+          backgroundColor: "#ffffffff",
           position: "relative",
         },
 

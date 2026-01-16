@@ -17,9 +17,11 @@ interface WardrobeItem {
   category: string;
   price: number;
   brand?: string;
-  imageUrl: string;
+  imageUrl?: string;      // ⚠️ legacy
+  images?: string[];      // ✅ new system
   createdAt: string;
 }
+
 
 export default function AllWardrobeItemsScreen() {
   const router = useRouter();
@@ -28,42 +30,42 @@ export default function AllWardrobeItemsScreen() {
   const [sortBy, setSortBy] = useState<"dateNewest" | "dateOldest" | "priceHigh" | "priceLow" | "nameAZ">("dateNewest");
   const [isGridView, setIsGridView] = useState(true);
   const [loading, setLoading] = useState(true);
-const { userId } = useLocalSearchParams();
+  const { userId } = useLocalSearchParams();
   const fetchItems = async () => {
-  try {
-    setLoading(true);
-    const token = await AsyncStorage.getItem("token");
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
 
-    let res;
+      let res;
 
-    if (userId) {
-      // 👤 Viewing someone else
-      res = await api.get(`/api/wardrobe/user/${userId}/items`, {
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : undefined,
-      });
+      if (userId) {
+        // 👤 Viewing someone else
+        res = await api.get(`/api/wardrobe/user/${userId}/items`, {
+          headers: token
+            ? { Authorization: `Bearer ${token}` }
+            : undefined,
+        });
 
-      setItems(res.data.items);
-    } else {
-      // 👤 Viewing myself
-      res = await api.get("/api/wardrobe/my", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        setItems(res.data.items);
+      } else {
+        // 👤 Viewing myself
+        res = await api.get("/api/wardrobe/my", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      setItems(res.data);
+        setItems(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => { fetchItems(); }, []);
 
   const sortedItems = [...items].sort((a, b) => {
-    switch(sortBy) {
+    switch (sortBy) {
       case "dateOldest": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       case "priceHigh": return b.price - a.price;
       case "priceLow": return a.price - b.price;
@@ -74,22 +76,27 @@ const { userId } = useLocalSearchParams();
   });
 
   // Helper to construct full image URL
- const DEFAULT_IMAGE =
-  "https://ui-avatars.com/api/?name=Item&background=random";
 
-const getItemImageUrl = (url?: string): string => {
-  if (!url) return DEFAULT_IMAGE;
+  const DEFAULT_IMAGE =
+    "https://ui-avatars.com/api/?name=Item&background=random";
 
-  // already absolute
-  if (url.startsWith("http")) return url;
+  const getItemImageUrl = (item: WardrobeItem): string => {
+    // ✅ NEW system first
+    if (item.images?.length && item.images[0]) {
+      const img = item.images[0];
+      return img.startsWith("http") ? img : `${SERVER_URL}${img.startsWith("/") ? img : `/${img}`}`;
+    }
 
-  // relative path from backend
-  if (url.startsWith("/")) {
-    return `${SERVER_URL}${url}`;
-  }
+    // ⚠️ LEGACY fallback
+    if (item.imageUrl) {
+      return item.imageUrl.startsWith("http")
+        ? item.imageUrl
+        : `${SERVER_URL}${item.imageUrl.startsWith("/") ? item.imageUrl : `/${item.imageUrl}`}`;
+    }
 
-  return `${SERVER_URL}/${url}`;
-};
+    return DEFAULT_IMAGE;
+  };
+
 
 
   return (
@@ -118,29 +125,33 @@ const getItemImageUrl = (url?: string): string => {
             <ActivityIndicator color="#A855F7" size="large" style={{ marginTop: 20 }} />
           ) : (
             sortedItems.map((item) => (
-              <View key={item._id} style={isGridView ? styles.gridItem : styles.listItem}>
-                {item.imageUrl ? (
-                  <Image 
-                    source={{ uri: getItemImageUrl(item.imageUrl) }} 
-                    style={isGridView ? styles.gridImage : styles.listImage} 
-                  />
-                ) : (
-                  <View style={isGridView ? styles.gridImagePlaceholder : styles.listImagePlaceholder}>
-                    <Ionicons name="shirt-outline" size={36} color="#A855F7" />
-                  </View>
-                )}
-                <View style={isGridView ? { padding: 8 } : { flex: 1, paddingLeft: 12 }}>
-                  <Text style={styles.itemName}>{item.category}</Text>
-                  {!isGridView && (
-                    <>
-                      <Text style={styles.itemCategory}>{item.brand || item.wardrobe}</Text>
-                      <Text style={styles.itemPrice}>₹{item.price}</Text>
-                      <Text style={styles.itemDate}>Added: {new Date(item.createdAt).toLocaleDateString()}</Text>
-                    </>
-                  )}
-                </View>
-              </View>
-            ))
+  <TouchableOpacity
+    key={item._id}
+    activeOpacity={0.85}
+    style={isGridView ? styles.gridItem : styles.listItem}
+    onPress={() => router.push(`/wardrobe/item/${item._id}`)}
+  >
+    <Image
+      source={{ uri: getItemImageUrl(item) }}
+      style={isGridView ? styles.gridImage : styles.listImage}
+    />
+
+    <View style={isGridView ? { padding: 8 } : { flex: 1, paddingLeft: 12 }}>
+      <Text style={styles.itemName}>{item.category}</Text>
+
+      {!isGridView && (
+        <>
+          <Text style={styles.itemCategory}>{item.brand || item.wardrobe}</Text>
+          <Text style={styles.itemPrice}>₹{item.price}</Text>
+          <Text style={styles.itemDate}>
+            Added: {new Date(item.createdAt).toLocaleDateString()}
+          </Text>
+        </>
+      )}
+    </View>
+  </TouchableOpacity>
+))
+
           )}
         </View>
       </ScrollView>
@@ -192,7 +203,7 @@ const getItemImageUrl = (url?: string): string => {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16,paddingTop:35 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, paddingTop: 35 },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   itemCountText: { marginLeft: 16, color: "#666", marginBottom: 8 },
   gridContainer: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },

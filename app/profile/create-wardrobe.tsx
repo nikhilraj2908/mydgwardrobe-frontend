@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-
+import { useLocalSearchParams } from "expo-router";
 import api from "../../api/api";
 
 const COLORS = [
@@ -27,47 +27,64 @@ const COLORS = [
 
 export default function CreateWardrobe() {
   const router = useRouter();
-
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(COLORS[0]);
+const params = useLocalSearchParams();
+const wardrobeId = params.id as string | undefined;
+const isEditMode = !!wardrobeId;
+ const [name, setName] = useState(params.name?.toString() || "");
+const [color, setColor] = useState(
+  params.color?.toString() || COLORS[0]
+);
   const [loading, setLoading] = useState(false);
 
-  const createWardrobe = async () => {
-    if (!name.trim()) {
-      Alert.alert("Error", "Wardrobe name is required");
+ const submitWardrobe = async () => {
+  if (!name.trim()) {
+    Alert.alert("Error", "Wardrobe name is required");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const token = await AsyncStorage.getItem("token");
+    if (!token) {
+      Alert.alert("Error", "Please login again");
       return;
     }
 
-    try {
-      setLoading(true);
+    if (isEditMode) {
+      // ✅ EDIT
+      await api.put(
+        `/api/wardrobe/${wardrobeId}`,
+        { name, color },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("Error", "Please login again");
-        return;
-      }
-
+      Alert.alert("Success", "Wardrobe updated");
+    } else {
+      // ✅ CREATE
       await api.post(
         "/api/wardrobe/create",
         { name, color },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       Alert.alert("Success", "Wardrobe created");
-      router.back(); // go back to profile
-    } catch (err: any) {
-      Alert.alert(
-        "Error",
-        err?.response?.data?.message || "Failed to create wardrobe"
-      );
-    } finally {
-      setLoading(false);
     }
-  };
+
+    router.back();
+  } catch (err: any) {
+    Alert.alert(
+      "Error",
+      err?.response?.data?.message || "Operation failed"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView style={styles.container}>
@@ -76,7 +93,9 @@ export default function CreateWardrobe() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} />
         </TouchableOpacity>
-        <Text style={styles.title}>Create Wardrobe</Text>
+        <Text style={styles.title}>
+  {isEditMode ? "Edit Wardrobe" : "Create Wardrobe"}
+</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -121,14 +140,20 @@ export default function CreateWardrobe() {
 
       {/* Submit */}
       <TouchableOpacity
-        style={styles.submitBtn}
-        onPress={createWardrobe}
-        disabled={loading}
-      >
-        <Text style={styles.submitText}>
-          {loading ? "Creating..." : "Create Wardrobe"}
-        </Text>
-      </TouchableOpacity>
+  style={styles.submitBtn}
+  onPress={submitWardrobe}
+  disabled={loading}
+>
+  <Text style={styles.submitText}>
+    {loading
+      ? isEditMode
+        ? "Updating..."
+        : "Creating..."
+      : isEditMode
+      ? "Update Wardrobe"
+      : "Create Wardrobe"}
+  </Text>
+</TouchableOpacity>
     </ScrollView>
   );
 }

@@ -7,13 +7,15 @@ import {
   Dimensions,
   Easing,
   Image,
+  ImageBackground,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import api from "../api/api";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 const { width } = Dimensions.get("window");
 const BASE_URL = "https://api.digiwardrobe.com";
 
@@ -30,7 +32,7 @@ interface WardrobeSummary {
 
 interface CollectionPostCardProps {
   item: {
-    _id: string; // userId (collection owner)
+    _id: string;
     type: "collection";
     user: {
       _id: string;
@@ -55,8 +57,7 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
   const [wardrobes, setWardrobes] = useState<WardrobeSummary[]>([]);
   const [likeCount, setLikeCount] = useState(0);
   const [viewCount, setViewCount] = useState(0);
-
-  /* ===== Gate animation ===== */
+  const [isOwner, setIsOwner] = useState(false);
 
   const leftDoorAnim = useRef(new Animated.Value(0)).current;
   const rightDoorAnim = useRef(new Animated.Value(0)).current;
@@ -69,79 +70,53 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
     if (price >= 1000) return `₹${(price / 1000).toFixed(1)}K`;
     return `₹${price}`;
   };
+
   useEffect(() => {
     fetchLikeCount();
-  }, []);
-
-  const fetchLikeCount = async () => {
-    try {
-      const res = await api.get(
-        `/api/collections/${item.user._id}/likes`
-      );
-      setLikeCount(res.data.totalLikes);
-    } catch (err) {
-      console.log("Like count error", err);
-    }
-  };
-
-
-  const fetchViewCount = async () => {
-    try {
-      const res = await api.get(
-        `/api/collections/${item.user._id}/view`
-      );
-      setViewCount(res.data.totalViews);
-    } catch (err) {
-      console.log("View count error", err);
-    }
-  };
-
-
-  useEffect(() => {
     fetchViewCount();
   }, []);
 
-  /* ================= LOAD WARDROBES ================= */
-  const [isOwner, setIsOwner] = useState(false);
+  const fetchLikeCount = async () => {
+    const res = await api.get(`/api/collections/${item.user._id}/likes`);
+    setLikeCount(res.data.totalLikes || 0);
+  };
+
+  const fetchViewCount = async () => {
+    const res = await api.get(`/api/collections/${item.user._id}/view`);
+    setViewCount(res.data.totalViews || 0);
+  };
 
   const loadWardrobes = async () => {
-    if (wardrobes.length > 0) return;
+    if (wardrobes.length) return;
 
-    try {
-      setLoading(true);
-      const res = await api.get(
-        `/api/collections/${item.user._id}/wardrobes`
-      );
-      setWardrobes(res.data?.wardrobes || []);
-      setIsOwner(res.data.isOwner);
-    } catch (err) {
-      console.log("Failed to load wardrobes");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setLoading(true);
 
-  /* ================= ANIMATIONS ================= */
-  const trackView = async () => {
-    try {
-      const res = await api.post(
-        `/api/collections/${item.user._id}/view`
-      );
-      if (res.data?.totalViews !== undefined) {
-        setViewCount(res.data.totalViews);
+    const res = await api.get(
+      `/api/collections/${item.user._id}/wardrobes`,
+      {
+        headers: {
+          Authorization: `Bearer ${await AsyncStorage.getItem("token")}`,
+        },
       }
-    } catch (err) {
-      console.log("View track error", err);
-    }
+    );
+
+    setWardrobes(res.data?.wardrobes || []);
+    setIsOwner(res.data.isOwner);
+
+    console.log("Backend isOwner:", res.data.isOwner);
+
+    setLoading(false);
   };
 
+
+  const trackView = async () => {
+    const res = await api.post(`/api/collections/${item.user._id}/view`);
+    if (res.data?.totalViews) setViewCount(res.data.totalViews);
+  };
 
   const openGate = async () => {
     if (!isOpen) {
-      // track view (backend decides if counted or not)
       await trackView();
-
-      // load wardrobes once
       await loadWardrobes();
     }
 
@@ -169,7 +144,6 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
     setIsOpen(true);
   };
 
-
   const closeGate = () => {
     Animated.parallel([
       Animated.timing(leftDoorAnim, {
@@ -194,28 +168,14 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
     setIsOpen(false);
   };
 
-  const toggleGate = () => {
-    isOpen ? closeGate() : openGate();
-  };
-
-  /* ================= RENDER ================= */
-
   return (
     <View style={styles.container}>
-      {/* ===== Header ===== */}
-      <View style={styles.header}>
-        <View style={styles.userRow}>
-
-        </View>
-      </View>
-
-      {/* ===== Gate Card ===== */}
-      <TouchableOpacity activeOpacity={0.9} onPress={toggleGate}>
-        <View style={styles.gateWrapper}>
-          {/* Closed Gate */}
+      <TouchableOpacity activeOpacity={0.9} onPress={isOpen ? closeGate : openGate}>
+        <View style={styles.card}>
+          {/* CLOSED STATE */}
           <Animated.View
             style={[
-              styles.closedGate,
+              styles.closedState,
               {
                 opacity: interiorAnim.interpolate({
                   inputRange: [0, 1],
@@ -224,76 +184,66 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
               },
             ]}
           >
-            <View style={styles.gateFrame}>
-              <Animated.View
-                style={[
-                  styles.door,
-                  { transform: [{ translateX: leftDoorAnim }] },
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.door,
-                  { transform: [{ translateX: rightDoorAnim }] },
-                ]}
-              />
-            </View>
+            <ImageBackground
+              source={require("../assets/images/bg-wardrobe.png")}
+              resizeMode="cover"
+              style={styles.bg}
+            >
+              <View style={styles.overlay} />
 
-            <View style={styles.overlay}>
+              <View style={styles.content}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {item.user.username.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
 
-
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {item.user.username.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View>
                 <Text style={styles.username}>{item.user.username}</Text>
-                <Text style={styles.handle}>
-                  @{item.user.username.toLowerCase()}
-                </Text>
-              </View>
+                <Text style={styles.handle}>@{item.user.username.toLowerCase()}</Text>
 
-              <View style={styles.statsRow}>
-                <Stat
-                  icon="cash-outline"
-                  value={formatPrice(item.stats.totalWorth)}
-                />
-                <Stat
-                  icon="albums-outline"
-                  value={`${item.stats.totalWardrobes} wardrobes`}
-                />
-                <Stat
-                  icon="shirt-outline"
-                  value={`${item.stats.totalItems} items`}
-                />
-              </View>
-              <View style={styles.socialRow}>
-                {/* Likes */}
-                <View style={styles.socialItem}>
-                  <Ionicons name="heart-outline" size={18} color="#fff" />
-                  <Text style={styles.countText}>{likeCount}</Text>
+                <View style={styles.statsPill}>
+                  <View style={styles.moneyStat}>
+                    {/* Rupee icon */}
+                    <View style={styles.rupeeCircle}>
+                      <Text style={styles.rupeeSymbol}>₹</Text>
+                    </View>
+
+                    {/* Amount only (no ₹) */}
+                    <Text style={styles.moneyValue}>
+                      {formatPrice(item.stats.totalWorth).replace("₹", "")}
+                    </Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.statRight}>
+                    <View style={styles.statRow}>
+                      <Ionicons name="thumbs-up-outline" size={14} color="#fff" />
+                      <Text style={styles.statText}>{likeCount} Likes</Text>
+                    </View>
+                    <View style={styles.statRow}>
+                      <Ionicons name="shirt-outline" size={14} color="#fff" />
+                      <Text style={styles.statText}>
+                        {item.stats.totalItems} Items
+                      </Text>
+                    </View>
+                    <View style={styles.statRow}>
+                      <Ionicons name="eye-outline" size={14} color="#fff" />
+                      <Text style={styles.statText}>{viewCount} Views</Text>
+                    </View>
+                  </View>
                 </View>
 
-                {/* Views */}
-                <View style={styles.socialItem}>
-                  <Ionicons name="eye-outline" size={18} color="#fff" />
-                  <Text style={styles.countText}>{viewCount}</Text>
-                </View>
+                <Text style={styles.peekText}>What’s inside? Wanna see!</Text>
               </View>
-
-
-
-              <Text style={styles.peekText}>
-                {isOpen ? "Tap to close" : "What's inside ? Wanna see !"}
-              </Text>
-            </View>
+            </ImageBackground>
           </Animated.View>
 
-          {/* Open Gate */}
+          {/* OPEN STATE */}
+          {/* OPEN STATE */}
           <Animated.View
             style={[
-              styles.openGate,
+              styles.openState,
               {
                 opacity: interiorAnim,
                 transform: [
@@ -308,34 +258,30 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
             ]}
           >
             {loading ? (
-              <View style={styles.center}>
-                <ActivityIndicator size="large" color="#A855F7" />
-                <Text style={styles.loadingText}>
-                  Opening wardrobes...
-                </Text>
-              </View>
-            ) : wardrobes.length === 0 ? (
-              <View style={styles.center}>
-                <Text style={styles.emptyText}>
-                  No wardrobes in this collection
-                </Text>
-              </View>
+              <ActivityIndicator size="large" color="#111827" />
             ) : (
-              <View style={styles.wardrobeGrid}>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.grid}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}        // 🔥 REQUIRED
+                keyboardShouldPersistTaps="handled"
+              >
+
                 {wardrobes.map((w) => (
                   <TouchableOpacity
                     key={w._id}
-                    disabled={!isOwner && w.totalItems === 0}
-                    style={[
-                      styles.wardrobeCard,
-                      !isOwner && w.totalItems === 0 && { opacity: 0.6 },
-                    ]}
+                    style={styles.wardrobeCard}
                     onPress={() => {
-                      const url = isOwner
-                        ? `/wardrobe/${w._id}?name=${encodeURIComponent(w.name)}`
-                        : `/wardrobe/${w._id}?name=${encodeURIComponent(w.name)}&public=true`;
-
-                      router.push(url);
+                      if (isOwner) {
+                        // 👤 Owner → private wardrobe
+                        router.push(
+                          `/wardrobe/${w._id}?name=${encodeURIComponent(w.name)}`
+                        );
+                      } else {
+                        // 🌍 Public viewer → public wardrobe
+                        router.push(`/wardrobe/${w._id}?public=true`);
+                      }
                     }}
                   >
                     <Image
@@ -346,27 +292,10 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
                       }
                       style={styles.wardrobeImage}
                     />
-
                     <Text style={styles.wardrobeName}>{w.name}</Text>
-
-                    <Text style={styles.wardrobeMeta}>
-                      {w.totalItems > 0
-                        ? `${w.totalItems} items · ${formatPrice(w.totalWorth)}`
-                        : isOwner
-                          ? "Only private items"
-                          : "No public items"}
-                    </Text>
-
-                    {/* ✅ ADD PRIVATE BADGE HERE */}
-                    {isOwner && w.hasPrivateItems && (
-                      <View style={styles.privateBadge}>
-                        <Text style={styles.privateText}>Private items inside</Text>
-                      </View>
-                    )}
                   </TouchableOpacity>
                 ))}
-
-              </View>
+              </ScrollView>
             )}
           </Animated.View>
         </View>
@@ -375,178 +304,120 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
   );
 }
 
-/* ================= SMALL COMPONENT ================= */
-
-const Stat = ({
-  icon,
-  value,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: string;
-}) => (
-  <View style={styles.stat}>
-    <Ionicons name={icon} size={16} color="#fff" />
-    <Text style={styles.statText}>{value}</Text>
-  </View>
-);
-
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    marginVertical: 14,
-    padding: 14,
-    elevation: 5,
-  },
 
-  header: {
-    marginBottom: 12,
-  },
 
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  socialRow: {
-    flexDirection: "row",
-    marginTop: 8,
-    marginBottom: 8,
-    justifyContent: "center",
-    gap: 16,
-  },
 
-  socialItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  countText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  privateBadge: {
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    backgroundColor: "#FEF3C7",
-    alignSelf: "flex-start",
-  },
-
-  privateText: {
-    fontSize: 10,
-    color: "#92400E",
-    fontWeight: "600",
-  },
-
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#E9D5FF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  avatarText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#6B21A8",
-
-  },
-
-  username: {
-    fontWeight: "700",
-    fontSize: 14,
-    color: "#fff",
-  },
-
-  handle: {
-    fontSize: 12,
-    color: "#ccc6c6ff",
-    marginBottom: 20
-
-  },
-
-  gateWrapper: {
-    height: 320,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-
-  closedGate: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#7C3AED",
-  },
-
-  gateFrame: {
-    flexDirection: "row",
-    flex: 1,
-  },
-
-  door: {
-    flex: 1,
-    backgroundColor: "#6D28D9",
-    borderWidth: 1,
-    borderColor: "#0d021fff",
-  },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.35)",
-    padding: 20,
-  },
-
-  collectionTitle: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "800",
-    marginBottom: 14,
-  },
-
-  statsRow: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    padding: 10,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-
-  stat: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 8,
-  },
-
-  statText: {
-    color: "#fff",
-    marginLeft: 6,
-    fontWeight: "600",
-  },
-
-  peekText: {
-    color: "#fff",
-    fontSize: 12,
-    opacity: 0.85,
-  },
-
-  openGate: {
+  openState: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#F8FAFC",
     padding: 14,
   },
-
-  wardrobeGrid: {
+  scrollContainer: {
+    flex: 1,
+  },
+  grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    paddingBottom: 20,
+  },
+  container: {
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  card: {
+    height: 340,
+    borderRadius: 28,
+    overflow: "hidden",
+    backgroundColor: "#000",
+    marginTop: 20,
+  },
+  bg: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+  },
+  content: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  avatarText: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#A855F7",
+  },
+  username: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#ffffffff",
+
+  },
+  handle: {
+    fontSize: 13,
+    color: "#aaaaaaff",
+    marginBottom: 18,
+  },
+  statsPill: {
+    flexDirection: "row",
+    backgroundColor: "#A855F7",
+    borderRadius: 15,
+    padding: 14,
+    width: "100%",
+    marginBottom: 16,
+  },
+  statItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  statValue: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  divider: {
+    width: 2,
+    backgroundColor: "rgba(255,255,255,0.4)",
+    marginHorizontal: 25,
+  },
+  statRight: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 6,
+  },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  statText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  peekText: {
+    fontSize: 14,
+    color: "#d1ceceff",
+    fontWeight: "500",
+  },
+  closedState: {
+    ...StyleSheet.absoluteFillObject,
   },
 
   wardrobeCard: {
@@ -555,41 +426,48 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 8,
     marginBottom: 12,
-    elevation: 2,
   },
-
   wardrobeImage: {
     width: "100%",
     height: 100,
     borderRadius: 8,
-    backgroundColor: "#E5E7EB",
     marginBottom: 6,
   },
-
   wardrobeName: {
-    fontWeight: "700",
     fontSize: 13,
+    fontWeight: "600",
+  },
+  moneyStat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
 
-  wardrobeMeta: {
-    fontSize: 11,
-    color: "#b72d2dff",
-    marginTop: 2,
-  },
-
-  center: {
-    flex: 1,
+  rupeeCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF", // filled circle
     justifyContent: "center",
     alignItems: "center",
+
+    // optional polish
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
-  loadingText: {
-    marginTop: 10,
-    color: "#666",
+  rupeeSymbol: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#A855F7", // purple ₹
   },
 
-  emptyText: {
-    color: "#666",
-    fontSize: 14,
+  moneyValue: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
+
 });

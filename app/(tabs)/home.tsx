@@ -12,6 +12,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ImageBackground
 } from "react-native";
 import api from "../../api/api";
 /* ================= TYPES ================= */
@@ -191,6 +192,7 @@ export default function HomeScreen() {
 
   const renderHeader = () => (
     <>
+    
       <View style={styles.header}>
         <Text style={styles.logoText}>
           <Text style={styles.logoHighlight}>D</Text><Text style={styles.logoHighlight2}>W</Text>
@@ -270,12 +272,14 @@ export default function HomeScreen() {
         </View>
 
       </View>
+      
 
     </>
   );
 
   return (
     <>
+    
       <FlatList
         data={feed}
         keyExtractor={(item, index) => `${item._id}-${index}`}
@@ -327,6 +331,7 @@ function injectCollections(posts: FeedItem[], collections: FeedItem[]) {
 
 const styles = StyleSheet.create({
   container: {
+    
     backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingTop: 25,
@@ -336,7 +341,10 @@ const styles = StyleSheet.create({
     height: 24,
     resizeMode: "contain",
   },
-
+ storyBg: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",

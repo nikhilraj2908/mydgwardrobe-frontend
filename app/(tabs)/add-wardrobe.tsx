@@ -1,23 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
     ActivityIndicator,
     Alert,
     FlatList,
     Image,
     Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ✅ Import centralized axios instance
 import api from "../../api/api"; // adjust path if needed
@@ -56,7 +55,15 @@ export default function AddWardrobe() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     // const [image, setImage] = useState<any>(null);
-    const [images, setImages] = useState<any[]>([]);
+    type ImageItem = {
+        uri: string;
+        isRemote: boolean;
+        fileName?: string | null;   // ✅ allow null
+        mimeType?: string;
+    };
+
+    const SERVER = "https://api.digiwardrobe.com"; // or your ENV base
+    const [images, setImages] = useState<ImageItem[]>([]);
     const [category, setCategory] = useState("");
     const [customCategory, setCustomCategory] = useState("");
     const [categoryType, setCategoryType] = useState<"mens" | "womens" | "unisex">("unisex");
@@ -81,6 +88,62 @@ export default function AddWardrobe() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
     const [description, setDescription] = useState("");
+
+    const params = useLocalSearchParams();
+
+    const mode = (params.mode as "create" | "edit") || "create";
+    const itemId = params.itemId as string | undefined;
+
+    const isEdit = mode === "edit" && !!itemId;
+
+
+    useEffect(() => {
+        if (!isEdit) return;
+
+        const fetchItem = async () => {
+            try {
+                setLoading(true);
+                const token = await AsyncStorage.getItem("token");
+
+                const res = await api.get(`/api/wardrobe/item/${itemId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                const item = res.data;
+
+                setCategory(
+                    typeof item.category === "string"
+                        ? item.category
+                        : item.category?.name || ""
+                );
+
+                setWardrobe(
+                    typeof item.wardrobe === "string"
+                        ? item.wardrobe
+                        : item.wardrobe?.name || ""
+                );
+                setPrice(item.price ? String(item.price) : "");
+                setBrand(item.brand || "");
+                setVisibility(item.visibility || "public");
+                setDescription(item.description || "");
+
+                // ✅ Convert DB images[] => ImageItem[]
+                const dbImages: ImageItem[] = (item.images || []).map((p: string) => ({
+                    uri: normalizeImageUrl(p),
+                    isRemote: true,
+                }));
+
+                setImages(dbImages);
+            } catch (e) {
+                Alert.alert("Error", "Failed to load item");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchItem();
+    }, [isEdit, itemId]);
+
     /* ================= FETCH CATEGORIES ================= */
     const fetchCategories = async () => {
         try {
@@ -249,20 +312,49 @@ export default function AddWardrobe() {
     const pickFromGallery = async () => {
         const res = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsMultipleSelection: true, // ✅ KEY
+            allowsMultipleSelection: true,
             quality: 0.8,
         });
 
         if (!res.canceled) {
-            setImages(prev => [...prev, ...res.assets]);
+            setImages(prev => [
+                ...prev,
+                ...res.assets.map(a => ({
+                    uri: a.uri,
+                    isRemote: false,
+                    fileName: a.fileName,
+                    mimeType: a.mimeType,
+                })),
+            ]);
         }
     };
+    const normalizeImageUrl = (path: string) => {
+        if (!path) return "";
+        if (path.startsWith("http")) return path;
+
+        // ✅ ensure exactly ONE slash between domain and path
+        if (!path.startsWith("/")) {
+            path = "/" + path;
+        }
+
+        return `${SERVER}${path}`;
+    };
+
 
     const pickFromCamera = async () => {
         const res = await ImagePicker.launchCameraAsync({ quality: 0.8 });
 
         if (!res.canceled) {
-            setImages(prev => [...prev, res.assets[0]]);
+            const a = res.assets[0];
+            setImages(prev => [
+                ...prev,
+                {
+                    uri: a.uri,
+                    isRemote: false,
+                    fileName: a.fileName,
+                    mimeType: a.mimeType,
+                },
+            ]);
         }
     };
 
@@ -298,22 +390,17 @@ export default function AddWardrobe() {
     };
 
     const handleSubmit = async () => {
-        // Handle custom category creation if needed
         let finalCategory = category;
 
+        // custom category creation if needed
         if (showOtherCategoryInput && customCategory) {
-            // Create new category on the server
             const newCategory = await createNewCategory(customCategory, categoryType);
-            if (newCategory) {
-                finalCategory = newCategory.name;
-            } else {
-                // If category creation failed, stop submission
-                return;
-            }
+            if (!newCategory) return;
+            finalCategory = newCategory.name;
         }
 
-        // Use custom wardrobe if "other" was selected
-        const finalWardrobe = showOtherWardrobeInput && customWardrobe ? customWardrobe : wardrobe;
+        const finalWardrobe =
+            showOtherWardrobeInput && customWardrobe ? customWardrobe : wardrobe;
 
         if (images.length === 0 || !finalCategory || !finalWardrobe) {
             Alert.alert("Error", "At least one image, category & wardrobe are required");
@@ -323,7 +410,7 @@ export default function AddWardrobe() {
         try {
             setLoading(true);
 
-            const token = await getToken();
+            const token = await AsyncStorage.getItem("token");
             if (!token) {
                 Alert.alert("Error", "Token not found. Please login again.");
                 return;
@@ -331,86 +418,73 @@ export default function AddWardrobe() {
 
             const formData = new FormData();
 
-            // Handle web blob URLs
-            images.forEach((img, index) => {
-                if (Platform.OS === "web" && img.uri.startsWith("blob:")) {
-                    // Web blob handling
-                    fetch(img.uri)
-                        .then(res => res.blob())
-                        .then(blob => {
-                            const file = new File(
-                                [blob],
-                                `wardrobe_${Date.now()}_${index}.jpg`,
-                                { type: img.mimeType || "image/jpeg" }
-                            );
-                            formData.append("images", file); // ✅ MUST MATCH backend
-                        });
-                } else {
-                    // Mobile / normal file
+            // ✅ 1) Upload only NEW images
+            images
+                .filter(img => !img.isRemote)
+                .forEach((img, index) => {
                     formData.append("images", {
                         uri: img.uri,
                         name: img.fileName || `wardrobe_${Date.now()}_${index}.jpg`,
                         type: img.mimeType || "image/jpeg",
                     } as any);
-                }
-            });
+                });
 
+            // ✅ 2) Send remaining old images only in EDIT mode
+            if (isEdit) {
+                const existing = images
+                    .filter(img => img.isRemote)
+                    .map(img => {
+                        let path = img.uri;
+
+                        // normalize
+                        if (path.startsWith(SERVER)) {
+                            path = path.replace(SERVER, "");
+                        }
+                        if (path.startsWith("/")) {
+                            path = path.slice(1);
+                        }
+
+
+                        return path;
+                    }); // back to "/uploads/.."
+
+                formData.append("existingImages", JSON.stringify(existing));
+            }
 
             formData.append("category", finalCategory);
             formData.append("wardrobe", finalWardrobe);
             formData.append("price", price || "0");
             formData.append("brand", brand);
             formData.append("visibility", visibility);
+            if (description.trim()) formData.append("description", description.trim());
 
-            const res = await fetch(
-                "https://api.digiwardrobe.com/api/wardrobe/add",
-                {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        // 🚫 DO NOT set Content-Type
-                    },
-                    body: formData,
-                }
-            );
+            // ✅ 3) Decide API based on create/edit
+            const url = isEdit
+                ? `${SERVER}/api/wardrobe/item/${itemId}`
+                : `${SERVER}/api/wardrobe/add`;
+
+            const method = isEdit ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+            });
 
             const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Request failed");
 
-            if (!res.ok) {
-                throw new Error(data.message || "Upload failed");
-            }
-
-            Alert.alert("Success", data.message || "Item added to wardrobe");
+            Alert.alert("Success", isEdit ? "Item updated" : "Item added");
             router.back();
-
         } catch (err: any) {
-            console.log("❌ UPLOAD ERROR FULL:", err);
-
-            if (err.response) {
-                // Server responded (4xx / 5xx)
-                console.log("📦 RESPONSE DATA:", err.response.data);
-                console.log("📡 STATUS:", err.response.status);
-                console.log("📄 HEADERS:", err.response.headers);
-            } else if (err.request) {
-                // Request sent but no response
-                console.log("📭 NO RESPONSE RECEIVED");
-                console.log("📨 REQUEST:", err.request);
-            } else {
-                // Something else failed
-                console.log("⚠️ ERROR MESSAGE:", err.message);
-            }
-
-            Alert.alert(
-                "Upload Error",
-                err.response?.data?.message ||
-                err.message ||
-                "Network request failed"
-            );
-        }
-        finally {
+            Alert.alert("Error", err.message || "Something went wrong");
+        } finally {
             setLoading(false);
         }
     };
+
 
     /* ================= RENDER CATEGORY ITEM ================= */
     const renderCategoryItem = ({ item }: { item: Category }) => (
@@ -517,7 +591,8 @@ export default function AddWardrobe() {
                 <TouchableOpacity onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
-                <Text style={styles.title}>Add to Wardrobe</Text>
+                <Text style={styles.title}>{isEdit ? "Edit Item" : "Add to Wardrobe"}</Text>
+
                 <View style={{ width: 24 }} />
             </View>
 
@@ -526,12 +601,18 @@ export default function AddWardrobe() {
                 {images.length > 0 ? (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {images.map((img, index) => (
-                            <Image
-                                key={index}
-                                source={{ uri: img.uri }}
-                                style={[styles.preview, { marginRight: 8 }]}
-                            />
+                            <View key={index} style={{ position: "relative", marginRight: 8 }}>
+                                <Image source={{ uri: img.uri }} style={styles.preview} />
+
+                                <TouchableOpacity
+                                    style={styles.removeIcon}
+                                    onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}
+                                >
+                                    <Ionicons name="close-circle" size={22} color="#EF4444" />
+                                </TouchableOpacity>
+                            </View>
                         ))}
+
                     </ScrollView>
                 ) : (
                     <>
@@ -719,7 +800,8 @@ export default function AddWardrobe() {
                 {loading ? (
                     <ActivityIndicator color="#fff" />
                 ) : (
-                    <Text style={styles.submitText}>Add to Wardrobe</Text>
+                    <Text style={styles.submitText}>{isEdit ? "Update Item" : "Add to Wardrobe"}</Text>
+
                 )}
             </TouchableOpacity>
 
@@ -913,6 +995,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         marginBottom: 16,
         marginTop: 16,
+    },
+    removeIcon: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+        backgroundColor: "#fff",
+        borderRadius: 12,
     },
     title: { fontSize: 18, fontWeight: "700", color: "#333", paddingLeft: 15 },
     uploadBox: {

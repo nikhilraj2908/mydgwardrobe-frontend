@@ -465,7 +465,7 @@ export default function Explore() {
       item.images?.length && item.images[0]
         ? item.images[0]
         : item.imageUrl;
-    
+    console.log("nikhil check",item.imageUrl)
     const imagePath = rawPath?.replace(/\\/g, "/");
 
     return (

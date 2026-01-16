@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -18,6 +19,7 @@ import api from "../../api/api";
 import SavedGridCard from "../../components/SavedGridCard";
 import { useAuth } from "../../context/AuthContext";
 import { useSavedItems } from "../../context/SavedItemsContext";
+import ScreenWrapper from "../../components/ScreenWrapper";
 // Define types
 const baseURL = api.defaults.baseURL;
 
@@ -29,6 +31,7 @@ interface Wardrobe {
   createdAt: string;
   itemCount?: number;
   totalWorth: number;
+  coverImage?: string;
 }
 
 interface WardrobeItem {
@@ -38,6 +41,7 @@ interface WardrobeItem {
   price: number;
   brand: string;
   imageUrl: string;
+  images?: string[];
 }
 
 interface User {
@@ -64,6 +68,7 @@ interface SavedItem {
   item: {
     _id: string;
     imageUrl: string;
+    images?: string[];
     price: number;
     user: {
       username: string;
@@ -95,7 +100,78 @@ export default function ProfileScreen() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const { resetSaved } = useSavedItems();
-const { clearFollowing } = useFollow();
+  const { clearFollowing } = useFollow();
+
+
+  // 🔹 Wardrobe selection state (Profile page)
+  const [selectedWardrobeIds, setSelectedWardrobeIds] = useState<string[]>([]);
+  const wardrobeSelectionMode = selectedWardrobeIds.length > 0;
+
+  const selectedWardrobe =
+    selectedWardrobeIds.length === 1
+      ? wardrobes.find(w => w._id === selectedWardrobeIds[0])
+      : null;
+
+  const toggleWardrobeSelect = (id: string) => {
+    setSelectedWardrobeIds(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    );
+  };
+
+  const cancelWardrobeSelection = () => {
+    setSelectedWardrobeIds([]);
+  };
+
+  const confirmWardrobeDelete = () => {
+    const isSingle = selectedWardrobeIds.length === 1;
+
+    Alert.alert(
+      isSingle ? "Delete wardrobe?" : "Delete wardrobes?",
+      isSingle
+        ? "All items inside this wardrobe will be permanently deleted. This action cannot be undone."
+        : "All items inside the selected wardrobes will be permanently deleted. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: isSingle
+            ? deleteSingleWardrobeFromProfile
+            : deleteMultipleWardrobesFromProfile,
+        },
+      ]
+    );
+  };
+
+  const deleteSingleWardrobeFromProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      await api.delete(`/api/wardrobe/${selectedWardrobeIds[0]}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSelectedWardrobeIds([]);
+      fetchProfileData();
+    } catch (err) {
+      console.error("Profile single delete failed", err);
+    }
+  };
+
+  const deleteMultipleWardrobesFromProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      await api.delete("/api/wardrobe/bulk-delete", {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { wardrobeIds: selectedWardrobeIds },
+      });
+      setSelectedWardrobeIds([]);
+      fetchProfileData();
+    } catch (err) {
+      console.error("Profile bulk delete failed", err);
+    }
+  };
+
   const fetchLikeCount = async (itemId: string) => {
     try {
       const res = await api.get(`/api/like/item/${itemId}/count`);
@@ -105,7 +181,28 @@ const { clearFollowing } = useFollow();
       return 0;
     }
   };
-const { logout } = useAuth();
+  const { logout } = useAuth();
+
+  const getWardrobeCoverImage = (wardrobeId: string) => {
+    const items = wardrobeItems.filter(i => i.wardrobe === wardrobeId);
+
+    if (!items.length) return null;
+
+    const firstItem = items[0];
+
+    // ✅ NEW SYSTEM FIRST
+    if (firstItem.images?.length && firstItem.images[0]) {
+      return `${baseURL}/${firstItem.images[0]}`;
+    }
+
+    // ⚠️ LEGACY FALLBACK
+    if (firstItem.imageUrl) {
+      return `${baseURL}/${firstItem.imageUrl}`;
+    }
+
+    return null;
+  };
+
 
   useEffect(() => {
     if (activeTab !== "savedItems") return;
@@ -388,6 +485,7 @@ const { logout } = useAuth();
 
   return (
     <>
+
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -395,7 +493,6 @@ const { logout } = useAuth();
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* User info */}
         <View style={styles.userCard}>
           <View style={styles.avatarContainer}>
             {user?.photo ? (
@@ -468,6 +565,8 @@ const { logout } = useAuth();
           </View>
         </View>
 
+
+
         {/* Tabs */}
         <View style={styles.tabRow}>
           <TouchableOpacity
@@ -497,58 +596,149 @@ const { logout } = useAuth();
 
             <TouchableOpacity style={styles.wardrobeCard} onPress={handleAllWardrobeItemsPress}>
               <View style={styles.imagesRow}>
-                {recentWardrobes.slice(0, 3).map((wardrobe, idx) => (
-                  <View
-                    key={wardrobe._id}
-                    style={[
-                      styles.wardrobeColor,
-                      {
-                        backgroundColor: wardrobe.color || "#A855F7",
+                {recentWardrobes.slice(0, 3).map((wardrobe, idx) => {
+                  const coverImage =
+                    wardrobe.coverImage || getWardrobeCoverImage(wardrobe._id);
+
+                  return (
+                    <View
+                      key={wardrobe._id}
+                      style={{
                         marginLeft: idx === 0 ? 0 : -10,
-                        zIndex: 3 - idx
-                      }
-                    ]}
-                  />
-                ))}
-                {recentWardrobes.length === 0 && (
-                  <View style={styles.wardrobeColor} />
-                )}
+                        zIndex: 3 - idx,
+                      }}
+                    >
+                      {coverImage ? (
+                        <View style={styles.imageWrapper}>
+                          <Image
+                            source={{ uri: coverImage }}
+                            style={styles.wardrobeImage}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.imageOverlay} />
+                        </View>
+                      ) : (
+                        <View
+                          style={[
+                            styles.wardrobeColor,
+                            { backgroundColor: wardrobe.color || "#A855F7" },
+                          ]}
+                        />
+                      )}
+                    </View>
+                  );
+                })}
               </View>
+
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.wardrobeName}>All Wardrobe Items</Text>
                 <Text style={styles.itemsCount}>{totalItems} items</Text>
               </View>
+
               <Ionicons name="chevron-forward-outline" size={24} color="#000" />
             </TouchableOpacity>
 
-            {recentWardrobes.map((wardrobe) => (
-              <TouchableOpacity
-                key={wardrobe._id}
-                style={styles.wardrobeCard}
-                onPress={() => handleWardrobePress(wardrobe)}
-              >
-                <View style={styles.imagesRow}>
-                  <View
-                    style={[
-                      styles.wardrobeColor,
-                      { backgroundColor: wardrobe.color || "#A855F7" }
-                    ]}
-                  />
+
+            {recentWardrobes.map((wardrobe) => {
+              const isSelected = selectedWardrobeIds.includes(wardrobe._id);
+
+              return (
+                <TouchableOpacity
+                  key={wardrobe._id}
+                  style={[
+                    styles.wardrobeCard,
+                    isSelected && { borderWidth: 2, borderColor: "#A855F7" },
+                  ]}
+                  onPress={() =>
+                    wardrobeSelectionMode
+                      ? toggleWardrobeSelect(wardrobe._id)
+                      : handleWardrobePress(wardrobe)
+                  }
+                  onLongPress={() => {
+                    if (!wardrobeSelectionMode) {
+                      setSelectedWardrobeIds([wardrobe._id]);
+                    }
+                  }}
+                >
+                  <View style={styles.imagesRow}>
+                    {(() => {
+                      const coverImage =
+                        wardrobe.coverImage || getWardrobeCoverImage(wardrobe._id);
+                      console.log("cover image nikhil", coverImage)
+                      return coverImage ? (
+                        <View style={styles.imageWrapper}>
+                          <Image
+                            source={{ uri: coverImage }}
+                            style={styles.wardrobeImage}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.imageOverlay} />
+                        </View>
+                      ) : (
+                        <View
+                          style={[
+                            styles.wardrobeColor,
+                            { backgroundColor: wardrobe.color || "#A855F7" },
+                          ]}
+                        />
+                      );
+                    })()}
+                  </View>
+
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.wardrobeName}>{wardrobe.name}</Text>
+                    <Text style={styles.itemsCount}>
+                      {wardrobe.itemCount || 0} items
+                    </Text>
+                  </View>
+
+                  <View>
+                    <Text>{formatPrice(wardrobe.totalWorth || 0)}</Text>
+                  </View>
+
+                  {wardrobeSelectionMode ? (
+                    <Ionicons
+                      name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                      size={22}
+                      color="#A855F7"
+                    />
+                  ) : (
+                    <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            {wardrobeSelectionMode && (
+              <View style={styles.selectionBar}>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+
+                  {selectedWardrobeIds.length === 1 && selectedWardrobe && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        router.push({
+                          pathname: "/profile/create-wardrobe",
+                          params: {
+                            id: selectedWardrobe._id,
+                            name: selectedWardrobe.name,
+                            color: selectedWardrobe.color,
+                          },
+                        })
+                      }
+                    >
+                      <Ionicons name="create-outline" size={20} color="#A855F7" />
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity onPress={confirmWardrobeDelete}>
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.wardrobeName}>{wardrobe.name}</Text>
-                  <Text style={styles.itemsCount}>
-                    {wardrobe.itemCount || 0} items
-                  </Text>
-                </View>
-                <View>
-                  <Text>
-                    {formatPrice(wardrobe.totalWorth || 0)}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward-outline" size={24} color="#000" />
-              </TouchableOpacity>
-            ))}
+
+                <TouchableOpacity onPress={cancelWardrobeSelection}>
+                  <Ionicons name="close-outline" size={22} color="#585858ff" />
+                </TouchableOpacity>
+              </View>
+            )}
 
             {wardrobes.length > 3 && (
               <TouchableOpacity
@@ -562,7 +752,7 @@ const { logout } = useAuth();
             )}
             {wardrobes.length === 0 && (
               <View style={styles.emptyState}>
-                <Ionicons name="folder-outline" size={48} color="#ccc" />
+                <Ionicons name="folder-outline" size={48} color="#e677f5ff" />
                 <Text style={styles.emptyStateText}>No wardrobes yet</Text>
                 <Text style={styles.emptyStateSubText}>
                   Create your first wardrobe to organize your items
@@ -600,22 +790,27 @@ const { logout } = useAuth();
                     {savedItems.map((saved) => {
                       if (!saved.item) return null; // 🛡️ safety guard
 
+                      const imagePath =
+                        saved.item.images?.length && saved.item.images[0]
+                          ? saved.item.images[0]          // ✅ NEW SYSTEM
+                          : saved.item.imageUrl;          // ⚠️ LEGACY FALLBACK
+
                       const itemData = {
                         _id: saved.item._id,
                         name: saved.item.name || "Item",
                         brand: saved.item.brand || saved.item.user?.username || "Brand",
                         price: saved.item.price || 0,
                         likes: likeCounts[saved.item._id] || 0,
-                        imageUrl: saved.item.imageUrl,
+                        imageUrl: imagePath,              // ✅ unified
                       };
+
 
                       return (
                         <View key={saved._id} style={styles.gridItem}>
                           <SavedGridCard
                             item={itemData}
-                            onPress={() =>
-                              console.log("Pressed item:", saved.item._id)
-                            }
+
+                            onPress={() => router.push(`/wardrobe/item/${itemData._id}`)}
                           />
                         </View>
                       );
@@ -679,8 +874,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffffd8",
     paddingTop: 20
+  },
+  selectionBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FAF5FF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
   },
   loadingContainer: {
     flex: 1,
@@ -703,6 +910,33 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: "relative",
   },
+  imageWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#E5E7EB",
+
+    // ✅ iOS shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+
+    // ✅ Android shadow
+    elevation: 4,
+  },
+
+  wardrobeImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#a955f73f", // 👈 keeps text readable
+  },
+
   avatar: {
     width: 70,
     height: 70,
@@ -770,12 +1004,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   handle: {
-    color: "#777",
+    color: "#777676ff",
     fontSize: 14,
     marginBottom: 8,
   },
   bio: {
-    color: "#444",
+    color: "#000000ff",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -794,9 +1028,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 18,
     marginBottom: 4,
+    color: "#d05bffff",
   },
   statLabel: {
-    color: "#777",
+    color: "#000000ff",
     fontSize: 12,
   },
   tabRow: {
