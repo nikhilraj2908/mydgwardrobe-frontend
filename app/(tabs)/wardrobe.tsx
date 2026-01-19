@@ -54,7 +54,7 @@ export default function Wardrobe() {
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff", paddingTop: 15 }}>
+    <View style={{ flex: 1, backgroundColor: "#fff"}}>
       <WardrobeHeader
         onBack={() => router.back()}
         onSearch={() => console.log("Search")}

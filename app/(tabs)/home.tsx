@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     
     backgroundColor: "#fff",
     paddingHorizontal: 16,
-    paddingTop: 25,
+
   },
   headerIcon: {
     width: 24,

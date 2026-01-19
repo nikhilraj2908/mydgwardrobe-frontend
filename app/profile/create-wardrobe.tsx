@@ -3,16 +3,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import api from "../../api/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const COLORS = [
   "#F97316",
@@ -27,134 +28,136 @@ const COLORS = [
 
 export default function CreateWardrobe() {
   const router = useRouter();
-const params = useLocalSearchParams();
-const wardrobeId = params.id as string | undefined;
-const isEditMode = !!wardrobeId;
- const [name, setName] = useState(params.name?.toString() || "");
-const [color, setColor] = useState(
-  params.color?.toString() || COLORS[0]
-);
+  const params = useLocalSearchParams();
+  const wardrobeId = params.id as string | undefined;
+  const isEditMode = !!wardrobeId;
+  const [name, setName] = useState(params.name?.toString() || "");
+  const [color, setColor] = useState(
+    params.color?.toString() || COLORS[0]
+  );
   const [loading, setLoading] = useState(false);
 
- const submitWardrobe = async () => {
-  if (!name.trim()) {
-    Alert.alert("Error", "Wardrobe name is required");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    const token = await AsyncStorage.getItem("token");
-    if (!token) {
-      Alert.alert("Error", "Please login again");
+  const submitWardrobe = async () => {
+    if (!name.trim()) {
+      Alert.alert("Error", "Wardrobe name is required");
       return;
     }
 
-    if (isEditMode) {
-      // ✅ EDIT
-      await api.put(
-        `/api/wardrobe/${wardrobeId}`,
-        { name, color },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+    try {
+      setLoading(true);
 
-      Alert.alert("Success", "Wardrobe updated");
-    } else {
-      // ✅ CREATE
-      await api.post(
-        "/api/wardrobe/create",
-        { name, color },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Error", "Please login again");
+        return;
+      }
 
-      Alert.alert("Success", "Wardrobe created");
+      if (isEditMode) {
+        // ✅ EDIT
+        await api.put(
+          `/api/wardrobe/${wardrobeId}`,
+          { name, color },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        Alert.alert("Success", "Wardrobe updated");
+      } else {
+        // ✅ CREATE
+        await api.post(
+          "/api/wardrobe/create",
+          { name, color },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        Alert.alert("Success", "Wardrobe created");
+      }
+
+      router.back();
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
+        err?.response?.data?.message || "Operation failed"
+      );
+    } finally {
+      setLoading(false);
     }
-
-    router.back();
-  } catch (err: any) {
-    Alert.alert(
-      "Error",
-      err?.response?.data?.message || "Operation failed"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.title}>
-  {isEditMode ? "Edit Wardrobe" : "Create Wardrobe"}
-</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {/* Name */}
-      <Text style={styles.label}>Wardrobe Name</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. Summer Collection"
-        value={name}
-        onChangeText={setName}
-      />
-
-      {/* Color */}
-      <Text style={styles.label}>Choose Color</Text>
-      <View style={styles.colorGrid}>
-        {COLORS.map((c) => (
-          <TouchableOpacity
-            key={c}
-            style={[
-              styles.colorBox,
-              { backgroundColor: c },
-              color === c && styles.activeColor,
-            ]}
-            onPress={() => setColor(c)}
-          >
-            {color === c && (
-              <Ionicons name="checkmark" size={20} color="#fff" />
-            )}
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+      <ScrollView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} />
           </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Preview */}
-      <Text style={styles.label}>Preview</Text>
-      <View style={[styles.previewCard, { backgroundColor: color + "33" }]}>
-        <View style={[styles.previewIcon, { backgroundColor: color }]} />
-        <View>
-          <Text style={styles.previewName}>{name || "Wardrobe"}</Text>
-          <Text style={styles.previewCount}>0 items</Text>
+          <Text style={styles.title}>
+            {isEditMode ? "Edit Wardrobe" : "Create Wardrobe"}
+          </Text>
+          <View style={{ width: 24 }} />
         </View>
-      </View>
 
-      {/* Submit */}
-      <TouchableOpacity
-  style={styles.submitBtn}
-  onPress={submitWardrobe}
-  disabled={loading}
->
-  <Text style={styles.submitText}>
-    {loading
-      ? isEditMode
-        ? "Updating..."
-        : "Creating..."
-      : isEditMode
-      ? "Update Wardrobe"
-      : "Create Wardrobe"}
-  </Text>
-</TouchableOpacity>
-    </ScrollView>
+        {/* Name */}
+        <Text style={styles.label}>Wardrobe Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Summer Collection"
+          value={name}
+          onChangeText={setName}
+        />
+
+        {/* Color */}
+        <Text style={styles.label}>Choose Color</Text>
+        <View style={styles.colorGrid}>
+          {COLORS.map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={[
+                styles.colorBox,
+                { backgroundColor: c },
+                color === c && styles.activeColor,
+              ]}
+              onPress={() => setColor(c)}
+            >
+              {color === c && (
+                <Ionicons name="checkmark" size={20} color="#fff" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Preview */}
+        <Text style={styles.label}>Preview</Text>
+        <View style={[styles.previewCard, { backgroundColor: color + "33" }]}>
+          <View style={[styles.previewIcon, { backgroundColor: color }]} />
+          <View>
+            <Text style={styles.previewName}>{name || "Wardrobe"}</Text>
+            <Text style={styles.previewCount}>0 items</Text>
+          </View>
+        </View>
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={styles.submitBtn}
+          onPress={submitWardrobe}
+          disabled={loading}
+        >
+          <Text style={styles.submitText}>
+            {loading
+              ? isEditMode
+                ? "Updating..."
+                : "Creating..."
+              : isEditMode
+                ? "Update Wardrobe"
+                : "Create Wardrobe"}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

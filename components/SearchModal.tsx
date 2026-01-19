@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   modalContainer: {
-    marginTop: 8,
+    marginTop: 20,
     marginHorizontal: 16,
     backgroundColor: "#fff",
     borderRadius: 14,

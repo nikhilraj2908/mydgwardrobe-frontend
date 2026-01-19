@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ✅ Import centralized axios instance
 import api from "../../api/api"; // adjust path if needed
+import { checkIfConfigIsValid } from "react-native-reanimated/lib/typescript/animation/spring";
 
 // Type definition for Category
 interface Category {
@@ -50,6 +51,104 @@ const DEFAULT_CATEGORIES = {
         // "Kurtis", "Anarkalis", "Blouse", "Traditional Wear", "Accessories"
     ]
 };
+
+
+const CATEGORY_ICONS = {
+    mens: {
+        accessories: require("../../assets/categories/mens/Accessories.png"),
+        blazers: require("../../assets/categories/mens/Blazers.png"),
+        cargos: require("../../assets/categories/mens/Cargo.png"),
+        shirts: require("../../assets/categories/mens/Shirts.png"),
+        chinos: require("../../assets/categories/mens/Chino.png"),
+        coats: require("../../assets/categories/mens/Coats.png"),
+        denimjackets: require("../../assets/categories/mens/DenimJackets.png"),
+        dhotis: require("../../assets/categories/mens/Dhotis.png"),
+        formalwear: require("../../assets/categories/mens/FormalWear.png"),
+        hoodies: require("../../assets/categories/mens/Hoodies.png"),
+        jackets: require("../../assets/categories/mens/Jackets.png"),
+        jeans: require("../../assets/categories/mens/Jeans.png"),
+        joggers: require("../../assets/categories/mens/Joggers.png"),
+        kurtas: require("../../assets/categories/mens/Kurtas.png"),
+        pajamas: require("../../assets/categories/mens/Pajamas.png"),
+        pants: require("../../assets/categories/mens/Pants.png"),
+        poloshirts: require("../../assets/categories/mens/PoloShirts.png"),
+        raincoats: require("../../assets/categories/mens/Raincoats.png"),
+        sherwanis: require("../../assets/categories/mens/Sherwanis.png"),
+        shorts: require("../../assets/categories/mens/Shorts.png"),
+        socks: require("../../assets/categories/mens/Socks.png"),
+        sportswear: require("../../assets/categories/mens/Sportswear.png"),
+        lifestyle: require("../../assets/categories/mens/Lifestyle.png"),
+        straightfit: require("../../assets/categories/mens/Straightfit.png"),
+        suits: require("../../assets/categories/mens/Suits.png"),
+        tanktops: require("../../assets/categories/mens/TankTops.png"),
+        thermals: require("../../assets/categories/mens/Thermals.png"),
+        trackpants: require("../../assets/categories/mens/TrackPants.png"),
+        traditionalwear: require("../../assets/categories/mens/TraditionalWear.png"),
+        trousers: require("../../assets/categories/mens/Trousers.png"),
+        underwear: require("../../assets/categories/mens/Underwear.png"),
+        vests: require("../../assets/categories/mens/Vests.png"),
+        sweaters: require("../../assets/categories/mens/Sweaters.png"),
+        swimwear: require("../../assets/categories/mens/Swimwear.png"),
+        leatherjackets: require("../../assets/categories/mens/LeatherJackets.png"),
+        casualwear: require("../../assets/categories/mens/CasualWear.png"),
+        "t-shirts": require("../../assets/categories/mens/T-Shirts.png"),
+    },
+
+    womens: {
+        accessories: require("../../assets/categories/womens/Accessories.png"),
+        anarkalis: require("../../assets/categories/womens/Anarkali.png"),
+        bikinis: require("../../assets/categories/womens/Bikini.png"),
+        blazers: require("../../assets/categories/womens/Blazer.png"),
+        blouse: require("../../assets/categories/womens/Blouse.png"),
+        bras: require("../../assets/categories/womens/Bra.png"),
+        capris: require("../../assets/categories/womens/Capri.png"),
+        cardigans: require("../../assets/categories/womens/Cardigan.png"),
+        casualwear: require("../../assets/categories/womens/CasualWear.png"),
+        coats: require("../../assets/categories/womens/Coat.png"),
+        dresses: require("../../assets/categories/womens/Dress.png"),
+        formalwear: require("../../assets/categories/womens/Dress.png"),
+        gowns: require("../../assets/categories/womens/Gown.png"),
+        hoodies: require("../../assets/categories/womens/Hoodie.png"),
+        jackets: require("../../assets/categories/womens/Jacket.png"),
+        jeans: require("../../assets/categories/womens/Jean.png"),
+        jumpsuits: require("../../assets/categories/womens/Jumpsuit.png"),
+        kurtis: require("../../assets/categories/womens/Kurti.png"),
+        leggings: require("../../assets/categories/womens/Legging.png"),
+        lehengas: require("../../assets/categories/womens/Lehnga.png"),
+        lingerie: require("../../assets/categories/womens/Lingerie.png"),
+        nightwear: require("../../assets/categories/womens/NightWear.png"),
+        pajamas: require("../../assets/categories/womens/Pajama.png"),
+        panties: require("../../assets/categories/womens/Panty.png"),
+        palazzos: require("../../assets/categories/womens/Plazzo.png"),
+        raincoats: require("../../assets/categories/womens/Raincoat.png"),
+        rompers: require("../../assets/categories/womens/Romper.png"),
+        salwarsuits: require("../../assets/categories/womens/SalwarSuit.png"),
+        sarees: require("../../assets/categories/womens/Saree.png"),
+        shirts: require("../../assets/categories/womens/Shirt.png"),
+        socks: require("../../assets/categories/womens/Socks.png"),
+        shorts: require("../../assets/categories/womens/Shorts.png"),
+        sportswear: require("../../assets/categories/womens/SportsWear.png"),
+        stockings: require("../../assets/categories/womens/Stocking.png"),
+        suits: require("../../assets/categories/womens/Suit.png"),
+        sweaters: require("../../assets/categories/womens/Sweater.png"),
+        swimwear: require("../../assets/categories/womens/SwimWear.png"),
+        tanktops: require("../../assets/categories/womens/TankTop.png"),
+        traditionalwear: require("../../assets/categories/womens/TraditionalWear.png"),
+        trousers: require("../../assets/categories/womens/Trouser.png"),
+        't-shirts': require("../../assets/categories/womens/Tshirt.png"),
+        vests: require("../../assets/categories/womens/Vest.png"),
+        tops: require("../../assets/categories/womens/Top.png"),
+        skirts: require("../../assets/categories/womens/Skirt.png"),
+
+    },
+
+    unisex: {},
+
+};
+
+
+const normalizeCategoryKey = (name: string) =>
+  name.toLowerCase().replace(/\s+/g, "");
 
 export default function AddWardrobe() {
     const router = useRouter();
@@ -143,6 +242,47 @@ export default function AddWardrobe() {
 
         fetchItem();
     }, [isEdit, itemId]);
+
+const getCategoryIcon = (item: Category) => {
+  const key = normalizeCategoryKey(item.name);
+
+  if (item.type === "mens" && CATEGORY_ICONS.mens[key]) {
+    return CATEGORY_ICONS.mens[key];
+  }
+
+  if (item.type === "womens" && CATEGORY_ICONS.womens[key]) {
+    return CATEGORY_ICONS.womens[key];
+  }
+
+  return null;
+};
+
+    const CategoryCard = ({ item }: { item: Category }) => {
+        const icon = getCategoryIcon(item);
+        return (
+            <TouchableOpacity
+                style={styles.categoryCard}
+                onPress={() => handleCategorySelect(item)}
+                onLongPress={() => {
+                    if (!item._id.startsWith("default-")) {
+                        handleDeleteCategory(item._id);
+                    }
+                }}
+            >
+                <View style={styles.categoryIconWrap}>
+                    {icon ? (
+                        <Image source={icon} style={styles.categoryIcon} />
+                    ) : (
+                        <Ionicons name="shirt-outline" size={28} color="#A855F7" />
+                    )}
+                </View>
+
+                <Text style={styles.categoryCardText} numberOfLines={1}>
+                    {item.name}
+                </Text>
+            </TouchableOpacity>
+        );
+    };
 
     /* ================= FETCH CATEGORIES ================= */
     const fetchCategories = async () => {
@@ -519,55 +659,34 @@ export default function AddWardrobe() {
     );
 
     /* ================= RENDER CATEGORY SECTION ================= */
-    const renderCategorySection = (title: string, data: Category[], typeFilter: 'mens' | 'womens' | "unisex") => {
-        const filteredData = data.filter(item => item.type === typeFilter);
-        const displayData = searchQuery === ""
-            ? filteredData
-            : filteredData.filter(item =>
-                item.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
+    const renderCategorySection = (
+        title: string,
+        data: Category[],
+        typeFilter: "mens" | "womens" | "unisex"
+    ) => {
+        const sectionData = data.filter(c => c.type === typeFilter);
 
-        if (displayData.length === 0) return null;
+        if (sectionData.length === 0) return null;
 
         return (
-            <View key={`section-${typeFilter}`}>
+            <View style={{ marginBottom: 16 }}>
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionHeaderText}>{title}</Text>
-                    <Text style={styles.sectionCount}>{displayData.length} items</Text>
+                    <Text style={styles.sectionCount}>{sectionData.length} items</Text>
                 </View>
-                <View style={styles.sectionContent}>
-                    {displayData.map((item) => (
-                        <TouchableOpacity
-                            key={item._id}
-                            style={[
-                                styles.categoryChip,
-                                {
-                                    backgroundColor: item.type === 'mens' ? '#EFF6FF' : '#FDF2F8',
-                                    borderColor: item.type === 'mens' ? '#BFDBFE' : '#FBCFE8'
-                                }
-                            ]}
-                            onPress={() => handleCategorySelect(item)}
-                            onLongPress={() => {
-                                if (!item._id.startsWith('default-')) {
-                                    handleDeleteCategory(item._id);
-                                }
-                            }}
-                        >
-                            <Text style={[
-                                styles.categoryChipText,
-                                { color: item.type === 'mens' ? '#1D4ED8' : '#BE185D' }
-                            ]}>
-                                {item.name}
-                            </Text>
-                            {!item._id.startsWith('default-') && (
-                                <Ionicons name="trash-outline" size={14} color="#FF3B30" style={styles.chipDeleteIcon} />
-                            )}
-                        </TouchableOpacity>
-                    ))}
-                </View>
+
+                <FlatList
+                    data={sectionData}
+                    keyExtractor={(item) => item._id}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 16 }}
+                    renderItem={({ item }) => <CategoryCard item={item} />}
+                />
             </View>
         );
     };
+
 
     /* ================= HANDLE CREATE CUSTOM CATEGORY ================= */
     const handleCreateCustomCategory = async () => {
@@ -990,11 +1109,11 @@ export default function AddWardrobe() {
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+    container: { flex: 1, padding: 16, backgroundColor: "#fff" ,paddingTop: 0},
     header: {
         flexDirection: "row",
         marginBottom: 16,
-        marginTop: 16,
+        
     },
     removeIcon: {
         position: "absolute",
@@ -1063,6 +1182,35 @@ const styles = StyleSheet.create({
         padding: 14,
         backgroundColor: "#fff",
     },
+    categoryCard: {
+        width: 90,
+        alignItems: "center",
+        marginRight: 12,
+    },
+
+    categoryIconWrap: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: "#F3E8FF",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 6,
+    },
+
+    categoryIcon: {
+        width: 36,
+        height: 36,
+        resizeMode: "contain",
+    },
+
+    categoryCardText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#333",
+        textAlign: "center",
+    },
+
     dropdownTextSelected: {
         fontSize: 16,
         color: "#000",
@@ -1344,5 +1492,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#999",
         marginTop: 4,
-    },
+    }
+    ,
 });

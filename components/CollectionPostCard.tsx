@@ -25,6 +25,7 @@ interface WardrobeSummary {
   _id: string;
   name: string;
   coverImage?: string;
+  images?: string[];
   totalItems: number;
   totalWorth: number;
   hasPrivateItems?: boolean;
@@ -100,6 +101,7 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
       }
     );
 
+
     setWardrobes(res.data?.wardrobes || []);
     setIsOwner(res.data.isOwner);
 
@@ -167,6 +169,26 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
 
     setIsOpen(false);
   };
+
+  
+    const getWardrobeImage = (w: WardrobeSummary) => {
+      // ✅ NEW system first
+      if (w.images?.length && w.images[0]) {
+        const img = w.images[0];
+        return img.startsWith("http")
+          ? img
+          : `${BASE_URL}${img.startsWith("/") ? img : `/${img}`}`;
+      }
+
+      // ⚠️ LEGACY fallback
+      if (w.coverImage) {
+        return w.coverImage.startsWith("http")
+          ? w.coverImage
+          : `${BASE_URL}${w.coverImage.startsWith("/") ? w.coverImage : `/${w.coverImage}`}`;
+      }
+
+      return null;
+    };
 
   return (
     <View style={styles.container}>
@@ -269,6 +291,7 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
               >
 
                 {wardrobes.map((w) => (
+                  
                   <TouchableOpacity
                     key={w._id}
                     style={styles.wardrobeCard}
@@ -286,12 +309,13 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
                   >
                     <Image
                       source={
-                        w.coverImage
-                          ? { uri: `${BASE_URL}/${w.coverImage}` }
+                        getWardrobeImage(w)
+                          ? { uri: getWardrobeImage(w)! }
                           : require("../assets/images/icon.png")
                       }
                       style={styles.wardrobeImage}
                     />
+
                     <Text style={styles.wardrobeName}>{w.name}</Text>
                   </TouchableOpacity>
                 ))}

@@ -1,130 +1,142 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Image, Platform, StyleSheet, TouchableOpacity, View ,ImageBackground} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  Image,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-
-  // Base height of the visible bar (without phone bottom inset)
-  const BASE_BAR_HEIGHT = Platform.OS === "ios" ? 60 : 60;
+  const BASE_BAR_HEIGHT = 60;
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-
-        // ✅ This is the main fix
-        tabBarStyle: {
-          height: BASE_BAR_HEIGHT + insets.bottom,   // ✅ adds space for 3-button nav / iPhone home indicator
-          paddingBottom: insets.bottom,              // ✅ keeps icons above system area
-          paddingTop: 10,
-
-          borderTopWidth: 0,
-          elevation: 10,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          backgroundColor: "#ffffffff",
-          position: "relative",
-        },
-
-        tabBarActiveTintColor: "#A855F7",
-        tabBarInactiveTintColor: "#9CA3AF",
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-          marginBottom: 4,
-        },
-
-        // Optional but good UX:
-        // tabBarHideOnKeyboard: true,
-      }}
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#ffffffff" }}
+      edges={["top"]} // ✅ fixes status bar overlap
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={require("../../assets/icons/home.png")}
-              style={[
-                styles.tabIcon,
-                { tintColor: focused ? "#A855F7" : undefined },
-              ]}
-            />
-          ),
-        }}
-      />
+      <Tabs
+        screenOptions={{
+          headerShown: false,
 
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={require("../../assets/icons/search.png")}
-              style={[
-                styles.tabIcon,
-                { tintColor: focused ? "#A855F7" : undefined },
-              ]}
-            />
-          ),
-        }}
-      />
+          tabBarStyle: {
+            height: BASE_BAR_HEIGHT + insets.bottom,
+            paddingBottom: insets.bottom,
+            paddingTop: 10,
 
-      <Tabs.Screen
-        name="add-wardrobe"
-        options={{
-          title: "",
-          tabBarIcon: () => null,
-          tabBarButton: (props) => (
-            <View style={styles.centerButtonContainer}>
-              <TouchableOpacity {...props} style={styles.centerButton} activeOpacity={0.8}>
-                <View style={styles.centerButtonInner}>
-                  <Ionicons name="add" size={32} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-            </View>
-          ),
-        }}
-      />
+            borderTopWidth: 0,
+            elevation: 10,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            backgroundColor: "#ffffffff",
+          },
 
-      <Tabs.Screen
-        name="wardrobe"
-        options={{
-          title: "Wardrobe",
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={require("../../assets/icons/logo.png")}
-              style={[
-                styles.wardrobeIcon,
-                { tintColor: focused ? "#A855F7" : "#424141ff" },
-              ]}
-            />
-          ),
+          tabBarActiveTintColor: "#A855F7",
+          tabBarInactiveTintColor: "#9CA3AF",
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: "500",
+            marginBottom: 4,
+          },
         }}
-      />
+      >
+        <Tabs.Screen
+          name="home"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={require("../../assets/icons/home.png")}
+                style={[
+                  styles.tabIcon,
+                  { tintColor: focused ? "#A855F7" : undefined },
+                ]}
+              />
+            ),
+          }}
+        />
 
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={require("../../assets/icons/person.png")}
-              style={[
-                styles.tabIcon,
-                { tintColor: focused ? "#A855F7" : undefined },
-              ]}
-            />
-          ),
-        }}
-      />
-    </Tabs>
+        <Tabs.Screen
+          name="explore"
+          options={{
+            title: "Explore",
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={require("../../assets/icons/search.png")}
+                style={[
+                  styles.tabIcon,
+                  { tintColor: focused ? "#A855F7" : undefined },
+                ]}
+              />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="add-wardrobe"
+          options={{
+            title: "",
+            tabBarIcon: () => null,
+            tabBarButton: (props) => (
+              <View style={styles.centerButtonContainer}>
+                <TouchableOpacity
+                  {...props}
+                  style={styles.centerButton}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.centerButtonInner}>
+                    <Ionicons name="add" size={32} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="wardrobe"
+          options={{
+            title: "Wardrobe",
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={require("../../assets/icons/logo.png")}
+                style={[
+                  styles.wardrobeIcon,
+                  { tintColor: focused ? "#A855F7" : "#424141ff" },
+                ]}
+              />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={require("../../assets/icons/person.png")}
+                style={[
+                  styles.tabIcon,
+                  { tintColor: focused ? "#A855F7" : undefined },
+                ]}
+              />
+            ),
+          }}
+        />
+      </Tabs>
+    </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   tabIcon: {

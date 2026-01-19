@@ -15,6 +15,7 @@ import {
     View
 } from "react-native";
 import api from "../../api/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface UserProfile {
   _id: string;
@@ -307,6 +308,7 @@ const baseURL = api.defaults.baseURL!;
   }
 
   return (
+     <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
@@ -454,6 +456,7 @@ const baseURL = api.defaults.baseURL!;
 
       <View style={{ height: 40 }} />
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -463,7 +466,8 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     padding: 16, 
-    backgroundColor: "#fff" 
+    backgroundColor: "#fff" ,
+    paddingTop: 0,
   },
   loadingContainer: {
     flex: 1,

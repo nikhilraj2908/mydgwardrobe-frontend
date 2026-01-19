@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: "#ffffffd8",
-    paddingTop: 20
+    paddingTop: 0
   },
   selectionBar: {
     flexDirection: "row",

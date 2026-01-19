@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const baseURL = api.defaults.baseURL;
 
@@ -47,6 +48,7 @@ export default function FollowersPage() {
    const followed = ready ? isFollowing(item._id) : false;
 
     return (
+        
       <TouchableOpacity
         style={styles.userRow}
         onPress={() => router.push(`/profile/${item._id}`)}
@@ -82,6 +84,7 @@ export default function FollowersPage() {
   };
 
   return (
+     <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
     <View style={styles.container}>
       {/* ✅ HEADER */}
       <WardrobeHeader
@@ -127,6 +130,7 @@ export default function FollowersPage() {
         />
       )}
     </View>
+    </SafeAreaView>
   );
 }
 
