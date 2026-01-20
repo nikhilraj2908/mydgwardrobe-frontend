@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import api from "../../api/api";
+import AppBackground from "@/components/AppBackground";
 
 export default function Wardrobe() {
   const router = useRouter();
@@ -54,7 +55,8 @@ export default function Wardrobe() {
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff"}}>
+    <AppBackground>
+    <View style={{ flex: 1, paddingTop:5}}>
       <WardrobeHeader
         onBack={() => router.back()}
         onSearch={() => console.log("Search")}
@@ -84,6 +86,7 @@ export default function Wardrobe() {
         }
       />
     </View>
+    </AppBackground>
   );
 }
 

@@ -10,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ImageBackground
 } from "react-native";
 
 import api from "../../api/api"; // ✅ Axios instance
@@ -55,7 +56,7 @@ export default function OtpVerify() {
 
       // Use the auth context login function (it will redirect to profile)
       await login(res.data.token);
-      
+
       Alert.alert("Success", "Logged in successfully!");
     } catch (err) {
       setLoading(false);
@@ -86,47 +87,62 @@ export default function OtpVerify() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Ionicons name="arrow-back" size={26} color="#000" />
-      </TouchableOpacity>
+    <ImageBackground
+      source={require("../../assets/images/bgallpage.png")}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      {/* Dark overlay to make white elements stand out */}
+      <View style={styles.overlay} />
+      <ScrollView contentContainerStyle={styles.container}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={26} color="#000" />
+        </TouchableOpacity>
 
-      <Text style={styles.title}>Enter OTP</Text>
-      <Text style={styles.subtitle}>OTP sent to: {email}</Text>
+        <Text style={styles.title}>Enter OTP</Text>
+        <Text style={styles.subtitle}>OTP sent to: {email}</Text>
 
-      <View style={styles.otpContainer}>
-        {otp.map((digit, index) => (
-          <TextInput
-            key={index}
-            ref={inputs[index]}
-            style={styles.otpBox}
-            keyboardType="number-pad"
-            maxLength={1}
-            value={digit}
-            onChangeText={(txt) => handleChange(txt, index)}
-          />
-        ))}
-      </View>
+        <View style={styles.otpContainer}>
+          {otp.map((digit, index) => (
+            <TextInput
+              key={index}
+              ref={inputs[index]}
+              style={styles.otpBox}
+              keyboardType="number-pad"
+              maxLength={1}
+              value={digit}
+              onChangeText={(txt) => handleChange(txt, index)}
+            />
+          ))}
+        </View>
 
-      <TouchableOpacity onPress={verifyCode} style={styles.btnWrapper}>
-        <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.btn}>
-          <Text style={styles.btnText}>
-            {loading ? "Verifying..." : "Verify"}
+        <TouchableOpacity onPress={verifyCode} style={styles.btnWrapper}>
+          <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.btn}>
+            <Text style={styles.btnText}>
+              {loading ? "Verifying..." : "Verify"}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={resendOtp}>
+          <Text style={styles.resendText}>
+            {resending ? "Resending..." : "Resend OTP"}
           </Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={resendOtp}>
-        <Text style={styles.resendText}>
-          {resending ? "Resending..." : "Resend OTP"}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        </TouchableOpacity>
+      </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, paddingHorizontal: 25, paddingTop: 40, backgroundColor: "#FFF" },
+  container: { flexGrow: 1, paddingHorizontal: 25, paddingTop: 40 },
+  background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+
+  },
+ 
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: "#F4EBFF",

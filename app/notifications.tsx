@@ -1,4 +1,5 @@
 import api from "@/api/api";
+import AppBackground from "@/components/AppBackground";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -112,6 +113,7 @@ export default function NotificationsScreen() {
     };
 
     return (
+        <AppBackground>
         <View style={styles.container}>
             {/* ================= HEADER ================= */}
             <View style={styles.header}>
@@ -184,6 +186,7 @@ export default function NotificationsScreen() {
                 )}
             />
         </View>
+        </AppBackground>
     );
 }
 
@@ -191,7 +194,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
+        backgroundColor: "#ffffff96",
         padding: 16,
         marginTop: 30,
     },

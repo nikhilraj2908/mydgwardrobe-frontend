@@ -14,6 +14,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import api from "../../api/api";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AppBackground from "@/components/AppBackground";
 
 const COLORS = [
   "#F97316",
@@ -88,7 +89,8 @@ export default function CreateWardrobe() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+    <AppBackground>
+          <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
       <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -158,11 +160,13 @@ export default function CreateWardrobe() {
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
+    </AppBackground>
+
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  container: { flex: 1, padding: 16, backgroundColor: "#ffffff7c" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

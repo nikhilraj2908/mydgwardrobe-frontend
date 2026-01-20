@@ -14,6 +14,7 @@ import {
   View
 } from "react-native";
 import { useAuth } from '../../context/AuthContext';
+import { ImageBackground } from "react-native";
 const API_URL = Constants.expoConfig.extra.apiBaseUrl;
 
 export default function LoginWithUsername() {
@@ -51,6 +52,13 @@ export default function LoginWithUsername() {
   };
 
   return (
+    <ImageBackground
+              source={require("../../assets/images/bgallpage.png")}
+              style={styles.background}
+              resizeMode="cover"
+            >
+              {/* Dark overlay to make white elements stand out */}
+              <View style={styles.overlay} />
     <View style={styles.container}>
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
         <View style={styles.backIconWrapper}>
@@ -119,6 +127,7 @@ export default function LoginWithUsername() {
         {/* <Text style={styles.signupText}>Sign up</Text> */}
       </Text>
     </View>
+    </ImageBackground>
   );
 }
 
@@ -126,11 +135,15 @@ export default function LoginWithUsername() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
     paddingHorizontal: 25,
     paddingTop: 50,
   },
-
+ background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  
   backBtn: {
     marginBottom: 10,
   },

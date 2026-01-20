@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import api from "../../api/api";
 import { useSavedItems } from "../../context/SavedItemsContext";
+import AppBackground from "@/components/AppBackground";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - 40) / 2;
@@ -680,6 +681,7 @@ export default function Explore() {
   );
 
   return (
+    <AppBackground>
     <View style={styles.screenContainer}>
       <WardrobeHeader
         onBack={() => router.back()}
@@ -764,6 +766,7 @@ export default function Explore() {
 
       {renderSortModal()}
     </View>
+    </AppBackground>
   );
 }
 
@@ -773,24 +776,22 @@ export default function Explore() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: "#fff",
+    paddingTop:5
   },
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   headerContainer: {
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 8,
-    backgroundColor: "#fff",
   },
 
   // Search Box
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f5f5f7",
+    backgroundColor: "#ffffffff",
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 50,
@@ -815,7 +816,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: "#f5f5f7",
+    backgroundColor: "#ffffffff",
     borderRadius: 25,
     marginRight: 10,
   },
@@ -849,7 +850,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#f5f5f7",
+    backgroundColor: "#ffffffff",
     borderRadius: 20,
   },
   sortButtonText: {

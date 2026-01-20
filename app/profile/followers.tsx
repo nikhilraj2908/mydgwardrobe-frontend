@@ -1,4 +1,5 @@
 import api from "@/api/api";
+import AppBackground from "@/components/AppBackground";
 import WardrobeHeader from "@/components/WardrobeHeader";
 import { useFollow } from "@/context/FollowContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -84,6 +85,7 @@ export default function FollowersPage() {
   };
 
   return (
+    <AppBackground>
      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
     <View style={styles.container}>
       {/* ✅ HEADER */}
@@ -131,6 +133,7 @@ export default function FollowersPage() {
       )}
     </View>
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
@@ -139,7 +142,7 @@ export default function FollowersPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff71",
   },
 
   /* Tabs */

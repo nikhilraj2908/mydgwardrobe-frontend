@@ -1,10 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity,ImageBackground } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Icon from "react-native-vector-icons/Ionicons";
 
 export default function ResetLinkSent() {
   return (
+     <ImageBackground
+                      source={require("../../assets/images/bgallpage.png")}
+                      style={styles.background}
+                      resizeMode="cover"
+                    >
+                      {/* Dark overlay to make white elements stand out */}
+                      <View style={styles.overlay} />
     <View style={styles.container}>
       
       {/* Back Button */}
@@ -44,15 +51,21 @@ export default function ResetLinkSent() {
       </Text>
 
     </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     padding: 25,
     justifyContent: "center",
+  },
+ background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+
   },
 
   backBtn: {

@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // ✅ Import centralized axios instance
 import api from "../../api/api"; // adjust path if needed
 import { checkIfConfigIsValid } from "react-native-reanimated/lib/typescript/animation/spring";
+import AppBackground from "@/components/AppBackground";
 
 // Type definition for Category
 interface Category {
@@ -106,7 +107,7 @@ const CATEGORY_ICONS = {
         casualwear: require("../../assets/categories/womens/CasualWear.png"),
         coats: require("../../assets/categories/womens/Coat.png"),
         dresses: require("../../assets/categories/womens/Dress.png"),
-        formalwear: require("../../assets/categories/womens/Dress.png"),
+        formalwear: require("../../assets/categories/womens/FormalWear.png"),
         gowns: require("../../assets/categories/womens/Gown.png"),
         hoodies: require("../../assets/categories/womens/Hoodie.png"),
         jackets: require("../../assets/categories/womens/Jacket.png"),
@@ -148,7 +149,7 @@ const CATEGORY_ICONS = {
 
 
 const normalizeCategoryKey = (name: string) =>
-  name.toLowerCase().replace(/\s+/g, "");
+    name.toLowerCase().replace(/\s+/g, "");
 
 export default function AddWardrobe() {
     const router = useRouter();
@@ -243,19 +244,19 @@ export default function AddWardrobe() {
         fetchItem();
     }, [isEdit, itemId]);
 
-const getCategoryIcon = (item: Category) => {
-  const key = normalizeCategoryKey(item.name);
+    const getCategoryIcon = (item: Category) => {
+        const key = normalizeCategoryKey(item.name);
 
-  if (item.type === "mens" && CATEGORY_ICONS.mens[key]) {
-    return CATEGORY_ICONS.mens[key];
-  }
+        if (item.type === "mens" && CATEGORY_ICONS.mens[key]) {
+            return CATEGORY_ICONS.mens[key];
+        }
 
-  if (item.type === "womens" && CATEGORY_ICONS.womens[key]) {
-    return CATEGORY_ICONS.womens[key];
-  }
+        if (item.type === "womens" && CATEGORY_ICONS.womens[key]) {
+            return CATEGORY_ICONS.womens[key];
+        }
 
-  return null;
-};
+        return null;
+    };
 
     const CategoryCard = ({ item }: { item: Category }) => {
         const icon = getCategoryIcon(item);
@@ -704,6 +705,7 @@ const getCategoryIcon = (item: Category) => {
     };
 
     return (
+        <AppBackground>
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
             {/* Header */}
             <View style={styles.header}>
@@ -736,7 +738,7 @@ const getCategoryIcon = (item: Category) => {
                 ) : (
                     <>
                         <View style={styles.iconCircle}>
-                            <Ionicons name="camera-outline" size={26} color="#fff" />
+                            <Ionicons name="camera-outline" size={26} color="#ffffffff" />
                         </View>
                         <Text style={styles.uploadTitle}>Tap to Add Photo</Text>
                         <Text style={styles.uploadSub}>
@@ -1104,16 +1106,18 @@ const getCategoryIcon = (item: Category) => {
                 </View>
             </Modal>
         </ScrollView>
+        </AppBackground>
     );
 }
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, backgroundColor: "#fff" ,paddingTop: 0},
+    container: { flex: 1, padding: 16, paddingTop: 0 },
     header: {
         flexDirection: "row",
         marginBottom: 16,
-        
+        marginTop: 15,
+
     },
     removeIcon: {
         position: "absolute",
@@ -1131,6 +1135,7 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: "center",
         marginBottom: 20,
+         backgroundColor: "#ffffff91",
     },
     iconCircle: {
         width: 56,

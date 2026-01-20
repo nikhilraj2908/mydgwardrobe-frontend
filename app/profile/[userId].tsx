@@ -15,6 +15,7 @@ import api from "../../api/api";
 import WardrobeHeader from "@/components/WardrobeHeader";
 import { useFollow } from "@/context/FollowContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AppBackground from "@/components/AppBackground";
 const baseURL = api.defaults.baseURL;
 
 interface User {
@@ -115,6 +116,7 @@ export default function OtherUserProfile() {
   );
 
   return (
+    <AppBackground>
      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
     <View style={styles.container}>
       {/* Fixed Header at the top */}
@@ -241,6 +243,7 @@ export default function OtherUserProfile() {
       </ScrollView>
     </View>
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
@@ -256,7 +259,7 @@ const Stat = ({ label, value }: any) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff70",
   },
   scrollView: {
     flex: 1,

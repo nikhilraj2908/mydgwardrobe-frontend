@@ -80,6 +80,7 @@ function FilterBtn({
   onPress: () => void;
 }) {
   return (
+    
     <TouchableOpacity
       onPress={onPress}
       style={[styles.filterBtn, active && styles.filterActive]}
@@ -100,7 +101,6 @@ function FilterBtn({
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: "#fff",
     paddingHorizontal: 16,
   },
 

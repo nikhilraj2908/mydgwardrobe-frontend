@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import api from "../../api/api";
+import AppBackground from "@/components/AppBackground";
 
 interface Wardrobe {
   _id: string;
@@ -149,6 +150,7 @@ export default function AllWardrobesScreen() {
      RENDER
   ================================ */
   return (
+    <AppBackground>
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
@@ -243,6 +245,7 @@ export default function AllWardrobesScreen() {
         })}
       </ScrollView>
     </View>
+    </AppBackground>
   );
 }
 
@@ -250,7 +253,7 @@ export default function AllWardrobesScreen() {
    STYLES
 ================================ */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#ffffffa4" },
   header: {
     paddingTop: 50,
     paddingHorizontal: 16,

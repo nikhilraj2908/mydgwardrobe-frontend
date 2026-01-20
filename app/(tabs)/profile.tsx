@@ -20,6 +20,7 @@ import SavedGridCard from "../../components/SavedGridCard";
 import { useAuth } from "../../context/AuthContext";
 import { useSavedItems } from "../../context/SavedItemsContext";
 import ScreenWrapper from "../../components/ScreenWrapper";
+import AppBackground from "@/components/AppBackground";
 // Define types
 const baseURL = api.defaults.baseURL;
 
@@ -485,7 +486,7 @@ export default function ProfileScreen() {
 
   return (
     <>
-
+<AppBackground>
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -866,6 +867,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+      </AppBackground>
     </>
   );
 }
@@ -874,14 +876,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#ffffffd8",
     paddingTop: 0
   },
   selectionBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#FAF5FF",
+    backgroundColor: "#ffffffff",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -915,7 +916,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#1a2c50ff",
 
     // ✅ iOS shadow
     shadowColor: "#000",
@@ -934,7 +935,7 @@ const styles = StyleSheet.create({
 
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#a955f73f", // 👈 keeps text readable
+    backgroundColor: "#ffffff3f", // 👈 keeps text readable
   },
 
   avatar: {
@@ -1038,7 +1039,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 20,
     marginTop: 10,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#ffffffff",
     borderRadius: 30,
     padding: 4,
   },
@@ -1080,7 +1081,7 @@ const styles = StyleSheet.create({
   wardrobeCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3E8FF",
+    backgroundColor: "#a453fc4d",
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -1197,7 +1198,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#ffffffff',
     borderRadius: 20,
   },
 

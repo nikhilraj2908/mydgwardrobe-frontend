@@ -8,6 +8,7 @@ import {
   Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View
 } from "react-native";
 import api from "../../api/api";
+import AppBackground from "@/components/AppBackground";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
 
@@ -100,7 +101,8 @@ export default function AllWardrobeItemsScreen() {
 
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+    <AppBackground>
+    <View style={{ flex: 1, backgroundColor: "#ffffff5b" }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -199,6 +201,7 @@ export default function AllWardrobeItemsScreen() {
         </View>
       </Modal>
     </View>
+    </AppBackground>
   );
 }
 

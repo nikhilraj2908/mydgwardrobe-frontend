@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   Alert,
+  ImageBackground
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -47,6 +48,13 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
+    <ImageBackground
+          source={require("../../assets/images/bgallpage.png")}
+          style={styles.background}
+          resizeMode="cover"
+        >
+          {/* Dark overlay to make white elements stand out */}
+          <View style={styles.overlay} />
     <View style={styles.container}>
       {/* Back */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -88,6 +96,7 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.footer}>Back to Login</Text>
       </TouchableOpacity>
     </View>
+    </ImageBackground>
   );
 }
 
@@ -95,8 +104,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 25,
-    backgroundColor: "#fff",
+    // backgroundColor: "#fff",
   },
+  background: {
+      flex: 1,
+      width: "100%",
+      height: "100%",
+      
+    },
   backBtn: {
     width: 40,
     height: 40,

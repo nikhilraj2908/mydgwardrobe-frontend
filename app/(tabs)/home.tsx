@@ -15,6 +15,7 @@ import {
   ImageBackground
 } from "react-native";
 import api from "../../api/api";
+import AppBackground from "@/components/AppBackground";
 /* ================= TYPES ================= */
 
 interface FeedUser {
@@ -279,7 +280,7 @@ export default function HomeScreen() {
 
   return (
     <>
-    
+    <AppBackground>
       <FlatList
         data={feed}
         keyExtractor={(item, index) => `${item._id}-${index}`}
@@ -305,6 +306,7 @@ export default function HomeScreen() {
         visible={showSearch}
         onClose={() => setShowSearch(false)}
       />
+      </AppBackground>
     </>
   );
 }
@@ -332,7 +334,6 @@ function injectCollections(posts: FeedItem[], collections: FeedItem[]) {
 const styles = StyleSheet.create({
   container: {
     
-    backgroundColor: "#fff",
     paddingHorizontal: 16,
 
   },
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 10,
+    marginTop:5
   },
 
   logoText: {
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
   },
 
   storyRow: {
-    marginTop: 18,
+    marginTop: 5,
     flexDirection: "row",
   },
 

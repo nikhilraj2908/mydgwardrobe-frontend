@@ -21,6 +21,7 @@ import { useFollow } from "../../../context/FollowContext";
 import { useSavedItems } from "../../../context/SavedItemsContext";
 import { Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AppBackground from "@/components/AppBackground";
 
 const baseURL = api.defaults.baseURL;
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -282,6 +283,7 @@ const [activeIndex, setActiveIndex] = useState(0);
             : [];
 
     return (
+        <AppBackground>
          <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <View style={styles.container}>
             <WardrobeHeader title="Item Details" onBack={() => router.back()} />
@@ -533,9 +535,10 @@ const [activeIndex, setActiveIndex] = useState(0);
 
         </View>
         </SafeAreaView>
+        </AppBackground>
     );
 } const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
+    container: { flex: 1, backgroundColor: "#ffffffdc" },
     center: { flex: 1, justifyContent: "center", alignItems: "center" },
     itemHeaderContainer: {
         paddingHorizontal: 16,

@@ -17,6 +17,7 @@ import {
   FlatList,
 } from "react-native";
 import api from "../../api/api";
+import { ImageBackground } from "react-native";
 
 const countryCodes = [
   { code: "+91", country: "India", flag: "🇮🇳" },
@@ -104,6 +105,13 @@ export default function LoginMobileScreen() {
   );
 
   return (
+    <ImageBackground
+          source={require("../../assets/images/bgallpage.png")}
+          style={styles.background}
+          resizeMode="cover"
+        >
+          {/* Dark overlay to make white elements stand out */}
+          <View style={styles.overlay} />
     <ScrollView 
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
@@ -227,16 +235,23 @@ export default function LoginMobileScreen() {
         </Text>
       </Text>
     </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+   background: {
+      flex: 1,
+      width: "100%",
+      height: "100%",
+      
+    },
+
   container: {
     flexGrow: 1,
     paddingHorizontal: 25,
     paddingTop: 60,
     paddingBottom: 40,
-    backgroundColor: "#FFF",
   },
   backBtn: {
     position: "absolute",

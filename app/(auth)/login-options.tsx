@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router } from "expo-router";
+import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function LoginOptionsScreen() {
   return (
@@ -66,10 +66,11 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+    
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)", // Dark overlay to make white elements visible
+    backgroundColor: "rgba(245, 244, 244, 0)", // Dark overlay to make white elements visible
   },
   container: {
     flex: 1,
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 30,
-    color: "#FFF", // Changed to white for better contrast
+    color: "#020202ff", // Changed to white for better contrast
   },
   optionButton: {
     flexDirection: "row",
@@ -128,12 +129,12 @@ const styles = StyleSheet.create({
   footer: {
     textAlign: "center",
     marginTop: 30,
-    color: "#FFF", // Changed to white
+    color: "#000000ff", // Changed to white
     fontSize: 14,
     fontWeight: "500",
   },
   signupText: {
-    color: "#E9D5FF", // Lighter purple for better contrast
+    color: "#a453faff", // Lighter purple for better contrast
     fontWeight: "700",
     fontSize: 14,
   },
