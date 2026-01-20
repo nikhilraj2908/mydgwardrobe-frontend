@@ -53,6 +53,8 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   const [showCommentActions, setShowCommentActions] = useState(false);
   const [justFollowed, setJustFollowed] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
   // const [saved, setSaved] = useState(false);
   // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // Debug log
@@ -493,24 +495,28 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
 
 
         {/* Image */}
-        <View style={styles.imageContainer}>
+        <View
+          style={styles.imageContainer}
+          onLayout={(e) => {
+            setContainerWidth(e.nativeEvent.layout.width);
+          }}
+        >
           {images.length > 0 ? (
             <>
               <FlatList
                 data={images}
                 horizontal
                 pagingEnabled
-                snapToInterval={width}
+                snapToInterval={containerWidth}
                 decelerationRate="fast"
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(uri, index) => `${uri}-${index}`}
-                removeClippedSubviews
                 initialNumToRender={1}
                 maxToRenderPerBatch={1}
                 windowSize={2}
                 onMomentumScrollEnd={(e) => {
                   const index = Math.round(
-                    e.nativeEvent.contentOffset.x / width
+                    e.nativeEvent.contentOffset.x / containerWidth
                   );
                   setActiveIndex(index);
                 }}
@@ -520,10 +526,32 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                     : `${BASE_URL}${uri.startsWith("/") ? "" : "/"}${uri}`;
 
                   return (
-                    <View style={{ width, height: "100%" }}>
+                    <View
+                      style={{
+                        width: containerWidth,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
                       <Image
                         source={{ uri: finalUrl }}
-                        style={styles.image}
+                        style={[
+                          styles.image,
+                          {
+                            height:
+                              imageRatios[finalUrl]
+                                ? containerWidth * imageRatios[finalUrl]
+                                : containerWidth * 0.75, // fallback
+
+                          },
+                        ]}
+                        onLoad={(e) => {
+                          const { width, height } = e.nativeEvent.source;
+                          setImageRatios((prev) => ({
+                            ...prev,
+                            [finalUrl]: height / width,
+                          }));
+                        }}
                       />
                     </View>
                   );
@@ -882,15 +910,15 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffffff",
     borderRadius: 8,
     marginTop: 12,
     marginBottom: 5,
     overflow: "hidden",
     elevation: 5,
-    shadowColor: "#000",
+    shadowColor: "#d87bfdff",
     shadowOpacity: 0.12,
-    shadowRadius: 10,
+    shadowRadius: 5,
     shadowOffset: { width: 0, height: 4 },
   },
 
@@ -945,16 +973,14 @@ const styles = StyleSheet.create({
 
   imageContainer: {
     width: "100%",
-    height: 260,                 // fixed height (important)
-    backgroundColor: "#F9FAFB",  // light neutral background
+    backgroundColor: "#ffffffff",  // light neutral background
     justifyContent: "center",
     alignItems: "center",
-    padding: 0,              // 👈 padding for all images
+
   },
 
   image: {
     width: "100%",
-    height: "100%",
     resizeMode: "contain",
   },
 

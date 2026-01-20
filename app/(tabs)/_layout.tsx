@@ -11,7 +11,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-
+import { router } from "expo-router";
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const BASE_BAR_HEIGHT = 60;
@@ -88,10 +88,16 @@ export default function TabsLayout() {
             tabBarButton: (props) => (
               <View style={styles.centerButtonContainer}>
                 <TouchableOpacity
-                  {...props}
                   style={styles.centerButton}
                   activeOpacity={0.8}
+                  onPress={() => {
+                    router.replace({
+                      pathname: "/(tabs)/add-wardrobe",
+                      params: { mode: "create" }, // 🔥 FORCE CREATE MODE
+                    });
+                  }}
                 >
+
                   <View style={styles.centerButtonInner}>
                     <Ionicons name="add" size={32} color="#FFFFFF" />
                   </View>

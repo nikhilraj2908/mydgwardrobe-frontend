@@ -17,7 +17,8 @@ import {
     View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 // ✅ Import centralized axios instance
 import api from "../../api/api"; // adjust path if needed
 import { checkIfConfigIsValid } from "react-native-reanimated/lib/typescript/animation/spring";
@@ -195,7 +196,16 @@ export default function AddWardrobe() {
     const itemId = params.itemId as string | undefined;
 
     const isEdit = mode === "edit" && !!itemId;
+useFocusEffect(
+  useCallback(() => {
+    // Screen focused → do nothing
 
+    return () => {
+      // Screen unfocused (back / cancel)
+      resetForm();
+    };
+  }, [])
+);
 
     useEffect(() => {
         if (!isEdit) return;
@@ -499,6 +509,29 @@ export default function AddWardrobe() {
         }
     };
 
+
+    const resetForm = () => {
+        setImages([]);
+        setCategory("");
+        setCustomCategory("");
+        setCategoryType("unisex");
+
+        setWardrobe("");
+        setCustomWardrobe("");
+
+        setPrice("");
+        setBrand("");
+        setDescription("");
+
+        setVisibility("public");
+
+        setShowOtherCategoryInput(false);
+        setShowOtherWardrobeInput(false);
+
+        setSearchQuery("");
+    };
+
+
     /* ================= CATEGORY SELECTION ================= */
     const handleCategorySelect = async (selectedCategory: Category | "other") => {
         if (selectedCategory === "other") {
@@ -617,8 +650,24 @@ export default function AddWardrobe() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Request failed");
 
-            Alert.alert("Success", isEdit ? "Item updated" : "Item added");
-            router.back();
+            Alert.alert(
+                "Success",
+                isEdit ? "Item updated" : "Item added",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            resetForm();   // ✅ clear form
+                            if (router.canGoBack()) {
+                                router.back();
+                            } else {
+                                router.replace("/(tabs)/home"); // or home screen
+                            }// ✅ then go back
+                        },
+                    },
+                ]
+            );
+
         } catch (err: any) {
             Alert.alert("Error", err.message || "Something went wrong");
         } finally {
@@ -706,406 +755,406 @@ export default function AddWardrobe() {
 
     return (
         <AppBackground>
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.title}>{isEdit ? "Edit Item" : "Add to Wardrobe"}</Text>
-
-                <View style={{ width: 24 }} />
-            </View>
-
-            {/* Upload */}
-            <View style={styles.uploadBox}>
-                {images.length > 0 ? (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {images.map((img, index) => (
-                            <View key={index} style={{ position: "relative", marginRight: 8 }}>
-                                <Image source={{ uri: img.uri }} style={styles.preview} />
-
-                                <TouchableOpacity
-                                    style={styles.removeIcon}
-                                    onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}
-                                >
-                                    <Ionicons name="close-circle" size={22} color="#EF4444" />
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-
-                    </ScrollView>
-                ) : (
-                    <>
-                        <View style={styles.iconCircle}>
-                            <Ionicons name="camera-outline" size={26} color="#ffffffff" />
-                        </View>
-                        <Text style={styles.uploadTitle}>Tap to Add Photo</Text>
-                        <Text style={styles.uploadSub}>
-                            Take a photo or choose from gallery
-                        </Text>
-                    </>
-                )}
-
-                <View style={styles.actionRow}>
-                    <TouchableOpacity style={styles.actionBtn} onPress={pickFromCamera}>
-                        <Ionicons name="camera-outline" size={16} color="#A855F7" />
-                        <Text style={styles.actionText}>Camera</Text>
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={24} color="#333" />
                     </TouchableOpacity>
+                    <Text style={styles.title}>{isEdit ? "Edit Item" : "Add to Wardrobe"}</Text>
 
-                    <TouchableOpacity style={styles.actionBtn} onPress={pickFromGallery}>
-                        <Ionicons name="image-outline" size={16} color="#A855F7" />
-                        <Text style={styles.actionText}>Gallery</Text>
+                    <View style={{ width: 24 }} />
+                </View>
+
+                {/* Upload */}
+                <View style={styles.uploadBox}>
+                    {images.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {images.map((img, index) => (
+                                <View key={index} style={{ position: "relative", marginRight: 8 }}>
+                                    <Image source={{ uri: img.uri }} style={styles.preview} />
+
+                                    <TouchableOpacity
+                                        style={styles.removeIcon}
+                                        onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}
+                                    >
+                                        <Ionicons name="close-circle" size={22} color="#EF4444" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+
+                        </ScrollView>
+                    ) : (
+                        <>
+                            <View style={styles.iconCircle}>
+                                <Ionicons name="camera-outline" size={26} color="#ffffffff" />
+                            </View>
+                            <Text style={styles.uploadTitle}>Tap to Add Photo</Text>
+                            <Text style={styles.uploadSub}>
+                                Take a photo or choose from gallery
+                            </Text>
+                        </>
+                    )}
+
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity style={styles.actionBtn} onPress={pickFromCamera}>
+                            <Ionicons name="camera-outline" size={16} color="#A855F7" />
+                            <Text style={styles.actionText}>Camera</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.actionBtn} onPress={pickFromGallery}>
+                            <Ionicons name="image-outline" size={16} color="#A855F7" />
+                            <Text style={styles.actionText}>Gallery</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Category Dropdown */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Category *</Text>
+                    <TouchableOpacity
+                        style={styles.dropdownTrigger}
+                        onPress={() => setShowCategoryDropdown(true)}
+                    >
+                        <Text style={category || showOtherCategoryInput ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                            {showOtherCategoryInput ? "Other (type below)" : category || "Select Category"}
+                        </Text>
+                        <Ionicons name="chevron-down-outline" size={20} color="#666" />
                     </TouchableOpacity>
                 </View>
-            </View>
 
-            {/* Category Dropdown */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Category *</Text>
-                <TouchableOpacity
-                    style={styles.dropdownTrigger}
-                    onPress={() => setShowCategoryDropdown(true)}
-                >
-                    <Text style={category || showOtherCategoryInput ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
-                        {showOtherCategoryInput ? "Other (type below)" : category || "Select Category"}
-                    </Text>
-                    <Ionicons name="chevron-down-outline" size={20} color="#666" />
-                </TouchableOpacity>
-            </View>
+                {/* Custom Category Input (when "other" is selected) */}
+                {showOtherCategoryInput && (
+                    <View style={styles.customCategoryContainer}>
+                        <Text style={styles.inputLabel}>Create New Category *</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter custom category name"
+                            value={customCategory}
+                            onChangeText={setCustomCategory}
+                        />
 
-            {/* Custom Category Input (when "other" is selected) */}
-            {showOtherCategoryInput && (
-                <View style={styles.customCategoryContainer}>
-                    <Text style={styles.inputLabel}>Create New Category *</Text>
+                        <Text style={[styles.inputLabel, { marginTop: 12 }]}>Category Type</Text>
+                        <View style={styles.visibilityRow}>
+                            {(["mens", "womens", "unisex"] as const).map((type) => (
+                                <TouchableOpacity
+                                    key={type}
+                                    style={[
+                                        styles.visibilityBtn,
+                                        categoryType === type && styles.activeVisibility,
+                                    ]}
+                                    onPress={() => setCategoryType(type)}
+                                >
+                                    <Text
+                                        style={{
+                                            color: categoryType === type ? "#fff" : "#111",
+                                            fontWeight: "600",
+                                        }}
+                                    >
+                                        {type.toUpperCase()}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.submitBtn, styles.createCategoryBtn]}
+                            onPress={handleCreateCustomCategory}
+                            disabled={!customCategory.trim()}
+                        >
+                            <Text style={styles.submitText}>Create Category</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.cancelBtn}
+                            onPress={() => {
+                                setShowOtherCategoryInput(false);
+                                setCustomCategory("");
+                            }}
+                        >
+                            <Text style={styles.cancelBtnText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Wardrobe Dropdown */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Wardrobe *</Text>
+                    <TouchableOpacity
+                        style={styles.dropdownTrigger}
+                        onPress={() => setShowWardrobeDropdown(true)}
+                    >
+                        <Text style={wardrobe ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                            {showOtherWardrobeInput ? "Other (type below)" : wardrobe || "Select Wardrobe"}
+                        </Text>
+                        <Ionicons name="chevron-down-outline" size={20} color="#666" />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Custom Wardrobe Input (when "other" is selected) */}
+                {showOtherWardrobeInput && (
                     <TextInput
                         style={styles.input}
-                        placeholder="Enter custom category name"
-                        value={customCategory}
-                        onChangeText={setCustomCategory}
+                        placeholder="Enter new wardrobe name"
+                        value={customWardrobe}
+                        onChangeText={setCustomWardrobe}
                     />
+                )}
 
-                    <Text style={[styles.inputLabel, { marginTop: 12 }]}>Category Type</Text>
+                {/* Price */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Price (Optional)</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter price"
+                        keyboardType="numeric"
+                        value={price}
+                        onChangeText={setPrice}
+                    />
+                </View>
+
+                {/* Brand */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Brand (Optional)</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter brand name"
+                        value={brand}
+                        onChangeText={setBrand}
+                    />
+                </View>
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Description (Optional)</Text>
+                    <TextInput
+                        style={[styles.input, { height: 100 }]}
+                        placeholder="Describe this item (fit, fabric, front/back, styling tips...)"
+                        multiline
+                        value={description}
+                        onChangeText={setDescription}
+                    />
+                </View>
+
+
+                {/* Visibility */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Visibility</Text>
                     <View style={styles.visibilityRow}>
-                        {(["mens", "womens", "unisex"] as const).map((type) => (
+                        {(["public", "private"] as const).map((v) => (
                             <TouchableOpacity
-                                key={type}
+                                key={v}
                                 style={[
                                     styles.visibilityBtn,
-                                    categoryType === type && styles.activeVisibility,
+                                    visibility === v && styles.activeVisibility,
                                 ]}
-                                onPress={() => setCategoryType(type)}
+                                onPress={() => setVisibility(v)}
                             >
                                 <Text
                                     style={{
-                                        color: categoryType === type ? "#fff" : "#111",
+                                        color: visibility === v ? "#fff" : "#111",
                                         fontWeight: "600",
                                     }}
                                 >
-                                    {type.toUpperCase()}
+                                    {v.toUpperCase()}
                                 </Text>
                             </TouchableOpacity>
                         ))}
                     </View>
-
-                    <TouchableOpacity
-                        style={[styles.submitBtn, styles.createCategoryBtn]}
-                        onPress={handleCreateCustomCategory}
-                        disabled={!customCategory.trim()}
-                    >
-                        <Text style={styles.submitText}>Create Category</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.cancelBtn}
-                        onPress={() => {
-                            setShowOtherCategoryInput(false);
-                            setCustomCategory("");
-                        }}
-                    >
-                        <Text style={styles.cancelBtnText}>Cancel</Text>
-                    </TouchableOpacity>
                 </View>
-            )}
 
-            {/* Wardrobe Dropdown */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Wardrobe *</Text>
+                {/* Submit */}
                 <TouchableOpacity
-                    style={styles.dropdownTrigger}
-                    onPress={() => setShowWardrobeDropdown(true)}
+                    style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+                    onPress={handleSubmit}
+                    disabled={loading}
                 >
-                    <Text style={wardrobe ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
-                        {showOtherWardrobeInput ? "Other (type below)" : wardrobe || "Select Wardrobe"}
-                    </Text>
-                    <Ionicons name="chevron-down-outline" size={20} color="#666" />
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.submitText}>{isEdit ? "Update Item" : "Add to Wardrobe"}</Text>
+
+                    )}
                 </TouchableOpacity>
-            </View>
 
-            {/* Custom Wardrobe Input (when "other" is selected) */}
-            {showOtherWardrobeInput && (
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter new wardrobe name"
-                    value={customWardrobe}
-                    onChangeText={setCustomWardrobe}
-                />
-            )}
-
-            {/* Price */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Price (Optional)</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter price"
-                    keyboardType="numeric"
-                    value={price}
-                    onChangeText={setPrice}
-                />
-            </View>
-
-            {/* Brand */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Brand (Optional)</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter brand name"
-                    value={brand}
-                    onChangeText={setBrand}
-                />
-            </View>
-            <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Description (Optional)</Text>
-                <TextInput
-                    style={[styles.input, { height: 100 }]}
-                    placeholder="Describe this item (fit, fabric, front/back, styling tips...)"
-                    multiline
-                    value={description}
-                    onChangeText={setDescription}
-                />
-            </View>
-
-
-            {/* Visibility */}
-            <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Visibility</Text>
-                <View style={styles.visibilityRow}>
-                    {(["public", "private"] as const).map((v) => (
-                        <TouchableOpacity
-                            key={v}
+                {/* Category Dropdown Modal */}
+                <Modal
+                    visible={showCategoryDropdown}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setShowCategoryDropdown(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View
                             style={[
-                                styles.visibilityBtn,
-                                visibility === v && styles.activeVisibility,
+                                styles.modalContent,
+                                { paddingBottom: insets.bottom || 16 },
                             ]}
-                            onPress={() => setVisibility(v)}
                         >
-                            <Text
-                                style={{
-                                    color: visibility === v ? "#fff" : "#111",
-                                    fontWeight: "600",
-                                }}
-                            >
-                                {v.toUpperCase()}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            {/* Submit */}
-            <TouchableOpacity
-                style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
-                onPress={handleSubmit}
-                disabled={loading}
-            >
-                {loading ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <Text style={styles.submitText}>{isEdit ? "Update Item" : "Add to Wardrobe"}</Text>
-
-                )}
-            </TouchableOpacity>
-
-            {/* Category Dropdown Modal */}
-            <Modal
-                visible={showCategoryDropdown}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowCategoryDropdown(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            { paddingBottom: insets.bottom || 16 },
-                        ]}
-                    >
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Category</Text>
-                            <TouchableOpacity onPress={() => setShowCategoryDropdown(false)}>
-                                <Ionicons name="close" size={24} color="#000" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Search Bar */}
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search-outline" size={20} color="#666" />
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Search categories..."
-                                value={searchQuery}
-                                onChangeText={handleSearch}
-                                autoCapitalize="none"
-                            />
-                            {searchQuery.length > 0 && (
-                                <TouchableOpacity onPress={() => handleSearch("")}>
-                                    <Ionicons name="close-circle" size={20} color="#999" />
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select Category</Text>
+                                <TouchableOpacity onPress={() => setShowCategoryDropdown(false)}>
+                                    <Ionicons name="close" size={24} color="#000" />
                                 </TouchableOpacity>
-                            )}
-                        </View>
-
-                        {loadingCategories ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color="#A855F7" />
-                                <Text style={styles.loadingText}>Loading categories...</Text>
                             </View>
-                        ) : (
-                            <ScrollView style={styles.modalScrollView}>
-                                {searchQuery.length > 0 ? (
-                                    // Show filtered results when searching
-                                    <View style={styles.searchResultsContainer}>
-                                        <Text style={styles.searchResultsTitle}>
-                                            Search Results ({filteredCategories.length})
-                                        </Text>
-                                        {filteredCategories.length > 0 ? (
-                                            filteredCategories.map((item) => (
-                                                <TouchableOpacity
-                                                    key={item._id}
-                                                    style={styles.searchResultItem}
-                                                    onPress={() => handleCategorySelect(item)}
-                                                    onLongPress={() => {
-                                                        if (!item._id.startsWith('default-')) {
-                                                            handleDeleteCategory(item._id);
-                                                        }
-                                                    }}
-                                                >
-                                                    <View style={styles.categoryItemContent}>
-                                                        <Text style={styles.searchResultText}>{item.name}</Text>
-                                                        {!item._id.startsWith('default-') && (
-                                                            <Ionicons name="trash-outline" size={16} color="#FF3B30" style={styles.deleteIcon} />
-                                                        )}
-                                                    </View>
-                                                    <View style={[
-                                                        styles.categoryBadge,
-                                                        {
-                                                            backgroundColor: item.type === 'mens' ? '#3B82F6' :
-                                                                item.type === 'womens' ? '#EC4899' : '#8B5CF6'
-                                                        }
-                                                    ]}>
-                                                        <Text style={styles.categoryBadgeText}>
-                                                            {item.type === 'mens' ? 'M' : item.type === 'womens' ? 'F' : 'U'}
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            ))
-                                        ) : (
-                                            <View style={styles.noResultsContainer}>
-                                                <Ionicons name="search-outline" size={48} color="#ccc" />
-                                                <Text style={styles.noResultsText}>No categories found</Text>
-                                                <Text style={styles.noResultsSubText}>
-                                                    Try a different search term
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                ) : (
-                                    // Show categorized view when not searching
-                                    <>
-                                        {renderCategorySection("Men's Categories", categories, 'mens')}
-                                        {renderCategorySection("Women's Categories", categories, 'womens')}
 
-                                        {/* Unisex Categories */}
-                                        {categories.filter(cat => cat.type === 'unisex').length > 0 && (
-                                            renderCategorySection("Unisex Categories", categories, 'unisex')
-                                        )}
-                                    </>
-                                )}
-
-                                {/* "Other" Option */}
-                                <TouchableOpacity
-                                    key="other-category-option"
-                                    style={styles.otherOption}
-                                    onPress={() => handleCategorySelect("other")}
-                                >
-                                    <View style={styles.otherIconContainer}>
-                                        <Ionicons name="add-circle-outline" size={24} color="#A855F7" />
-                                    </View>
-                                    <View style={styles.otherTextContainer}>
-                                        <Text style={styles.otherOptionTitle}>Other</Text>
-                                        <Text style={styles.otherOptionSubtitle}>Create custom category</Text>
-                                    </View>
-                                    <Ionicons name="chevron-forward-outline" size={20} color="#999" />
-                                </TouchableOpacity>
-                            </ScrollView>
-                        )}
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Wardrobe Dropdown Modal */}
-            <Modal
-                visible={showWardrobeDropdown}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowWardrobeDropdown(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            { paddingBottom: insets.bottom || 16 },
-                        ]}
-                    >
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Wardrobe</Text>
-                            <TouchableOpacity onPress={() => setShowWardrobeDropdown(false)}>
-                                <Ionicons name="close" size={24} color="#000" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {loadingWardrobes ? (
-                            <ActivityIndicator size="large" color="#A855F7" style={styles.loadingIndicator} />
-                        ) : (
-                            <FlatList
-                                data={[...userWardrobes, "other"]}
-                                keyExtractor={(item) => item}
-                                contentContainerStyle={{
-                                    paddingBottom: insets.bottom + 20,
-                                }}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        style={styles.dropdownItem}
-                                        onPress={() => handleWardrobeSelect(item)}
-                                    >
-                                        <Text style={styles.dropdownItemText}>
-                                            {item === "other" ? "➕ Other (Create New)" : item}
-                                        </Text>
-                                        {item === "other" && (
-                                            <Ionicons
-                                                name="add-circle-outline"
-                                                size={20}
-                                                color="#A855F7"
-                                            />
-                                        )}
+                            {/* Search Bar */}
+                            <View style={styles.searchContainer}>
+                                <Ionicons name="search-outline" size={20} color="#666" />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Search categories..."
+                                    value={searchQuery}
+                                    onChangeText={handleSearch}
+                                    autoCapitalize="none"
+                                />
+                                {searchQuery.length > 0 && (
+                                    <TouchableOpacity onPress={() => handleSearch("")}>
+                                        <Ionicons name="close-circle" size={20} color="#999" />
                                     </TouchableOpacity>
                                 )}
-                            />
+                            </View>
 
-                        )}
+                            {loadingCategories ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color="#A855F7" />
+                                    <Text style={styles.loadingText}>Loading categories...</Text>
+                                </View>
+                            ) : (
+                                <ScrollView style={styles.modalScrollView}>
+                                    {searchQuery.length > 0 ? (
+                                        // Show filtered results when searching
+                                        <View style={styles.searchResultsContainer}>
+                                            <Text style={styles.searchResultsTitle}>
+                                                Search Results ({filteredCategories.length})
+                                            </Text>
+                                            {filteredCategories.length > 0 ? (
+                                                filteredCategories.map((item) => (
+                                                    <TouchableOpacity
+                                                        key={item._id}
+                                                        style={styles.searchResultItem}
+                                                        onPress={() => handleCategorySelect(item)}
+                                                        onLongPress={() => {
+                                                            if (!item._id.startsWith('default-')) {
+                                                                handleDeleteCategory(item._id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <View style={styles.categoryItemContent}>
+                                                            <Text style={styles.searchResultText}>{item.name}</Text>
+                                                            {!item._id.startsWith('default-') && (
+                                                                <Ionicons name="trash-outline" size={16} color="#FF3B30" style={styles.deleteIcon} />
+                                                            )}
+                                                        </View>
+                                                        <View style={[
+                                                            styles.categoryBadge,
+                                                            {
+                                                                backgroundColor: item.type === 'mens' ? '#3B82F6' :
+                                                                    item.type === 'womens' ? '#EC4899' : '#8B5CF6'
+                                                            }
+                                                        ]}>
+                                                            <Text style={styles.categoryBadgeText}>
+                                                                {item.type === 'mens' ? 'M' : item.type === 'womens' ? 'F' : 'U'}
+                                                            </Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                ))
+                                            ) : (
+                                                <View style={styles.noResultsContainer}>
+                                                    <Ionicons name="search-outline" size={48} color="#ccc" />
+                                                    <Text style={styles.noResultsText}>No categories found</Text>
+                                                    <Text style={styles.noResultsSubText}>
+                                                        Try a different search term
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    ) : (
+                                        // Show categorized view when not searching
+                                        <>
+                                            {renderCategorySection("Men's Categories", categories, 'mens')}
+                                            {renderCategorySection("Women's Categories", categories, 'womens')}
+
+                                            {/* Unisex Categories */}
+                                            {categories.filter(cat => cat.type === 'unisex').length > 0 && (
+                                                renderCategorySection("Unisex Categories", categories, 'unisex')
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* "Other" Option */}
+                                    <TouchableOpacity
+                                        key="other-category-option"
+                                        style={styles.otherOption}
+                                        onPress={() => handleCategorySelect("other")}
+                                    >
+                                        <View style={styles.otherIconContainer}>
+                                            <Ionicons name="add-circle-outline" size={24} color="#A855F7" />
+                                        </View>
+                                        <View style={styles.otherTextContainer}>
+                                            <Text style={styles.otherOptionTitle}>Other</Text>
+                                            <Text style={styles.otherOptionSubtitle}>Create custom category</Text>
+                                        </View>
+                                        <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+                                    </TouchableOpacity>
+                                </ScrollView>
+                            )}
+                        </View>
                     </View>
-                </View>
-            </Modal>
-        </ScrollView>
+                </Modal>
+
+                {/* Wardrobe Dropdown Modal */}
+                <Modal
+                    visible={showWardrobeDropdown}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setShowWardrobeDropdown(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View
+                            style={[
+                                styles.modalContent,
+                                { paddingBottom: insets.bottom || 16 },
+                            ]}
+                        >
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select Wardrobe</Text>
+                                <TouchableOpacity onPress={() => setShowWardrobeDropdown(false)}>
+                                    <Ionicons name="close" size={24} color="#000" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {loadingWardrobes ? (
+                                <ActivityIndicator size="large" color="#A855F7" style={styles.loadingIndicator} />
+                            ) : (
+                                <FlatList
+                                    data={[...userWardrobes, "other"]}
+                                    keyExtractor={(item) => item}
+                                    contentContainerStyle={{
+                                        paddingBottom: insets.bottom + 20,
+                                    }}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={styles.dropdownItem}
+                                            onPress={() => handleWardrobeSelect(item)}
+                                        >
+                                            <Text style={styles.dropdownItemText}>
+                                                {item === "other" ? "➕ Other (Create New)" : item}
+                                            </Text>
+                                            {item === "other" && (
+                                                <Ionicons
+                                                    name="add-circle-outline"
+                                                    size={20}
+                                                    color="#A855F7"
+                                                />
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+                                />
+
+                            )}
+                        </View>
+                    </View>
+                </Modal>
+            </ScrollView>
         </AppBackground>
     );
 }
@@ -1135,7 +1184,7 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: "center",
         marginBottom: 20,
-         backgroundColor: "#ffffff91",
+        backgroundColor: "#ffffff91",
     },
     iconCircle: {
         width: 56,
