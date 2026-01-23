@@ -18,6 +18,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  BackHandler 
 } from "react-native";
 import api from "../../api/api";
 import { useSavedItems } from "../../context/SavedItemsContext";
@@ -98,7 +99,14 @@ export default function Explore() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const params = useLocalSearchParams();
   const [searchUsers, setSearchUsers] = useState<SearchUser[]>([]);
+  const [mode, setMode] = useState<"collage" | "list">("collage");
 
+  const handleCategorySelect = (categoryKey: string) => {
+    setActiveCategory(categoryKey);   // already exists
+    setPage(1);
+    setItems([]);
+    setMode("list");                  // 🔥 switch to FlatList view
+  };
   const getAvatarUrl = (photo?: string, username?: string) => {
     if (photo && photo.trim() && photo !== "null") {
       if (photo.startsWith("http")) return photo;
@@ -156,6 +164,22 @@ export default function Explore() {
       fetchExploreItemsWithSearch(incomingSearch);
     }
   }, [params.search]);
+
+  useEffect(() => {
+  const backHandler = BackHandler.addEventListener(
+    "hardwareBackPress",
+    () => {
+      if (mode === "list") {
+        setMode("collage");
+        setActiveCategory("All");
+        return true; // ⛔ stop navigation
+      }
+      return false;
+    }
+  );
+
+  return () => backHandler.remove();
+}, [mode]);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toggleSave, savedItemIds } = useSavedItems();
@@ -466,7 +490,7 @@ export default function Explore() {
       item.images?.length && item.images[0]
         ? item.images[0]
         : item.imageUrl;
-    console.log("nikhil check",item.imageUrl)
+    console.log("nikhil check", item.imageUrl)
     const imagePath = rawPath?.replace(/\\/g, "/");
 
     return (
@@ -487,7 +511,7 @@ export default function Explore() {
         <Image
           source={
             imagePath
-              ? { uri: `${baseURL}/${imagePath}` }
+              ? { uri: `${imagePath}` }
               : require("../../assets/images/icon.png")
           }
           style={styles.image}
@@ -682,90 +706,97 @@ export default function Explore() {
 
   return (
     <AppBackground>
-    <View style={styles.screenContainer}>
-      <WardrobeHeader
-        onBack={() => router.back()}
-        title="Explore"
-        showFilters={false}
-      />
+      <View style={styles.screenContainer}>
+        <WardrobeHeader
+          onBack={() => {
+            if (mode === "list") {
+              setMode("collage");
+              setActiveCategory("All");
+              return;
+            }
+            router.back();
+          }}
+          title="Explore"
+          showFilters={false}
+        />
 
-      <View style={styles.container}>
-        {renderHeader()}
-        {search.trim() && searchUsers.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Users</Text>
+        <View style={styles.container}>
+          {renderHeader()}
+          {search.trim() && searchUsers.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Users</Text>
 
-            {searchUsers.map(user => (
-              <TouchableOpacity
-                key={user._id}
-                style={styles.userCard}
-                activeOpacity={0.85}
-                onPress={() => handleUserPress(user._id)}
-              >
-                <Image
-                  source={{ uri: getAvatarUrl(user.photo, user.username) }}
-                  style={styles.userAvatar}
-                  resizeMode="cover"
-                  onError={() => {
-                    console.log("Avatar failed for:", user.username, user.photo);
-                  }}
-                />
+              {searchUsers.map(user => (
+                <TouchableOpacity
+                  key={user._id}
+                  style={styles.userCard}
+                  activeOpacity={0.85}
+                  onPress={() => handleUserPress(user._id)}
+                >
+                  <Image
+                    source={{ uri: getAvatarUrl(user.photo, user.username) }}
+                    style={styles.userAvatar}
+                    resizeMode="cover"
+                    onError={() => {
+                      console.log("Avatar failed for:", user.username, user.photo);
+                    }}
+                  />
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.userName}>{user.username}</Text>
-                  <Text style={styles.userMeta}>@{user.username}</Text>
-                </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.userName}>{user.username}</Text>
+                    <Text style={styles.userMeta}>@{user.username}</Text>
+                  </View>
 
-                <TouchableOpacity style={styles.followBtn}>
-                  <Text style={styles.followText}>Follow</Text>
+                  <TouchableOpacity style={styles.followBtn}>
+                    <Text style={styles.followText}>Follow</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        {loading && page === 1 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#9b5cff" />
-            <Text style={styles.loadingText}>Loading items...</Text>
-          </View>
-        ) : (
-          <FlatList<ExploreItem>
-            data={items}
-            numColumns={2}
-            keyExtractor={(item) => item._id}
-            renderItem={renderItemCard}
-            columnWrapperStyle={styles.columnWrapper}
-            contentContainerStyle={[
-              styles.itemsContainer,
-              items.length === 0 && { flex: 1 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={["#9b5cff"]}
-                tintColor="#9b5cff"
-              />
-            }
-            onEndReached={loadMoreItems}
-            onEndReachedThreshold={0.5}
-            ListEmptyComponent={
-              search.trim() && searchUsers.length > 0
-                ? null
-                : renderEmptyState()
-            }
-            ListFooterComponent={
-              loading && page > 1 ? (
-                <ActivityIndicator size="small" color="#9b5cff" style={{ marginVertical: 20 }} />
-              ) : null
-            }
-          />
-        )}
-      </View>
+              ))}
+            </View>
+          )}
+          {loading && page === 1 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#9b5cff" />
+              <Text style={styles.loadingText}>Loading items...</Text>
+            </View>
+          ) : (
+            <FlatList<ExploreItem>
+              data={items}
+              numColumns={2}
+              keyExtractor={(item) => item._id}
+              renderItem={renderItemCard}
+              columnWrapperStyle={styles.columnWrapper}
+              contentContainerStyle={[
+                styles.itemsContainer,
+                items.length === 0 && { flex: 1 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={["#9b5cff"]}
+                  tintColor="#9b5cff"
+                />
+              }
+              onEndReached={loadMoreItems}
+              onEndReachedThreshold={0.5}
+              ListEmptyComponent={
+                search.trim() && searchUsers.length > 0
+                  ? null
+                  : renderEmptyState()
+              }
+              ListFooterComponent={
+                loading && page > 1 ? (
+                  <ActivityIndicator size="small" color="#9b5cff" style={{ marginVertical: 20 }} />
+                ) : null
+              }
+            />
+          )}
+        </View>
 
-      {renderSortModal()}
-    </View>
+        {renderSortModal()}
+      </View>
     </AppBackground>
   );
 }
@@ -776,7 +807,7 @@ export default function Explore() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    paddingTop:5
+    paddingTop: 5
   },
   container: {
     flex: 1,

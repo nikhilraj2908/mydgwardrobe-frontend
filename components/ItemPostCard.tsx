@@ -546,12 +546,19 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                           },
                         ]}
                         onLoad={(e) => {
-                          const { width, height } = e.nativeEvent.source;
+                          const source = e?.nativeEvent?.source;
+
+                          // ✅ Web safety check
+                          if (!source?.width || !source?.height) return;
+
+                          const { width, height } = source;
+
                           setImageRatios((prev) => ({
                             ...prev,
                             [finalUrl]: height / width,
                           }));
                         }}
+
                       />
                     </View>
                   );
@@ -582,7 +589,7 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
           )}
 
           {/* Price badge stays */}
-          {item.price && (
+          {typeof item.price === "number" && (
             <View style={styles.priceBadge}>
               <Text style={styles.priceText}>₹{item.price / 1000}K</Text>
             </View>

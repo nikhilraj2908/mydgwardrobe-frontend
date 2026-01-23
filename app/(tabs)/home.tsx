@@ -12,11 +12,19 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ImageBackground
 } from "react-native";
 import api from "../../api/api";
 import AppBackground from "@/components/AppBackground";
+
 /* ================= TYPES ================= */
+interface StoryGroup {
+  user: {
+    _id: string;
+    username: string;
+    photo?: string;
+  };
+  stories: any[];
+}
 
 interface FeedUser {
   _id?: string;
@@ -33,7 +41,7 @@ interface CollectionStats {
 interface FeedItem {
   _id: string;
   type: "item" | "wardrobe" | "collection";
-  images?: string[];   // ✅ ADD THIS
+  images?: string[];
   imageUrl?: string;
   image?: string;
   user?: FeedUser;
@@ -41,7 +49,6 @@ interface FeedItem {
 }
 
 /* ================= COMPONENT ================= */
-
 export default function HomeScreen() {
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -50,57 +57,57 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [stories, setStories] = useState<any[]>([]);
+  const [stories, setStories] = useState<StoryGroup[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-
   const LIMIT = 6;
+
+  const API_URL = "https://api.digiwardrobe.com";
 
   useEffect(() => {
     loadFeed(true);
+    loadStories();
+    loadMe();
+    loadNotificationsCount();
+  }, []);
 
+  const loadStories = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
 
+      const res = await api.get("/api/story", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    const loadStories = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) return;
+      console.log("📱 Stories loaded:", JSON.stringify(res.data, null, 2));
+      setStories(res.data);
+    } catch (err) {
+      console.error("Story load error:", err);
+    }
+  };
 
-        const res = await api.get("/api/story", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  const loadMe = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
 
-        setStories(res.data); // grouped by user
-      } catch (err) {
-        console.error("Story load error:", err);
-      }
-    };
+      const res = await api.get("/api/user/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
+      setCurrentUserId(res.data._id);
+    } catch (err) {
+      console.error("User me error:", err);
+    }
+  };
 
-
-    const loadMe = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) return;
-
-        const res = await api.get("/api/user/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setCurrentUserId(res.data._id);
-        console.log("Logged-in user:", res.data._id);
-
-
-
-      } catch (err) {
-        console.error("User me error:", err);
-      }
-    };
-    const loadNotificationsCount = async () => {
+  const loadNotificationsCount = async () => {
+    try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
 
@@ -108,24 +115,18 @@ export default function HomeScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setUnreadCount(res.data.unreadCount);
-    };
-
-    loadNotificationsCount();
-
-    loadMe();
-    loadStories();
-  }, []);
-
+      setUnreadCount(res.data.unreadCount || 0);
+    } catch (err) {
+      console.error("Notification count error:", err);
+    }
+  };
 
   /* ================= LOAD FEED ================= */
-
   const loadFeed = async (reset = false) => {
     if (loading || (!hasMore && !reset)) return;
 
     try {
       setLoading(true);
-
       const [publicRes, collectionRes] = await Promise.all([
         api.get(`/api/feed/public?page=${reset ? 1 : page}&limit=${LIMIT}`),
         api.get(`/api/feed/collections`),
@@ -136,8 +137,6 @@ export default function HomeScreen() {
 
       const processedPublic = publicItems.map((item) => ({
         ...item,
-
-        // ✅ backward compatibility for old items
         images: item.images && item.images.length
           ? item.images
           : item.imageUrl
@@ -147,9 +146,7 @@ export default function HomeScreen() {
               : [],
       }));
 
-
       const merged = injectCollections(processedPublic, collections);
-
       setFeed((prev) => (reset ? merged : [...prev, ...merged]));
       setPage((prev) => (reset ? 2 : prev + 1));
       setHasMore(publicItems.length === LIMIT);
@@ -161,7 +158,6 @@ export default function HomeScreen() {
   };
 
   /* ================= REFRESH ================= */
-
   const handleRefresh = async () => {
     setRefreshing(true);
     setHasMore(true);
@@ -170,13 +166,12 @@ export default function HomeScreen() {
   };
 
   /* ================= RENDER POST ================= */
-
   const renderPost = ({ item }: { item: FeedItem }) => {
     if (item.type === "item") {
       return (
         <ItemPostCard
           item={item}
-          currentUserId={currentUserId}   // ✅ THIS WAS MISSING
+          currentUserId={currentUserId}
           key={`item-${item._id}`}
           onDelete={(deletedId: string) => {
             setFeed(prev => prev.filter(i => i._id !== deletedId));
@@ -184,19 +179,38 @@ export default function HomeScreen() {
         />
       );
     }
-
     return null;
   };
 
+  /* ================= STORY UTILITIES ================= */
+  const getStoryCoverImage = (storyGroup: StoryGroup) => {
+    if (storyGroup.stories && storyGroup.stories.length > 0) {
+      return storyGroup.stories[0].media;
+    }
+    return null;
+  };
+
+  const getUserPhotoUrl = (photoPath?: string) => {
+    if (!photoPath) return null;
+    
+    if (photoPath.startsWith('http')) {
+      return photoPath;
+    }
+    
+    if (photoPath.includes('amazonaws.com')) {
+      return photoPath;
+    }
+    
+    return `${API_URL}${photoPath}`;
+  };
 
   /* ================= HEADER ================= */
-
   const renderHeader = () => (
     <>
-    
       <View style={styles.header}>
         <Text style={styles.logoText}>
-          <Text style={styles.logoHighlight}>D</Text><Text style={styles.logoHighlight2}>W</Text>
+          <Text style={styles.logoHighlight}>D</Text>
+          <Text style={styles.logoHighlight2}>W</Text>
         </Text>
 
         <View style={styles.headerIcons}>
@@ -215,38 +229,40 @@ export default function HomeScreen() {
               source={require("../../assets/icons/bell.png")}
               style={styles.headerIcon}
             />
-
             {unreadCount > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.storyRow}>
-        {/* Add Story */}
-
-
-
-        {/* Sample User Story */}
-        <View style={styles.storyRow}>
-          {/* Add Story */}
-          <TouchableOpacity
-            style={styles.storyCard}
-            onPress={() => router.push("/story/add")}
-          >
-            <View style={styles.addStoryCard}>
+      {/* Stories Section */}
+      <View style={styles.storiesContainer}>
+        {/* Add Story Button - SAME SIZE AS USER STORIES */}
+        <TouchableOpacity
+          style={styles.storyCard}
+          onPress={() => router.push("/story/add")}
+        >
+          <View style={styles.addStoryWrapper}>
+            <View style={styles.addStoryInner}>
               <Ionicons name="add" size={26} color="#A855F7" />
             </View>
-            <Text style={styles.storyName}>Add Story</Text>
-          </TouchableOpacity>
+          </View>
+          <Text style={styles.storyName}>Add Story</Text>
+        </TouchableOpacity>
 
-          {/* User Stories */}
-          {stories.map((group, index) => (
+        {/* User Stories */}
+        {stories.map((group, index) => {
+          const coverImage = getStoryCoverImage(group);
+          const userPhotoUrl = getUserPhotoUrl(group.user.photo);
+          
+          return (
             <TouchableOpacity
-              key={index}
+              key={`${group.user._id}-${index}`}
               style={styles.storyCard}
               onPress={() =>
                 router.push({
@@ -255,31 +271,39 @@ export default function HomeScreen() {
                 })
               }
             >
-              <View style={styles.userStoryCard}>
-                {group.user.photo ? (
-                  <Image
-                    source={{ uri: `https://api.digiwardrobe.com${group.user.photo}` }}
-                    style={{ width: 64, height: 84, borderRadius: 14 }}
-                  />
-                ) : (
-                  <Text style={styles.storyInitial}>
-                    {group.user.username[0].toUpperCase()}
-                  </Text>
-                )}
+              <View style={styles.userStoryWrapper}>
+                {/* Story Image Container */}
+                <View style={styles.storyImageContainer}>
+                  {coverImage ? (
+                    <Image
+                      source={{ uri: coverImage }}
+                      style={styles.storyImage}
+                    />
+                  ) : userPhotoUrl ? (
+                    <Image
+                      source={{ uri: userPhotoUrl }}
+                      style={styles.storyImage}
+                    />
+                  ) : (
+                    <View style={styles.storyFallback}>
+                      <Text style={styles.storyInitial}>
+                        {group.user.username[0].toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
-              <Text style={styles.storyName}>{group.user.username}</Text>
+              <Text style={styles.storyName} numberOfLines={1}>
+                {group.user.username}
+              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
+          );
+        })}
       </View>
-      
-
     </>
   );
 
   return (
-    <>
     <AppBackground>
       <FlatList
         data={feed}
@@ -306,57 +330,43 @@ export default function HomeScreen() {
         visible={showSearch}
         onClose={() => setShowSearch(false)}
       />
-      </AppBackground>
-    </>
+    </AppBackground>
   );
 }
 
 /* ================= HELPERS ================= */
-
 function injectCollections(posts: FeedItem[], collections: FeedItem[]) {
   if (!collections.length) return posts;
-
   const result = [...posts];
   let insertIndex = 2;
-
   collections.forEach((collection) => {
     if (insertIndex < result.length) {
       result.splice(insertIndex, 0, collection);
       insertIndex += 4;
     }
   });
-
   return result;
 }
 
 /* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
   container: {
-    
     paddingHorizontal: 16,
-
   },
   headerIcon: {
     width: 24,
     height: 24,
     resizeMode: "contain",
   },
- storyBg: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop:5
+    marginTop: 5
   },
-
   logoText: {
     fontSize: 22,
   },
-
   logoHighlight: {
     fontSize: 35,
     color: "#A855F7",
@@ -365,52 +375,78 @@ const styles = StyleSheet.create({
   logoHighlight2: {
     fontFamily: "Cookie",
     fontSize: 35,
-
   },
   headerIcons: {
     flexDirection: "row",
   },
-
-  storyRow: {
+  storiesContainer: {
     marginTop: 5,
     flexDirection: "row",
+    paddingVertical: 8,
   },
-
   storyCard: {
     alignItems: "center",
-    marginRight: 14,
+    marginRight: 12,
+    width: 72,
   },
-
-  addStoryCard: {
-    width: 64,
-    height: 84,
-    borderRadius: 14, // rounded square
-    borderWidth: 2,
-    borderColor: "#A855F7",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-
-  userStoryCard: {
+  // Add Story Styles - Square
+  addStoryWrapper: {
     width: 64,
     height: 84,
     borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#A855F7",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addStoryInner: {
+    width: 56,
+    height: 78,
+    borderRadius: 12,
+    backgroundColor: "#f5f5f5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // User Story Styles - Square
+  userStoryWrapper: {
+    width: 64,
+    height: 84,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#A855F7",
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  storyImageContainer: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  storyImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  storyFallback: {
+    width: "100%",
+    height: "100%",
     backgroundColor: "#A855F7",
     justifyContent: "center",
     alignItems: "center",
   },
-
   storyInitial: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: 24,
+    fontWeight: "bold",
     color: "#fff",
   },
-
   storyName: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize: 11,
     color: "#444",
+    textAlign: "center",
+    width: 64,
   },
   badge: {
     position: "absolute",
@@ -422,10 +458,12 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   badgeText: {
     color: "#fff",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
   },
 });

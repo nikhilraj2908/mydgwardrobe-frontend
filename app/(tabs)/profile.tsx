@@ -184,25 +184,28 @@ export default function ProfileScreen() {
   };
   const { logout } = useAuth();
 
-  const getWardrobeCoverImage = (wardrobeId: string) => {
-    const items = wardrobeItems.filter(i => i.wardrobe === wardrobeId);
+ const getWardrobeCoverImage = (wardrobeId: string) => {
+  const items = wardrobeItems.filter(i => i.wardrobe === wardrobeId);
+  if (!items.length) return null;
 
-    if (!items.length) return null;
+  const firstItem = items[0];
 
-    const firstItem = items[0];
+  // ✅ S3 / FULL URL SAFE
+  if (firstItem.images?.length && firstItem.images[0]) {
+    const img = firstItem.images[0];
+    return img.startsWith("http") ? img : `${baseURL}/${img}`;
+  }
 
-    // ✅ NEW SYSTEM FIRST
-    if (firstItem.images?.length && firstItem.images[0]) {
-      return `${baseURL}/${firstItem.images[0]}`;
-    }
+  // ⚠️ Legacy fallback
+  if (firstItem.imageUrl) {
+    return firstItem.imageUrl.startsWith("http")
+      ? firstItem.imageUrl
+      : `${baseURL}/${firstItem.imageUrl}`;
+  }
 
-    // ⚠️ LEGACY FALLBACK
-    if (firstItem.imageUrl) {
-      return `${baseURL}/${firstItem.imageUrl}`;
-    }
+  return null;
+};
 
-    return null;
-  };
 
 
   useEffect(() => {
@@ -500,7 +503,7 @@ export default function ProfileScreen() {
               <Image
                 source={{
                   uri: user.photo
-                    ? `${baseURL}${user.photo}`
+                    ? `${user.photo}`
                     : "https://ui-avatars.com/api/?name=User"
                 }}
                 style={styles.avatarImage}

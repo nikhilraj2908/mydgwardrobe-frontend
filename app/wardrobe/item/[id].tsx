@@ -299,7 +299,7 @@ const [activeIndex, setActiveIndex] = useState(0);
                         >
                             {item.user?.photo ? (
                                 <Image
-                                    source={{ uri: `${baseURL}${item.user.photo}` }}
+                                    source={{ uri: `${item.user.photo}` }}
                                     style={styles.ownerAvatar}
                                 />
                             ) : (
@@ -349,7 +349,7 @@ const [activeIndex, setActiveIndex] = useState(0);
                         {images.map((img, index) => (
                             <Image
                                 key={index}
-                                source={{ uri: `${baseURL}/${img}` }}
+                                source={{ uri: `${img}` }}
                                 style={styles.image}
                             />
                         ))}

@@ -1,14 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     FlatList,
     Image,
     Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,12 +18,9 @@ import {
     View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
 // ✅ Import centralized axios instance
-import api from "../../api/api"; // adjust path if needed
-import { checkIfConfigIsValid } from "react-native-reanimated/lib/typescript/animation/spring";
 import AppBackground from "@/components/AppBackground";
+import api from "../../api/api"; // adjust path if needed
 
 // Type definition for Category
 interface Category {
@@ -196,16 +194,16 @@ export default function AddWardrobe() {
     const itemId = params.itemId as string | undefined;
 
     const isEdit = mode === "edit" && !!itemId;
-useFocusEffect(
-  useCallback(() => {
-    // Screen focused → do nothing
-
-    return () => {
-      // Screen unfocused (back / cancel)
-      resetForm();
-    };
-  }, [])
-);
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                // Only reset form if we're NOT in edit mode
+                if (!isEdit) {
+                    resetForm();
+                }
+            };
+        }, [isEdit]) // Add isEdit as dependency
+    );
 
     useEffect(() => {
         if (!isEdit) return;
@@ -479,35 +477,53 @@ useFocusEffect(
             ]);
         }
     };
-    const normalizeImageUrl = (path: string) => {
-        if (!path) return "";
-        if (path.startsWith("http")) return path;
-
-        // ✅ ensure exactly ONE slash between domain and path
-        if (!path.startsWith("/")) {
-            path = "/" + path;
+   const normalizeImageUrl = (path: string) => {
+    if (!path) return "";
+    
+    // If already a full URL (S3 or local server), return as is
+    if (path.startsWith("http")) {
+        // Check if it's an S3 URL or your server URL
+        if (path.includes("digiwardrobe-assets.s3.ap-south-1.amazonaws.com")) {
+            // It's an S3 URL, return as is
+            return path;
+        } else if (path.startsWith(SERVER)) {
+            // It's already our server URL
+            return path;
+        } else {
+            // Some other URL, return as is
+            return path;
         }
-
-        return `${SERVER}${path}`;
-    };
+    }
+    
+    // If it's a local path (without server prefix), add the server URL
+    if (!path.startsWith("/")) {
+        path = "/" + path;
+    }
+    
+    return `${SERVER}${path}`;
+};
 
 
     const pickFromCamera = async () => {
-        const res = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+        const res = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+        });
 
-        if (!res.canceled) {
+        if (!res.canceled && res.assets?.length) {
             const a = res.assets[0];
             setImages(prev => [
                 ...prev,
                 {
                     uri: a.uri,
                     isRemote: false,
-                    fileName: a.fileName,
-                    mimeType: a.mimeType,
+                    fileName: a.fileName ?? `camera_${Date.now()}.jpg`,
+                    mimeType: a.mimeType ?? "image/jpeg",
                 },
             ]);
         }
     };
+
 
 
     const resetForm = () => {
@@ -563,117 +579,236 @@ useFocusEffect(
         return await AsyncStorage.getItem("token");
     };
 
-    const handleSubmit = async () => {
-        let finalCategory = category;
+ const handleSubmit = async () => {
+    let finalCategory = category;
+    
+    // Handle custom category if needed
+    if (showOtherCategoryInput && customCategory) {
+        const newCategory = await createNewCategory(customCategory, categoryType);
+        if (!newCategory) return;
+        finalCategory = newCategory.name;
+    }
 
-        // custom category creation if needed
-        if (showOtherCategoryInput && customCategory) {
-            const newCategory = await createNewCategory(customCategory, categoryType);
-            if (!newCategory) return;
-            finalCategory = newCategory.name;
-        }
+    const finalWardrobe = showOtherWardrobeInput && customWardrobe ? customWardrobe : wardrobe;
 
-        const finalWardrobe =
-            showOtherWardrobeInput && customWardrobe ? customWardrobe : wardrobe;
+    if (images.length === 0 || !finalCategory || !finalWardrobe) {
+        Alert.alert("Error", "At least one image, category & wardrobe are required");
+        return;
+    }
 
-        if (images.length === 0 || !finalCategory || !finalWardrobe) {
-            Alert.alert("Error", "At least one image, category & wardrobe are required");
+    try {
+        setLoading(true);
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+            Alert.alert("Error", "Token not found. Please login again.");
             return;
         }
 
-        try {
-            setLoading(true);
+        const formData = new FormData();
 
-            const token = await AsyncStorage.getItem("token");
-            if (!token) {
-                Alert.alert("Error", "Token not found. Please login again.");
-                return;
-            }
-
-            const formData = new FormData();
-
-            // ✅ 1) Upload only NEW images
-            images
-                .filter(img => !img.isRemote)
-                .forEach((img, index) => {
-                    formData.append("images", {
-                        uri: img.uri,
-                        name: img.fileName || `wardrobe_${Date.now()}_${index}.jpg`,
-                        type: img.mimeType || "image/jpeg",
-                    } as any);
-                });
-
-            // ✅ 2) Send remaining old images only in EDIT mode
-            if (isEdit) {
-                const existing = images
-                    .filter(img => img.isRemote)
-                    .map(img => {
-                        let path = img.uri;
-
-                        // normalize
-                        if (path.startsWith(SERVER)) {
-                            path = path.replace(SERVER, "");
-                        }
-                        if (path.startsWith("/")) {
-                            path = path.slice(1);
-                        }
-
-
-                        return path;
-                    }); // back to "/uploads/.."
-
-                formData.append("existingImages", JSON.stringify(existing));
-            }
-
-            formData.append("category", finalCategory);
-            formData.append("wardrobe", finalWardrobe);
-            formData.append("price", price || "0");
-            formData.append("brand", brand);
-            formData.append("visibility", visibility);
-            if (description.trim()) formData.append("description", description.trim());
-
-            // ✅ 3) Decide API based on create/edit
-            const url = isEdit
-                ? `${SERVER}/api/wardrobe/item/${itemId}`
-                : `${SERVER}/api/wardrobe/add`;
-
-            const method = isEdit ? "PUT" : "POST";
-
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                body: formData,
+        if (isEdit) {
+            // EDIT MODE
+            
+            // 1. Extract existing image paths (S3 keys)
+            const existingImages = images.filter(img => img.isRemote);
+            const newImages = images.filter(img => !img.isRemote);
+            
+            console.log("📊 Edit mode breakdown:", {
+                existing: existingImages.length,
+                new: newImages.length
             });
+            
+            // ✅ FIX: Send existingImages as JSON array string
+            if (existingImages.length > 0) {
+                const existingPaths = existingImages.map((img) => {
+                    let path = img.uri;
+                    
+                    // Extract S3 key from URL
+                    // From: https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com/wardrobe/1769078556458-237275586.jpg
+                    // To: wardrobe/1769078556458-237275586.jpg
+                    if (path.includes("s3.ap-south-1.amazonaws.com")) {
+                        const urlParts = path.split('.com/');
+                        if (urlParts.length > 1) {
+                            path = urlParts[1]; // "wardrobe/1769078556458-237275586.jpg"
+                        }
+                    } else if (path.startsWith(SERVER)) {
+                        // Handle local server paths (just in case)
+                        path = path.replace(SERVER, "");
+                        if (path.startsWith("/")) {
+                            path = path.substring(1);
+                        }
+                    }
+                    
+                    return path;
+                });
+                
+                console.log("📸 Existing paths array:", existingPaths);
+                
+                // ✅ CRITICAL FIX: Send as JSON string array (exactly what backend expects)
+                formData.append("existingImages", JSON.stringify(existingPaths));
+            }
+            
+            // 2. Append new images as files (if any)
+            newImages.forEach((img, index) => {
+                const cleanUri = Platform.OS === "ios" 
+                    ? img.uri.replace("file://", "")
+                    : img.uri;
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || "Request failed");
+                console.log(`📸 New image ${index}:`, cleanUri);
 
-            Alert.alert(
-                "Success",
-                isEdit ? "Item updated" : "Item added",
-                [
-                    {
-                        text: "OK",
-                        onPress: () => {
-                            resetForm();   // ✅ clear form
-                            if (router.canGoBack()) {
-                                router.back();
-                            } else {
-                                router.replace("/(tabs)/home"); // or home screen
-                            }// ✅ then go back
-                        },
-                    },
-                ]
-            );
+                formData.append("images", {
+                    uri: cleanUri,
+                    name: img.fileName || `wardrobe_${Date.now()}_${index}.jpg`,
+                    type: img.mimeType || "image/jpeg",
+                } as any);
+            });
+            
+        } else {
+            // ADD MODE: Send all images as files
+            images.forEach((img, index) => {
+                const cleanUri = Platform.OS === "ios" 
+                    ? img.uri.replace("file://", "")
+                    : img.uri;
 
-        } catch (err: any) {
-            Alert.alert("Error", err.message || "Something went wrong");
-        } finally {
-            setLoading(false);
+                console.log(`📸 Adding image ${index}:`, cleanUri);
+
+                formData.append("images", {
+                    uri: cleanUri,
+                    name: img.fileName || `wardrobe_${Date.now()}_${index}.jpg`,
+                    type: img.mimeType || "image/jpeg",
+                } as any);
+            });
         }
-    };
+
+        // ✅ Append other fields
+        formData.append("category", finalCategory);
+        formData.append("wardrobe", finalWardrobe);
+        formData.append("price", price || "0");
+        formData.append("brand", brand);
+        formData.append("visibility", visibility);
+        if (description.trim()) formData.append("description", description.trim());
+
+        // ✅ Log for debugging
+        console.log("📤 Submitting form data:");
+        console.log("- Mode:", isEdit ? "EDIT" : "ADD");
+        console.log("- Category:", finalCategory);
+        console.log("- Wardrobe:", finalWardrobe);
+        console.log("- Price:", price || "0");
+        console.log("- Brand:", brand);
+        console.log("- Visibility:", visibility);
+        console.log("- Total images:", images.length);
+        console.log("- Existing images:", images.filter(img => img.isRemote).length);
+        console.log("- New images:", images.filter(img => !img.isRemote).length);
+        
+        // Debug: Log FormData entries
+        console.log("🔍 FormData entries:");
+        for (let pair of formData.entries()) {
+            const [key, value] = pair;
+            if (value && typeof value === 'object' && value.uri) {
+                console.log(key, "File:", value.uri);
+            } else if (key === "existingImages") {
+                console.log(key, "JSON String:", value);
+                console.log("Parsed:", JSON.parse(value as string));
+            } else {
+                console.log(key, ":", value);
+            }
+        }
+
+        // ✅ Choose the right endpoint
+        let url;
+        let method;
+        
+        if (isEdit && itemId) {
+            // EDIT mode - use PUT
+            url = `${SERVER}/api/wardrobe/item/${itemId}`;
+            method = "PUT";
+            console.log(`🔄 EDIT mode - Updating item ${itemId}`);
+        } else {
+            // ADD mode
+            url = `${SERVER}/api/wardrobe/add`;
+            method = "POST";
+            console.log("➕ ADD mode - Creating new item");
+        }
+
+        console.log(`🚀 Making ${method} request to: ${url}`);
+
+        // ✅ Make the request using fetch with proper headers
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+                // DO NOT set Content-Type for FormData - let React Native handle it
+            },
+            body: formData,
+        });
+
+        // ✅ Handle response
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("❌ Server error response:", {
+                status: response.status,
+                statusText: response.statusText,
+                errorText: errorText
+            });
+            
+            let errorMessage = `Server error: ${response.status}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                if (errorData.message) {
+                    errorMessage = errorData.message;
+                } else if (errorData.error) {
+                    errorMessage = errorData.error;
+                }
+            } catch (e) {
+                console.log("Error response is not JSON:", errorText);
+            }
+            
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        console.log("✅ Success! Response:", data);
+
+        Alert.alert(
+            "Success",
+            isEdit ? "Item updated successfully!" : "Item added successfully!",
+            [
+                {
+                    text: "OK",
+                    onPress: () => {
+                        resetForm();
+                        if (router.canGoBack()) {
+                            router.back();
+                        } else {
+                            router.replace("/(tabs)/home");
+                        }
+                    },
+                },
+            ]
+        );
+
+    } catch (err: any) {
+        console.error("❌ Upload error details:", {
+            message: err.message,
+            stack: err.stack
+        });
+        
+        // More specific error message
+        let errorMessage = err.message || "Something went wrong. Please try again.";
+        
+        if (err.message.includes("Invalid existingImages format")) {
+            errorMessage = "Image format error. Please try removing and re-adding images.";
+        } else if (err.message.includes("500") || err.message.includes("Server error")) {
+            errorMessage = "Server error. Please try again in a few moments.";
+        }
+        
+        Alert.alert("Error", errorMessage);
+    } finally {
+        setLoading(false);
+    }
+};
+
 
 
     /* ================= RENDER CATEGORY ITEM ================= */
