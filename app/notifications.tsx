@@ -114,78 +114,82 @@ export default function NotificationsScreen() {
 
     return (
         <AppBackground>
-        <View style={styles.container}>
-            {/* ================= HEADER ================= */}
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={22} color="#000" />
+            <View style={styles.container}>
+                {/* ================= HEADER ================= */}
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={22} color="#000" />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>Notifications</Text>
+                    </View>
+
+                    <TouchableOpacity onPress={markAllRead}>
+                        <Text style={styles.mark}>Mark all read</Text>
                     </TouchableOpacity>
-                    <Text style={styles.title}>Notifications</Text>
                 </View>
 
-                <TouchableOpacity onPress={markAllRead}>
-                    <Text style={styles.mark}>Mark all read</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* ================= LIST ================= */}
-            <FlatList
-                data={notifications}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                    <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={async () => {
-                            // ✅ mark ONLY this notification
-                            if (!item.read) {
-                                await markSingleRead(item._id);
-                            }
-
-                            // 👉 navigate to item
-                            if (item.item) {
-                                if (item.type === "comment") {
-                                    router.push({
-                                        pathname: `/wardrobe/item/${item.item}`,
-                                        params: { openComments: "true" },
-                                    });
-                                } else {
-                                    router.push(`/wardrobe/item/${item.item}`);
+                {/* ================= LIST ================= */}
+                <FlatList
+                    data={notifications}
+                    keyExtractor={(item) => item._id}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={async () => {
+                                // ✅ mark ONLY this notification
+                                if (!item.read) {
+                                    await markSingleRead(item._id);
                                 }
-                            }
-                        }}
-                    >
-                        <View style={styles.card}>
-                            <Image
-                                source={
-                                    item.actor.photo
-                                        ? {
-                                            uri: `https://api.digiwardrobe.com${item.actor.photo}`,
-                                        }
-                                        : require("../assets/icons/person-round.png")
+                                if (item.type === "follow") {
+                                    router.push(`/profile/${item.actor._id}`);
+                                    return;
                                 }
-                                style={styles.avatar}
-                            />
 
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.message}>
-                                    <Text style={styles.name}>
-                                        {item.actor.username}
-                                    </Text>{" "}
-                                    {item.message}
-                                </Text>
+                                // 👉 navigate to item
+                                if (item.item) {
+                                    if (item.type === "comment") {
+                                        router.push({
+                                            pathname: `/wardrobe/item/${item.item}`,
+                                            params: { openComments: "true" },
+                                        });
+                                    } else {
+                                        router.push(`/wardrobe/item/${item.item}`);
+                                    }
+                                }
+                            }}
+                        >
+                            <View style={styles.card}>
+                                <Image
+                                    source={
+                                        item.actor.photo
+                                            ? {
+                                                uri: `https://api.digiwardrobe.com${item.actor.photo}`,
+                                            }
+                                            : require("../assets/icons/person-round.png")
+                                    }
+                                    style={styles.avatar}
+                                />
 
-                                <Text style={styles.time}>
-                                    {formatNotificationTime(item.createdAt)}
-                                </Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.message}>
+                                        <Text style={styles.name}>
+                                            {item.actor.username}
+                                        </Text>{" "}
+                                        {item.message}
+                                    </Text>
+
+                                    <Text style={styles.time}>
+                                        {formatNotificationTime(item.createdAt)}
+                                    </Text>
+                                </View>
+
+                                {!item.read && <View style={styles.unreadDot} />}
                             </View>
-
-                            {!item.read && <View style={styles.unreadDot} />}
-                        </View>
-                    </TouchableOpacity>
-                )}
-            />
-        </View>
+                        </TouchableOpacity>
+                    )}
+                />
+            </View>
         </AppBackground>
     );
 }

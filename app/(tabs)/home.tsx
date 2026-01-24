@@ -192,15 +192,15 @@ export default function HomeScreen() {
 
   const getUserPhotoUrl = (photoPath?: string) => {
     if (!photoPath) return null;
-    
+
     if (photoPath.startsWith('http')) {
       return photoPath;
     }
-    
+
     if (photoPath.includes('amazonaws.com')) {
       return photoPath;
     }
-    
+
     return `${API_URL}${photoPath}`;
   };
 
@@ -259,7 +259,7 @@ export default function HomeScreen() {
         {stories.map((group, index) => {
           const coverImage = getStoryCoverImage(group);
           const userPhotoUrl = getUserPhotoUrl(group.user.photo);
-          
+
           return (
             <TouchableOpacity
               key={`${group.user._id}-${index}`}
@@ -329,6 +329,10 @@ export default function HomeScreen() {
       <SearchModal
         visible={showSearch}
         onClose={() => setShowSearch(false)}
+        onSearch={(query) => {
+          setShowSearch(false);
+          router.push({ pathname: "/explore", params: { q: query } });
+        }}
       />
     </AppBackground>
   );

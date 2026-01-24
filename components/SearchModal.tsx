@@ -30,6 +30,7 @@ type SearchItem =
 interface Props {
   visible: boolean;
   onClose: () => void;
+  onSearch: (query: string) => void;
 }
 
 interface SuggestionItem {
@@ -38,7 +39,7 @@ interface SuggestionItem {
   brand?: string;
 }
 
-export default function SearchModal({ visible, onClose }: Props) {
+export default function SearchModal({ visible, onClose, onSearch }: Props) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchItem[]>([]);
 
@@ -64,11 +65,26 @@ export default function SearchModal({ visible, onClose }: Props) {
           }),
         ]);
 
-        const items: SearchItem[] = (itemRes.data || []).map((i: any) => ({
+        const exploreItems = itemRes.data.items || [];
+
+        // unique categories
+        const categorySuggestions: SearchItem[] = Array.from(
+          new Set(exploreItems.map((x: any) => (x.category || "").trim()).filter(Boolean))
+        ).slice(0, 8).map((cat) => ({
           type: "item",
-          _id: i._id,
-          label: i.category || i.brand,
+          _id: `cat-${cat}`,
+          label: cat,
         }));
+
+        // unique brands
+        const brandSuggestions: SearchItem[] = Array.from(
+          new Set(exploreItems.map((x: any) => (x.brand || "").trim()).filter(Boolean))
+        ).slice(0, 8).map((brand) => ({
+          type: "item",
+          _id: `brand-${brand}`,
+          label: brand,
+        }));
+
 
         const users: SearchItem[] = (userRes.data.users || []).map(
           (u: any) => ({
@@ -79,7 +95,8 @@ export default function SearchModal({ visible, onClose }: Props) {
           })
         );
 
-        setSuggestions([...users, ...items]);
+        setSuggestions([...users, ...categorySuggestions, ...brandSuggestions]);
+
       } catch (err) {
         console.log("Search error:", err);
       } finally {
@@ -92,19 +109,17 @@ export default function SearchModal({ visible, onClose }: Props) {
 
   /* ================= SELECT ================= */
   const handleSelect = (item: SearchItem) => {
-    onClose();
-    setQuery("");
-    setSuggestions([]);
+  onClose();
+  setQuery("");
+  setSuggestions([]);
 
-    if (item.type === "user") {
-      router.push(`/profile?userId=${item._id}`);
-    } else {
-      router.push({
-        pathname: "/(tabs)/explore",
-        params: { search: item.label },
-      });
-    }
-  };
+  if (item.type === "user") {
+    router.push(`/profile/${item._id}`);
+  } else {
+    onSearch(item.label); // redirect through parent
+  }
+};
+
 
 
   return (
@@ -120,11 +135,18 @@ export default function SearchModal({ visible, onClose }: Props) {
             <TextInput
               autoFocus
               placeholder="Search outfits, brands..."
-              placeholderTextColor="#999"
               value={query}
               onChangeText={setQuery}
+              onSubmitEditing={() => {
+                if (query.trim()) {
+                  onSearch(query.trim());
+                  setQuery("");
+                  setSuggestions([]);
+                }
+              }}
               style={styles.input}
             />
+
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={20} color="#555" />
             </TouchableOpacity>
