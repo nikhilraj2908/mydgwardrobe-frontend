@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import api from "../../api/api";
-
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 const { width } = Dimensions.get("window");
 
 export default function StoryView() {
@@ -49,10 +49,7 @@ export default function StoryView() {
   const group = groups[userIndex];
   const story = group?.stories?.[storyIndex];
 
-  const mediaUrl =
-    story?.media?.startsWith("http")
-      ? story.media
-      : `${api.defaults.baseURL}${story?.media}`;
+ const mediaUrl = resolveImageUrl(story?.media);
 
   /* ================= MARK VIEW ================= */
   useEffect(() => {

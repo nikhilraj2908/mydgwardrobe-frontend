@@ -16,12 +16,11 @@ import {
 } from "react-native";
 import api from "../api/api";
 import { useSavedItems } from "../context/SavedItemsContext";
-
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { useFollow } from "../context/FollowContext";
 
 
 const { width } = Dimensions.get('window');
-const BASE_URL = "https://api.digiwardrobe.com";
 
 interface CommentType {
   _id: string;
@@ -322,19 +321,10 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   // Helper function to get user avatar URL
   const getUserAvatarUrl = () => {
     const photoPath = item.user?.photo;
-
     if (!photoPath) return null;
-
-    if (photoPath.startsWith('http')) {
-      return photoPath;
-    }
-
-    if (photoPath.startsWith('/')) {
-      return `${BASE_URL}${photoPath}`;
-    }
-
-    return `${BASE_URL}/${photoPath}`;
+    return resolveImageUrl(photoPath);
   };
+
   const formatCommentTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -365,9 +355,10 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
           {userObj?.photo ? (
             <TouchableOpacity onPress={handleUserPress}>
               <Image
-                source={{ uri: `${BASE_URL}${userObj.photo}` }}
+                source={{ uri: resolveImageUrl(userObj.photo) }}
                 style={styles.commentAvatar}
               />
+
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -521,9 +512,7 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                   setActiveIndex(index);
                 }}
                 renderItem={({ item: uri }) => {
-                  const finalUrl = uri.startsWith("http")
-                    ? uri
-                    : `${BASE_URL}${uri.startsWith("/") ? "" : "/"}${uri}`;
+                  const finalUrl = resolveImageUrl(uri);
 
                   return (
                     <View
@@ -541,25 +530,20 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                             height:
                               imageRatios[finalUrl]
                                 ? containerWidth * imageRatios[finalUrl]
-                                : containerWidth * 0.75, // fallback
-
+                                : containerWidth * 0.75,
                           },
                         ]}
                         onLoad={(e) => {
                           const source = e?.nativeEvent?.source;
-
-                          // ✅ Web safety check
                           if (!source?.width || !source?.height) return;
-
-                          const { width, height } = source;
 
                           setImageRatios((prev) => ({
                             ...prev,
-                            [finalUrl]: height / width,
+                            [finalUrl]: source.height / source.width,
                           }));
                         }}
-
                       />
+
                     </View>
                   );
                 }}

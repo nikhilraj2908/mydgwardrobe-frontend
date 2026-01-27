@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useRef, useState, useMemo } from "react";
+
 import {
   ActivityIndicator,
   Dimensions,
@@ -27,6 +28,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
 const GAP = 8;
 const COLUMN_WIDTH = (SCREEN_WIDTH - (GAP * (NUM_COLUMNS + 1))) / NUM_COLUMNS;
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 
 interface CategoryItem {
   _id: string;
@@ -68,7 +70,6 @@ interface ExploreItem {
 }
 
 type SortId = "newest" | "popular" | "price-low" | "price-high";
-const baseURL = api.defaults.baseURL;
 
 const SORT_OPTIONS: SortOption[] = [
   { id: "newest", label: "Newest", icon: "time-outline" },
@@ -335,20 +336,20 @@ export default function Explore() {
     categories: CategoryItem[];
     users: SearchUser[];
   }>({ categories: [], users: [] });
-const { q } = useLocalSearchParams<{ q?: string }>();
+  const { q } = useLocalSearchParams<{ q?: string }>();
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toggleSave, savedItemIds } = useSavedItems();
-useEffect(() => {
-  if (!q || typeof q !== "string") return;
+  useEffect(() => {
+    if (!q || typeof q !== "string") return;
 
-  // fill input
-  setSearch(q);
-  setIsSearching(true);
+    // fill input
+    setSearch(q);
+    setIsSearching(true);
 
-  // run the same explore search logic you already use
-  handleSearchChange(q);
+    // run the same explore search logic you already use
+    handleSearchChange(q);
 
-}, [q]);
+  }, [q]);
   // Fetch categories
   useEffect(() => {
     fetchCategories();
@@ -446,12 +447,12 @@ useEffect(() => {
   }, [mode, isSearching, search]);
 
   useEffect(() => {
-  if (q && typeof q === "string") {
-    setSearch(q);
-    setIsSearching(true);
-    performSearch(q);
-  }
-}, [q]);
+    if (q && typeof q === "string") {
+      setSearch(q);
+      setIsSearching(true);
+      performSearch(q);
+    }
+  }, [q]);
 
 
   useEffect(() => {
@@ -577,10 +578,13 @@ useEffect(() => {
   const renderItemCard = (item: ExploreItem, index: number, columnIndex: number) => {
     const isLiked = likedItems[item._id] || false;
     const isSaved = savedItemIds.includes(item._id);
-    const rawPath = item.images?.length && item.images[0]
-      ? item.images[0]
-      : item.imageUrl;
-    const imagePath = rawPath?.replace(/\\/g, "/");
+    const rawPath =
+      item.images?.length && item.images[0]
+        ? item.images[0]
+        : item.imageUrl;
+
+    const imageUrl = resolveImageUrl(rawPath);
+
 
     const cardHeight = getRandomHeight(COLUMN_WIDTH * 1.5, index * (columnIndex + 1));
     const borderRadius = [18, 14, 22, 16, 20][index % 5];
@@ -607,13 +611,11 @@ useEffect(() => {
       >
         <Image
           source={
-            imagePath
-              ? { uri: `${imagePath}` }
+            imageUrl
+              ? { uri: imageUrl }
               : require("../../assets/images/icon.png")
           }
-          style={[styles.image, {
-            transform: [{ rotate: rotation }]
-          }]}
+          style={styles.image}
           resizeMode="cover"
         />
 
@@ -851,23 +853,33 @@ useEffect(() => {
           <View style={styles.searchSection}>
             <Text style={styles.searchSectionTitle}>Users</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScrollView}>
-              {searchResults.users.map((user) => (
-                <TouchableOpacity
-                  key={user._id}
-                  style={styles.userCard}
-                  activeOpacity={0.85}
-                  onPress={() => handleUserPress(user._id)}
-                >
-                  <Image
-                    source={{ uri: getAvatarUrl(user.photo, user.username) }}
-                    style={styles.userAvatar}
-                    resizeMode="cover"
-                  />
-                  <Text style={styles.userName} numberOfLines={1}>
-                    {user.username}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {searchResults.users.map((user) => {
+                const avatarUrl = user.photo
+                  ? resolveImageUrl(user.photo)
+                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    user.username || "User"
+                  )}&background=E9D5FF&color=6B21A8&size=128`;
+
+                return (
+                  <TouchableOpacity
+                    key={user._id}
+                    style={styles.userCard}
+                    activeOpacity={0.85}
+                    onPress={() => handleUserPress(user._id)}
+                  >
+                    <Image
+                      source={{ uri: avatarUrl }}
+                      style={styles.userAvatar}
+                      resizeMode="cover"
+                    />
+
+                    <Text style={styles.userName} numberOfLines={1}>
+                      {user.username}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+
             </ScrollView>
           </View>
         )}

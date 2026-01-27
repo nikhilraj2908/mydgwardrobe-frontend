@@ -12,8 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/api";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
-
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 interface WardrobeItem {
   _id: string;
   wardrobe: string;
@@ -47,7 +46,7 @@ export default function WardrobeDetailsScreen() {
   const [moveModalVisible, setMoveModalVisible] = useState(false);
   const [wardrobes, setWardrobes] = useState<Wardrobe[]>([]);
   const [moving, setMoving] = useState(false);
-const [renderVersion, setRenderVersion] = useState(0);
+  const [renderVersion, setRenderVersion] = useState(0);
 
 
   const fetchWardrobes = async () => {
@@ -120,11 +119,16 @@ const [renderVersion, setRenderVersion] = useState(0);
   };
 
 
-  const getFirstItemImage = (item: WardrobeItem): string => {
+  const getFirstItemImage = (item: WardrobeItem): string | null => {
     if (Array.isArray(item.images) && item.images.length > 0) {
-      return item.images[0];
+      return resolveImageUrl(item.images[0]);
     }
-    return item.imageUrl || "";
+
+    if (item.imageUrl) {
+      return resolveImageUrl(item.imageUrl);
+    }
+
+    return null;
   };
 
 
@@ -225,22 +229,7 @@ const [renderVersion, setRenderVersion] = useState(0);
       default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
   });
-  const DEFAULT_IMAGE =
-    "https://ui-avatars.com/api/?name=Item&background=random";
 
-  const getItemImageUrl = (url?: string): string => {
-    if (!url) return DEFAULT_IMAGE;
-
-    // already absolute URL
-    if (url.startsWith("http")) return url;
-
-    // relative backend path
-    if (url.startsWith("/")) {
-      return `${SERVER_URL}${url}`;
-    }
-
-    return `${SERVER_URL}/${url}`;
-  };
 
   return (
     <AppBackground>
@@ -301,7 +290,7 @@ const [renderVersion, setRenderVersion] = useState(0);
 
           <Text style={styles.itemCountText}>{items.length} items in this wardrobe</Text>
 
-          <ScrollView key={renderVersion}  style={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+          <ScrollView key={renderVersion} style={{ padding: 16 }} showsVerticalScrollIndicator={false}>
             <View style={isGridView ? styles.gridContainer : undefined}>
               {loading ? (
                 <ActivityIndicator color="#A855F7" size="large" style={{ marginTop: 20 }} />
@@ -336,7 +325,7 @@ const [renderVersion, setRenderVersion] = useState(0);
                     >
                       {imagePath ? (
                         <Image
-                          source={{ uri: getItemImageUrl(imagePath) }}
+                          source={{ uri: imagePath }}
                           style={isGridView ? styles.gridImage : styles.listImage}
                           resizeMode="cover"
                         />
@@ -512,20 +501,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
   },
-moveWardrobeItem: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingVertical: 14,
-  borderBottomWidth: 1,
-  borderBottomColor: "#EDE9FE",
-},
+  moveWardrobeItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EDE9FE",
+  },
 
-moveWardrobeText: {
-  fontSize: 15,
-  fontWeight: "600",
-  color: "#333",
-},
+  moveWardrobeText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+  },
 
 
 });

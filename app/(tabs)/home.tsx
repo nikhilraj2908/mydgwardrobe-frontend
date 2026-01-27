@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import api from "../../api/api";
 import AppBackground from "@/components/AppBackground";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 
 /* ================= TYPES ================= */
 interface StoryGroup {
@@ -183,26 +184,17 @@ export default function HomeScreen() {
   };
 
   /* ================= STORY UTILITIES ================= */
-  const getStoryCoverImage = (storyGroup: StoryGroup) => {
-    if (storyGroup.stories && storyGroup.stories.length > 0) {
-      return storyGroup.stories[0].media;
-    }
-    return null;
-  };
+ const getStoryCoverImage = (storyGroup: StoryGroup) => {
+  if (storyGroup.stories && storyGroup.stories.length > 0) {
+    return resolveImageUrl(storyGroup.stories[0].media);
+  }
+  return null;
+};
 
   const getUserPhotoUrl = (photoPath?: string) => {
-    if (!photoPath) return null;
+  return photoPath ? resolveImageUrl(photoPath) : null;
+};
 
-    if (photoPath.startsWith('http')) {
-      return photoPath;
-    }
-
-    if (photoPath.includes('amazonaws.com')) {
-      return photoPath;
-    }
-
-    return `${API_URL}${photoPath}`;
-  };
 
   /* ================= HEADER ================= */
   const renderHeader = () => (

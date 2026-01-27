@@ -21,8 +21,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useSavedItems } from "../../context/SavedItemsContext";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import AppBackground from "@/components/AppBackground";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 // Define types
-const baseURL = api.defaults.baseURL;
 
 
 interface Wardrobe {
@@ -184,27 +184,20 @@ export default function ProfileScreen() {
   };
   const { logout } = useAuth();
 
- const getWardrobeCoverImage = (wardrobeId: string) => {
-  const items = wardrobeItems.filter(i => i.wardrobe === wardrobeId);
-  if (!items.length) return null;
+  const getWardrobeCoverImage = (wardrobeId: string) => {
+    const items = wardrobeItems.filter(i => i.wardrobe === wardrobeId);
+    if (!items.length) return null;
 
-  const firstItem = items[0];
+    const firstItem = items[0];
 
-  // ✅ S3 / FULL URL SAFE
-  if (firstItem.images?.length && firstItem.images[0]) {
-    const img = firstItem.images[0];
-    return img.startsWith("http") ? img : `${baseURL}/${img}`;
-  }
+    const imagePath =
+      firstItem.images?.[0] ||
+      firstItem.imageUrl ||
+      null;
 
-  // ⚠️ Legacy fallback
-  if (firstItem.imageUrl) {
-    return firstItem.imageUrl.startsWith("http")
-      ? firstItem.imageUrl
-      : `${baseURL}/${firstItem.imageUrl}`;
-  }
+    return imagePath ? resolveImageUrl(imagePath) : null;
+  };
 
-  return null;
-};
 
 
 
@@ -489,387 +482,384 @@ export default function ProfileScreen() {
 
   return (
     <>
-<AppBackground>
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.userCard}>
-          <View style={styles.avatarContainer}>
-            {user?.photo ? (
-              <Image
-                source={{
-                  uri: user.photo
-                    ? `${user.photo}`
-                    : "https://ui-avatars.com/api/?name=User"
-                }}
-                style={styles.avatarImage}
-                onError={(e) =>
-                  console.log("Profile image load error:", e.nativeEvent.error)
-                }
-              />
-
-            ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {getInitials(userData?.name.toUpperCase() || "User")}
-                </Text>
-              </View>
-            )}
-            {/* Add Story Button */}
-            <TouchableOpacity style={styles.addStoryBtn} onPress={handleAddStory}>
-              <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-          <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={styles.name}>{userData?.name.toUpperCase() || "User"}</Text>
-            <Text style={styles.handle}>{userData?.handle || "@user"}</Text>
-            <Text style={styles.bio}>{userData?.bio || "Fashion enthusiast | Style curator"}</Text>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={handleEditProfile}>
-            <Ionicons name="pencil" size={16} color="#fff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.actionBtn, styles.menuBtn]} onPress={handleSettingsPress}>
-            <Ionicons name="ellipsis-horizontal" size={16} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>
-              {userData?.collectionWorth || "₹0"}
-            </Text>
-            <Text style={styles.statLabel}>Collection Worth</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.statBox}
-            onPress={() =>
-              router.push(
-                `/profile/followers?userId=${user?._id}&tab=followers`
-              )
-            }
-          >
-            <Text style={styles.statValue}>
-              {followersCount}
-            </Text>
-            <Text style={styles.statLabel}>Followers</Text>
-          </TouchableOpacity>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{userData?.wardrobeCount || 0}</Text>
-            <Text style={styles.statLabel}>Wardrobes</Text>
-          </View>
-        </View>
-
-
-
-        {/* Tabs */}
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === "myWardrobes" && styles.activeTab]}
-            onPress={() => setActiveTab("myWardrobes")}
-          >
-            <Text style={[styles.tabText, activeTab === "myWardrobes" && styles.activeTabText]}>
-              My Wardrobes
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === "savedItems" && styles.activeTab]}
-            onPress={() => setActiveTab("savedItems")}
-          >
-            <Text style={[styles.tabText, activeTab === "savedItems" && styles.activeTabText]}>
-              Saved Items
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Content based on active tab */}
-        {activeTab === "myWardrobes" ? (
-          <View style={styles.contentContainer}>
-            <TouchableOpacity style={styles.addWardrobeBtn} onPress={handleAddWardrobe}>
-              <Text style={styles.addWardrobeText}>+ Add New Wardrobe</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.wardrobeCard} onPress={handleAllWardrobeItemsPress}>
-              <View style={styles.imagesRow}>
-                {recentWardrobes.slice(0, 3).map((wardrobe, idx) => {
-                  const coverImage =
-                    wardrobe.coverImage || getWardrobeCoverImage(wardrobe._id);
-
-                  return (
-                    <View
-                      key={wardrobe._id}
-                      style={{
-                        marginLeft: idx === 0 ? 0 : -10,
-                        zIndex: 3 - idx,
-                      }}
-                    >
-                      {coverImage ? (
-                        <View style={styles.imageWrapper}>
-                          <Image
-                            source={{ uri: coverImage }}
-                            style={styles.wardrobeImage}
-                            resizeMode="cover"
-                          />
-                          <View style={styles.imageOverlay} />
-                        </View>
-                      ) : (
-                        <View
-                          style={[
-                            styles.wardrobeColor,
-                            { backgroundColor: wardrobe.color || "#A855F7" },
-                          ]}
-                        />
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.wardrobeName}>All Wardrobe Items</Text>
-                <Text style={styles.itemsCount}>{totalItems} items</Text>
-              </View>
-
-              <Ionicons name="chevron-forward-outline" size={24} color="#000" />
-            </TouchableOpacity>
-
-
-            {recentWardrobes.map((wardrobe) => {
-              const isSelected = selectedWardrobeIds.includes(wardrobe._id);
-
-              return (
-                <TouchableOpacity
-                  key={wardrobe._id}
-                  style={[
-                    styles.wardrobeCard,
-                    isSelected && { borderWidth: 2, borderColor: "#A855F7" },
-                  ]}
-                  onPress={() =>
-                    wardrobeSelectionMode
-                      ? toggleWardrobeSelect(wardrobe._id)
-                      : handleWardrobePress(wardrobe)
-                  }
-                  onLongPress={() => {
-                    if (!wardrobeSelectionMode) {
-                      setSelectedWardrobeIds([wardrobe._id]);
-                    }
-                  }}
-                >
-                  <View style={styles.imagesRow}>
-                    {(() => {
-                      const coverImage =
-                        wardrobe.coverImage || getWardrobeCoverImage(wardrobe._id);
-                      console.log("cover image nikhil", coverImage)
-                      return coverImage ? (
-                        <View style={styles.imageWrapper}>
-                          <Image
-                            source={{ uri: coverImage }}
-                            style={styles.wardrobeImage}
-                            resizeMode="cover"
-                          />
-                          <View style={styles.imageOverlay} />
-                        </View>
-                      ) : (
-                        <View
-                          style={[
-                            styles.wardrobeColor,
-                            { backgroundColor: wardrobe.color || "#A855F7" },
-                          ]}
-                        />
-                      );
-                    })()}
-                  </View>
-
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.wardrobeName}>{wardrobe.name}</Text>
-                    <Text style={styles.itemsCount}>
-                      {wardrobe.itemCount || 0} items
-                    </Text>
-                  </View>
-
-                  <View>
-                    <Text>{formatPrice(wardrobe.totalWorth || 0)}</Text>
-                  </View>
-
-                  {wardrobeSelectionMode ? (
-                    <Ionicons
-                      name={isSelected ? "checkmark-circle" : "ellipse-outline"}
-                      size={22}
-                      color="#A855F7"
-                    />
-                  ) : (
-                    <Ionicons name="chevron-forward-outline" size={24} color="#000" />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-            {wardrobeSelectionMode && (
-              <View style={styles.selectionBar}>
-                <View style={{ flexDirection: "row", gap: 12 }}>
-
-                  {selectedWardrobeIds.length === 1 && selectedWardrobe && (
-                    <TouchableOpacity
-                      onPress={() =>
-                        router.push({
-                          pathname: "/profile/create-wardrobe",
-                          params: {
-                            id: selectedWardrobe._id,
-                            name: selectedWardrobe.name,
-                            color: selectedWardrobe.color,
-                          },
-                        })
-                      }
-                    >
-                      <Ionicons name="create-outline" size={20} color="#A855F7" />
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity onPress={confirmWardrobeDelete}>
-                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity onPress={cancelWardrobeSelection}>
-                  <Ionicons name="close-outline" size={22} color="#585858ff" />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {wardrobes.length > 3 && (
-              <TouchableOpacity
-                style={styles.moreWardrobesContainer}
-                onPress={handleAllWardrobesPress} // <-- Add this
-              >
-                <Text style={styles.moreWardrobesText}>
-                  +{wardrobes.length - 3} more wardrobes
-                </Text>
-              </TouchableOpacity>
-            )}
-            {wardrobes.length === 0 && (
-              <View style={styles.emptyState}>
-                <Ionicons name="folder-outline" size={48} color="#e677f5ff" />
-                <Text style={styles.emptyStateText}>No wardrobes yet</Text>
-                <Text style={styles.emptyStateSubText}>
-                  Create your first wardrobe to organize your items
-                </Text>
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={styles.contentContainer}>
-            {activeTab === "savedItems" && (
-              <View style={styles.savedContainer}>
-                {/* Header with count and sort */}
-                <View style={styles.savedHeader}>
-                  <Text style={styles.savedCount}>
-                    {savedItems.length} saved items
-                  </Text>
-
-                  <TouchableOpacity style={styles.sortButton}>
-                    <Text style={styles.sortButtonText}>Sort by</Text>
-                    <Ionicons name="chevron-down" size={16} color="#000" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Grid layout */}
-                {savedItems.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="bookmark-outline" size={48} color="#ccc" />
-                    <Text style={styles.emptyStateText}>No saved items yet</Text>
-                    <Text style={styles.emptyStateSubText}>
-                      Items you save will appear here
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.gridContainer}>
-                    {savedItems.map((saved) => {
-                      if (!saved.item) return null; // 🛡️ safety guard
-
-                      const imagePath =
-                        saved.item.images?.length && saved.item.images[0]
-                          ? saved.item.images[0]          // ✅ NEW SYSTEM
-                          : saved.item.imageUrl;          // ⚠️ LEGACY FALLBACK
-
-                      const itemData = {
-                        _id: saved.item._id,
-                        name: saved.item.name || "Item",
-                        brand: saved.item.brand || saved.item.user?.username || "Brand",
-                        price: saved.item.price || 0,
-                        likes: likeCounts[saved.item._id] || 0,
-                        imageUrl: imagePath,              // ✅ unified
-                      };
-
-
-                      return (
-                        <View key={saved._id} style={styles.gridItem}>
-                          <SavedGridCard
-                            item={itemData}
-
-                            onPress={() => router.push(`/wardrobe/item/${itemData._id}`)}
-                          />
-                        </View>
-                      );
-                    })}
-
-                  </View>
-                )}
-              </View>
-            )}
-
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Settings Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={settingsModalVisible}
-        onRequestClose={handleCloseSettings}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={handleCloseSettings}
+      <AppBackground>
+        <ScrollView
+          style={styles.container}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={handleNavigateToSettings}
-            >
-              <Ionicons name="settings-outline" size={20} color="#666" />
-              <Text style={styles.modalItemText}>Settings</Text>
+          <View style={styles.userCard}>
+            <View style={styles.avatarContainer}>
+              {user?.photo ? (
+                <Image
+  source={{
+    uri: user?.photo
+      ? resolveImageUrl(user.photo)
+      : DEFAULT_AVATAR,
+  }}
+  style={styles.avatarImage}
+/>
+
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {getInitials(userData?.name.toUpperCase() || "User")}
+                  </Text>
+                </View>
+              )}
+              {/* Add Story Button */}
+              <TouchableOpacity style={styles.addStoryBtn} onPress={handleAddStory}>
+                <Ionicons name="add" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <Text style={styles.name}>{userData?.name.toUpperCase() || "User"}</Text>
+              <Text style={styles.handle}>{userData?.handle || "@user"}</Text>
+              <Text style={styles.bio}>{userData?.bio || "Fashion enthusiast | Style curator"}</Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={handleEditProfile}>
+              <Ionicons name="pencil" size={16} color="#fff" />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={handleNavigateToHelp}
-            >
-              <Ionicons name="help-circle-outline" size={20} color="#666" />
-              <Text style={styles.modalItemText}>Help & Support</Text>
-            </TouchableOpacity>
-
-            <View style={styles.modalDivider} />
-
-            <TouchableOpacity
-              style={[styles.modalItem, styles.logoutItem]}
-              onPress={handleLogout}
-            >
-              <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-              <Text style={[styles.modalItemText, styles.logoutText]}>Logout</Text>
+            <TouchableOpacity style={[styles.actionBtn, styles.menuBtn]} onPress={handleSettingsPress}>
+              <Ionicons name="ellipsis-horizontal" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Modal>
+
+          {/* Stats */}
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>
+                {userData?.collectionWorth || "₹0"}
+              </Text>
+              <Text style={styles.statLabel}>Collection Worth</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.statBox}
+              onPress={() =>
+                router.push(
+                  `/profile/followers?userId=${user?._id}&tab=followers`
+                )
+              }
+            >
+              <Text style={styles.statValue}>
+                {followersCount}
+              </Text>
+              <Text style={styles.statLabel}>Followers</Text>
+            </TouchableOpacity>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{userData?.wardrobeCount || 0}</Text>
+              <Text style={styles.statLabel}>Wardrobes</Text>
+            </View>
+          </View>
+
+
+
+          {/* Tabs */}
+          <View style={styles.tabRow}>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === "myWardrobes" && styles.activeTab]}
+              onPress={() => setActiveTab("myWardrobes")}
+            >
+              <Text style={[styles.tabText, activeTab === "myWardrobes" && styles.activeTabText]}>
+                My Wardrobes
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === "savedItems" && styles.activeTab]}
+              onPress={() => setActiveTab("savedItems")}
+            >
+              <Text style={[styles.tabText, activeTab === "savedItems" && styles.activeTabText]}>
+                Saved Items
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Content based on active tab */}
+          {activeTab === "myWardrobes" ? (
+            <View style={styles.contentContainer}>
+              <TouchableOpacity style={styles.addWardrobeBtn} onPress={handleAddWardrobe}>
+                <Text style={styles.addWardrobeText}>+ Add New Wardrobe</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.wardrobeCard} onPress={handleAllWardrobeItemsPress}>
+                <View style={styles.imagesRow}>
+                  {recentWardrobes.slice(0, 3).map((wardrobe, idx) => {
+                    const coverImage =
+                      wardrobe.coverImage || getWardrobeCoverImage(wardrobe._id);
+
+                    return (
+                      <View
+                        key={wardrobe._id}
+                        style={{
+                          marginLeft: idx === 0 ? 0 : -10,
+                          zIndex: 3 - idx,
+                        }}
+                      >
+                        {coverImage ? (
+                          <View style={styles.imageWrapper}>
+                            <Image
+                              source={{ uri: coverImage }}
+                              style={styles.wardrobeImage}
+                              resizeMode="cover"
+                            />
+                            <View style={styles.imageOverlay} />
+                          </View>
+                        ) : (
+                          <View
+                            style={[
+                              styles.wardrobeColor,
+                              { backgroundColor: wardrobe.color || "#A855F7" },
+                            ]}
+                          />
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.wardrobeName}>All Wardrobe Items</Text>
+                  <Text style={styles.itemsCount}>{totalItems} items</Text>
+                </View>
+
+                <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+              </TouchableOpacity>
+
+
+              {recentWardrobes.map((wardrobe) => {
+                const isSelected = selectedWardrobeIds.includes(wardrobe._id);
+
+                return (
+                  <TouchableOpacity
+                    key={wardrobe._id}
+                    style={[
+                      styles.wardrobeCard,
+                      isSelected && { borderWidth: 2, borderColor: "#A855F7" },
+                    ]}
+                    onPress={() =>
+                      wardrobeSelectionMode
+                        ? toggleWardrobeSelect(wardrobe._id)
+                        : handleWardrobePress(wardrobe)
+                    }
+                    onLongPress={() => {
+                      if (!wardrobeSelectionMode) {
+                        setSelectedWardrobeIds([wardrobe._id]);
+                      }
+                    }}
+                  >
+                    <View style={styles.imagesRow}>
+                      {(() => {
+                        const coverImage =
+                          wardrobe.coverImage || getWardrobeCoverImage(wardrobe._id);
+                        console.log("cover image nikhil", coverImage)
+                        return coverImage ? (
+                          <View style={styles.imageWrapper}>
+                            <Image
+                              source={{ uri: coverImage }}
+                              style={styles.wardrobeImage}
+                              resizeMode="cover"
+                            />
+                            <View style={styles.imageOverlay} />
+                          </View>
+                        ) : (
+                          <View
+                            style={[
+                              styles.wardrobeColor,
+                              { backgroundColor: wardrobe.color || "#A855F7" },
+                            ]}
+                          />
+                        );
+                      })()}
+                    </View>
+
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.wardrobeName}>{wardrobe.name}</Text>
+                      <Text style={styles.itemsCount}>
+                        {wardrobe.itemCount || 0} items
+                      </Text>
+                    </View>
+
+                    <View>
+                      <Text>{formatPrice(wardrobe.totalWorth || 0)}</Text>
+                    </View>
+
+                    {wardrobeSelectionMode ? (
+                      <Ionicons
+                        name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                        size={22}
+                        color="#A855F7"
+                      />
+                    ) : (
+                      <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              {wardrobeSelectionMode && (
+                <View style={styles.selectionBar}>
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+
+                    {selectedWardrobeIds.length === 1 && selectedWardrobe && (
+                      <TouchableOpacity
+                        onPress={() =>
+                          router.push({
+                            pathname: "/profile/create-wardrobe",
+                            params: {
+                              id: selectedWardrobe._id,
+                              name: selectedWardrobe.name,
+                              color: selectedWardrobe.color,
+                            },
+                          })
+                        }
+                      >
+                        <Ionicons name="create-outline" size={20} color="#A855F7" />
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity onPress={confirmWardrobeDelete}>
+                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity onPress={cancelWardrobeSelection}>
+                    <Ionicons name="close-outline" size={22} color="#585858ff" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {wardrobes.length > 3 && (
+                <TouchableOpacity
+                  style={styles.moreWardrobesContainer}
+                  onPress={handleAllWardrobesPress} // <-- Add this
+                >
+                  <Text style={styles.moreWardrobesText}>
+                    +{wardrobes.length - 3} more wardrobes
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {wardrobes.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Ionicons name="folder-outline" size={48} color="#e677f5ff" />
+                  <Text style={styles.emptyStateText}>No wardrobes yet</Text>
+                  <Text style={styles.emptyStateSubText}>
+                    Create your first wardrobe to organize your items
+                  </Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.contentContainer}>
+              {activeTab === "savedItems" && (
+                <View style={styles.savedContainer}>
+                  {/* Header with count and sort */}
+                  <View style={styles.savedHeader}>
+                    <Text style={styles.savedCount}>
+                      {savedItems.length} saved items
+                    </Text>
+
+                    <TouchableOpacity style={styles.sortButton}>
+                      <Text style={styles.sortButtonText}>Sort by</Text>
+                      <Ionicons name="chevron-down" size={16} color="#000" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Grid layout */}
+                  {savedItems.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Ionicons name="bookmark-outline" size={48} color="#ccc" />
+                      <Text style={styles.emptyStateText}>No saved items yet</Text>
+                      <Text style={styles.emptyStateSubText}>
+                        Items you save will appear here
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.gridContainer}>
+                      {savedItems.map((saved) => {
+                        if (!saved.item) return null; // 🛡️ safety guard
+
+                        const imagePath =
+                          saved.item.images?.length && saved.item.images[0]
+                            ? saved.item.images[0]          // ✅ NEW SYSTEM
+                            : saved.item.imageUrl;          // ⚠️ LEGACY FALLBACK
+
+                        const itemData = {
+                          _id: saved.item._id,
+                          name: saved.item.name || "Item",
+                          brand: saved.item.brand || saved.item.user?.username || "Brand",
+                          price: saved.item.price || 0,
+                          likes: likeCounts[saved.item._id] || 0,
+                          imageUrl: resolveImageUrl(imagePath),             // ✅ unified
+                        };
+
+
+                        return (
+                          <View key={saved._id} style={styles.gridItem}>
+                            <SavedGridCard
+                              item={itemData}
+
+                              onPress={() => router.push(`/wardrobe/item/${itemData._id}`)}
+                            />
+                          </View>
+                        );
+                      })}
+
+                    </View>
+                  )}
+                </View>
+              )}
+
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Settings Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={settingsModalVisible}
+          onRequestClose={handleCloseSettings}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={handleCloseSettings}
+          >
+            <View style={styles.modalContent}>
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={handleNavigateToSettings}
+              >
+                <Ionicons name="settings-outline" size={20} color="#666" />
+                <Text style={styles.modalItemText}>Settings</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={handleNavigateToHelp}
+              >
+                <Ionicons name="help-circle-outline" size={20} color="#666" />
+                <Text style={styles.modalItemText}>Help & Support</Text>
+              </TouchableOpacity>
+
+              <View style={styles.modalDivider} />
+
+              <TouchableOpacity
+                style={[styles.modalItem, styles.logoutItem]}
+                onPress={handleLogout}
+              >
+                <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+                <Text style={[styles.modalItemText, styles.logoutText]}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </AppBackground>
     </>
   );

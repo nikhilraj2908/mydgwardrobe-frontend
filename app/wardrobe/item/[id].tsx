@@ -22,8 +22,7 @@ import { useSavedItems } from "../../../context/SavedItemsContext";
 import { Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppBackground from "@/components/AppBackground";
-
-const baseURL = api.defaults.baseURL;
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 export default function ItemDetails() {
@@ -277,11 +276,12 @@ const [activeIndex, setActiveIndex] = useState(0);
 
 
 
-    const images: string[] =
-        Array.isArray(item.images) && item.images.length > 0
-            ? item.images.map((img: string) => img.replace(/\\/g, "/"))
-            : [];
-
+            const images: string[] =
+  Array.isArray(item.images) && item.images.length > 0
+    ? item.images
+        .map((img: string) => resolveImageUrl(img))
+        .filter(Boolean) as string[]
+    : [];
     return (
         <AppBackground>
          <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
@@ -299,9 +299,15 @@ const [activeIndex, setActiveIndex] = useState(0);
                         >
                             {item.user?.photo ? (
                                 <Image
-                                    source={{ uri: `${item.user.photo}` }}
-                                    style={styles.ownerAvatar}
-                                />
+  source={{
+    uri: resolveImageUrl(item.user.photo) ??
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        item.user?.username || "User"
+      )}&background=E9D5FF&color=6B21A8&size=128`
+  }}
+  style={styles.ownerAvatar}
+/>
+
                             ) : (
                                 <View style={styles.ownerAvatarFallback}>
                                     <Text style={styles.ownerInitial}>
@@ -348,10 +354,10 @@ const [activeIndex, setActiveIndex] = useState(0);
                     >
                         {images.map((img, index) => (
                             <Image
-                                key={index}
-                                source={{ uri: `${img}` }}
-                                style={styles.image}
-                            />
+  key={index}
+  source={{ uri: img }}
+  style={styles.image}
+/>
                         ))}
                     </ScrollView>
                 ) : (
@@ -446,9 +452,15 @@ const [activeIndex, setActiveIndex] = useState(0);
                                     {/* Avatar */}
                                     {comment.user?.photo ? (
                                         <Image
-                                            source={{ uri: `${baseURL}${comment.user.photo}` }}
-                                            style={styles.commentAvatar}
-                                        />
+  source={{
+    uri: resolveImageUrl(comment.user.photo) ??
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        comment.user?.username || "User"
+      )}&background=E9D5FF&color=6B21A8&size=128`
+  }}
+  style={styles.commentAvatar}
+/>
+
                                     ) : (
                                         <View style={styles.commentAvatarPlaceholder}>
                                             <Text style={styles.commentInitial}>

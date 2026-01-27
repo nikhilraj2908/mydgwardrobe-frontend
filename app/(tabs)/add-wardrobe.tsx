@@ -477,31 +477,12 @@ export default function AddWardrobe() {
             ]);
         }
     };
-   const normalizeImageUrl = (path: string) => {
-    if (!path) return "";
-    
-    // If already a full URL (S3 or local server), return as is
-    if (path.startsWith("http")) {
-        // Check if it's an S3 URL or your server URL
-        if (path.includes("digiwardrobe-assets.s3.ap-south-1.amazonaws.com")) {
-            // It's an S3 URL, return as is
-            return path;
-        } else if (path.startsWith(SERVER)) {
-            // It's already our server URL
-            return path;
-        } else {
-            // Some other URL, return as is
-            return path;
-        }
-    }
-    
-    // If it's a local path (without server prefix), add the server URL
-    if (!path.startsWith("/")) {
-        path = "/" + path;
-    }
-    
-    return `${SERVER}${path}`;
+  const normalizeImageUrl = (path: string) => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com/${path}`;
 };
+
 
 
     const pickFromCamera = async () => {

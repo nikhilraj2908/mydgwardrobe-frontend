@@ -17,8 +17,7 @@ import {
 import api from "../api/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 const { width } = Dimensions.get("window");
-const BASE_URL = "https://api.digiwardrobe.com";
-
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 /* ================= TYPES ================= */
 
 interface WardrobeSummary {
@@ -170,25 +169,19 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
     setIsOpen(false);
   };
 
-  
-    const getWardrobeImage = (w: WardrobeSummary) => {
-      // ✅ NEW system first
-      if (w.images?.length && w.images[0]) {
-        const img = w.images[0];
-        return img.startsWith("http")
-          ? img
-          : `${BASE_URL}${img.startsWith("/") ? img : `/${img}`}`;
-      }
 
-      // ⚠️ LEGACY fallback
-      if (w.coverImage) {
-        return w.coverImage.startsWith("http")
-          ? w.coverImage
-          : `${BASE_URL}${w.coverImage.startsWith("/") ? w.coverImage : `/${w.coverImage}`}`;
-      }
+  const getWardrobeImage = (w: WardrobeSummary): string | null => {
+    if (Array.isArray(w.images) && w.images.length > 0) {
+      return resolveImageUrl(w.images[0]);
+    }
 
-      return null;
-    };
+    if (w.coverImage) {
+      return resolveImageUrl(w.coverImage);
+    }
+
+    return null;
+  };
+
 
   return (
     <View style={styles.container}>
@@ -291,7 +284,7 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
               >
 
                 {wardrobes.map((w) => (
-                  
+
                   <TouchableOpacity
                     key={w._id}
                     style={styles.wardrobeCard}
