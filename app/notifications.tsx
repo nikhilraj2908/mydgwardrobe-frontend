@@ -12,7 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 interface Notification {
     _id: string;
     message: string;
@@ -163,13 +163,12 @@ export default function NotificationsScreen() {
                                 <Image
                                     source={
                                         item.actor.photo
-                                            ? {
-                                                uri: `https://api.digiwardrobe.com${item.actor.photo}`,
-                                            }
+                                            ? { uri: resolveImageUrl(item.actor.photo) }
                                             : require("../assets/icons/person-round.png")
                                     }
                                     style={styles.avatar}
                                 />
+
 
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.message}>
