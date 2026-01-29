@@ -1,8 +1,12 @@
 // app/wardrobe/items.tsx
+import AppBackground from "@/components/AppBackground";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -15,8 +19,6 @@ import {
   View
 } from "react-native";
 import api from "../../api/api";
-import AppBackground from "@/components/AppBackground";
-import { resolveImageUrl } from "@/utils/resolveImageUrl";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -199,9 +201,12 @@ export default function AllWardrobeItemsScreen() {
     }
   };
 
-  useEffect(() => { 
-    fetchItems(); 
-  }, []);
+useFocusEffect(
+  useCallback(() => {
+    setSelectedCategory(null);
+    fetchItems();
+  }, [userId])
+);
 
   // Get unique categories with counts
   const categoriesWithCounts = useMemo(() => {

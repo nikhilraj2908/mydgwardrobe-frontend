@@ -7,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SavedItemsProvider } from "../context/SavedItemsContext";
 import { FollowProvider } from "@/context/FollowContext";
 import { AuthProvider } from "../context/AuthContext";
+import { ThemeProvider } from "./theme/ThemeContext";
 
 export const linking = {
   prefixes: ["mydgwardrobe://"],
@@ -40,7 +41,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <FollowProvider>
           <SavedItemsProvider>
-            <Slot />
+            <ThemeProvider>
+             <Slot />
+            </ThemeProvider>
           </SavedItemsProvider>
         </FollowProvider>
       </SafeAreaProvider>

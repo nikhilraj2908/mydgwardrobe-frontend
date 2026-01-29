@@ -217,7 +217,11 @@ export default function WardrobeDetailsScreen() {
   };
 
 
-  useEffect(() => { fetchItems(); fetchWardrobes(); }, []);
+ useEffect(() => {
+  fetchItems();
+  fetchWardrobes();
+}, [wardrobeId, isPublicView]);
+
 
   const sortedItems = [...items].sort((a, b) => {
     switch (sortBy) {

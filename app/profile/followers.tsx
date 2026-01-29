@@ -14,7 +14,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 const baseURL = api.defaults.baseURL;
 
 export default function FollowersPage() {
@@ -56,9 +56,9 @@ export default function FollowersPage() {
         activeOpacity={0.8}
       >
         <Image
-          source={{ uri: `${baseURL}${item.photo}` }}
-          style={styles.avatar}
-        />
+    source={{ uri: resolveImageUrl(item.photo) }}
+    style={styles.avatar}
+  />
 
         <View style={styles.userInfo}>
           <Text style={styles.username}>{item.username}</Text>
