@@ -172,7 +172,7 @@ export default function AddWardrobe() {
     const [brand, setBrand] = useState("");
     const [visibility, setVisibility] = useState<"public" | "private">("private");
     const [accessLevel, setAccessLevel] = useState<"normal" | "premium">("normal");
-const [useBgRemoval, setUseBgRemoval] = useState(false);
+    const [useBgRemoval, setUseBgRemoval] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // State for dropdowns
@@ -671,7 +671,7 @@ const [useBgRemoval, setUseBgRemoval] = useState(false);
             formData.append("brand", brand);
             formData.append("visibility", visibility);
             formData.append("accessLevel", accessLevel);
-            
+
             if (description.trim()) formData.append("description", description.trim());
 
             // ✅ Log for debugging
@@ -933,41 +933,41 @@ const [useBgRemoval, setUseBgRemoval] = useState(false);
                     </View>
                 </View>
                 {/* Background Removal Toggle */}
-<View style={styles.inputContainer}>
-  <Text style={styles.inputLabel}>Image Processing</Text>
+                {/* <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Image Processing</Text>
 
-  <View style={styles.visibilityRow}>
-    <TouchableOpacity
-      style={[
-        styles.visibilityBtn,
-        !useBgRemoval && styles.activeVisibility,
-      ]}
-      onPress={() => setUseBgRemoval(false)}
-    >
-      <Text style={{ color: !useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
-        ORIGINAL
-      </Text>
-    </TouchableOpacity>
+                    <View style={styles.visibilityRow}>
+                        <TouchableOpacity
+                            style={[
+                                styles.visibilityBtn,
+                                !useBgRemoval && styles.activeVisibility,
+                            ]}
+                            onPress={() => setUseBgRemoval(false)}
+                        >
+                            <Text style={{ color: !useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
+                                ORIGINAL
+                            </Text>
+                        </TouchableOpacity>
 
-    <TouchableOpacity
-      style={[
-        styles.visibilityBtn,
-        useBgRemoval && styles.activeVisibility,
-      ]}
-      onPress={() => setUseBgRemoval(true)}
-    >
-      <Text style={{ color: useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
-        REMOVE BG
-      </Text>
-    </TouchableOpacity>
-  </View>
+                        <TouchableOpacity
+                            style={[
+                                styles.visibilityBtn,
+                                useBgRemoval && styles.activeVisibility,
+                            ]}
+                            onPress={() => setUseBgRemoval(true)}
+                        >
+                            <Text style={{ color: useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
+                                REMOVE BG
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
-  {useBgRemoval && (
-    <Text style={{ fontSize: 12, color: "#666", marginTop: 6 }}>
-      Background will be removed using AI (may take a few seconds)
-    </Text>
-  )}
-</View>
+                    {useBgRemoval && (
+                        <Text style={{ fontSize: 12, color: "#666", marginTop: 6 }}>
+                            Background will be removed using AI (may take a few seconds)
+                        </Text>
+                    )}
+                </View> */}
 
 
                 {/* Category Dropdown */}
@@ -1096,56 +1096,83 @@ const [useBgRemoval, setUseBgRemoval] = useState(false);
                 </View>
 
 
+              
                 {/* Visibility */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Visibility</Text>
+
                     <View style={styles.visibilityRow}>
-                        {(["public", "private"] as const).map((v) => (
-                            <TouchableOpacity
-                                key={v}
-                                style={[
-                                    styles.visibilityBtn,
-                                    visibility === v && styles.activeVisibility,
-                                ]}
-                                onPress={() => setVisibility(v)}
+                        {/* PRIVATE */}
+                        <TouchableOpacity
+                            style={[
+                                styles.visibilityBtn,
+                                visibility === "private" && styles.activeVisibility,
+                            ]}
+                            onPress={() => {
+                                setVisibility("private");
+                                setAccessLevel("normal"); // 🔥 force normal
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: visibility === "private" ? "#fff" : "#111",
+                                    fontWeight: "600",
+                                }}
                             >
-                                <Text
-                                    style={{
-                                        color: visibility === v ? "#fff" : "#111",
-                                        fontWeight: "600",
-                                    }}
-                                >
-                                    {v.toUpperCase()}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                                PRIVATE
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* PUBLIC */}
+                        <TouchableOpacity
+                            style={[
+                                styles.visibilityBtn,
+                                visibility === "public" && accessLevel === "normal" && styles.activeVisibility,
+                            ]}
+                            onPress={() => {
+                                setVisibility("public");
+                                setAccessLevel("normal");
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        visibility === "public" && accessLevel === "normal"
+                                            ? "#fff"
+                                            : "#111",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                PUBLIC
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* PREMIUM */}
+                        <TouchableOpacity
+                            style={[
+                                styles.visibilityBtn,
+                                visibility === "public" && accessLevel === "premium" && styles.activeVisibility,
+                            ]}
+                            onPress={() => {
+                                setVisibility("public");     // 🔥 auto public
+                                setAccessLevel("premium");   // 🔥 premium mode
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        visibility === "public" && accessLevel === "premium"
+                                            ? "#fff"
+                                            : "#111",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                PREMIUM
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
-                {/* Access Level */}
-                <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Access Level</Text>
-                    <View style={styles.visibilityRow}>
-                        {(["normal", "premium"] as const).map((level) => (
-                            <TouchableOpacity
-                                key={level}
-                                style={[
-                                    styles.visibilityBtn,
-                                    accessLevel === level && styles.activeVisibility,
-                                ]}
-                                onPress={() => setAccessLevel(level)}
-                            >
-                                <Text
-                                    style={{
-                                        color: accessLevel === level ? "#fff" : "#111",
-                                        fontWeight: "600",
-                                    }}
-                                >
-                                    {level.toUpperCase()}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
+
 
 
                 {/* Submit */}
