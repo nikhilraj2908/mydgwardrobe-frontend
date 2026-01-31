@@ -49,15 +49,15 @@ const years = Array.from({ length: 90 }, (_, i) => (2024 - i).toString());
 export default function SignupScreen() {
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
-  webClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
-  androidClientId: "857333011106-7l23nn58346k6l5cl7uqa6piiohv285p.apps.googleusercontent.com",
-  // iosClientId: "857333011106-pc1gaugs3lh4mjqdv2mip53hdo2r4k0i.apps.googleusercontent.com", // optional but you have it
-  responseType: "id_token",
-  scopes: ["profile", "email"],
-});
+    webClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
+    androidClientId: "857333011106-7l23nn58346k6l5cl7uqa6piiohv285p.apps.googleusercontent.com",
+    // iosClientId: "857333011106-pc1gaugs3lh4mjqdv2mip53hdo2r4k0i.apps.googleusercontent.com", // optional but you have it
+    responseType: "id_token",
+    scopes: ["profile", "email"],
+  });
 
   const router = useRouter();
-const { login } = useAuth();
+  const { login } = useAuth();
   // Form states
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -71,9 +71,8 @@ const { login } = useAuth();
 
   // Phone
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
-  const [countryDropdownVisible, setCountryDropdownVisible] = useState(false);
   const [phone, setPhone] = useState("");
-
+const [showCountryModal, setShowCountryModal] = useState(false);
   // DOB
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -85,13 +84,13 @@ const { login } = useAuth();
 
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-  if (response?.type === "success") {
-    const idToken = response.params?.id_token;
-    if (idToken) {
-      handleGoogleLogin(idToken);
+    if (response?.type === "success") {
+      const idToken = response.params?.id_token;
+      if (idToken) {
+        handleGoogleLogin(idToken);
+      }
     }
-  }
-}, [response]);
+  }, [response]);
 
   // ---------------------- SIGNUP HANDLER ----------------------
   const handleSignup = async () => {
@@ -144,25 +143,29 @@ const { login } = useAuth();
       setLoading(false);
     }
   };
- const handleGoogleLogin = async (idToken) => {
-  try {
-    const res = await api.post("/api/auth/google", { idToken });
+  const handleGoogleLogin = async (idToken) => {
+    try {
+      const res = await api.post("/api/auth/google", { idToken });
 
-    const { token, user } = res.data;
+      const { token, user } = res.data;
 
-    // 🔥 THIS IS THE FIX
-    await login(token);
+      // 🔥 THIS IS THE FIX
+      await login(token);
 
-    if (!user.profileCompleted) {
-      router.replace("/complete-profile");
-    } else {
-      router.replace("/(tabs)/profile");
+      if (!user.profileCompleted) {
+        router.replace("/complete-profile");
+      } else {
+        router.replace("/(tabs)/profile");
+      }
+    } catch (error) {
+      console.log("Google login error:", error.response?.data || error.message);
+      alert("Google login failed");
     }
-  } catch (error) {
-    console.log("Google login error:", error.response?.data || error.message);
-    alert("Google login failed");
-  }
-};
+  };
+
+
+
+
 
 
   // ---------------------- DROPDOWN UI ----------------------
@@ -195,390 +198,402 @@ const { login } = useAuth();
 
   // ------------------------- UI -------------------------
   return (
-     <ImageBackground 
-    source={require("../assets/images/bgallpage.png")}
-    style={{ flex: 1 }}
-    resizeMode="cover"
-  >
-    {/* Light overlay for readability */}
-    <View style={styles.overlay} />
+    <ImageBackground
+      source={require("../assets/images/bgallpage.png")}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
+      {/* Light overlay for readability */}
+      <View style={styles.overlay} />
 
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Image source={require("../assets/images/logo.png")} style={styles.logo} />
-
-        <TouchableOpacity
-          style={styles.googleBtn}
-          disabled={!request}
-          // onPress={() => promptAsync()}
-        onPress={() => promptAsync()}
-
-        >
-          <Ionicons name="logo-google" size={20} color="#111" />
-          <Text style={styles.googleText}>Continue with Google</Text>
-
-        </TouchableOpacity>
-        <Text style={styles.orText}>OR</Text>
-
-        {/* USERNAME */}
-        <Text style={styles.label}>Username</Text>
-        <TextInput
-          placeholder="Choose a username"
-          style={styles.input}
-          value={username}
-          onChangeText={setUsername}
-        />
-
-        {/* PASSWORD */}
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            placeholder="Create password"
-            secureTextEntry={!passwordVisible}
-            style={styles.inputPassword}
-            value={password}
-            onChangeText={setPassword}
-          />
-          <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
-            <Ionicons name={passwordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-
-        {/* CONFIRM PASSWORD */}
-        <Text style={styles.label}>Confirm Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            placeholder="Confirm password"
-            secureTextEntry={!confirmPasswordVisible}
-            style={styles.inputPassword}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
-          <TouchableOpacity onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)}>
-            <Ionicons name={confirmPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-
-        {/* GENDER */}
-        <Text style={styles.label}>Gender</Text>
-        <View style={styles.genderRow}>
-          <TouchableOpacity
-            style={[styles.genderBox, gender === "male" && styles.genderSelected]}
-            onPress={() => setGender("male")}
-          >
-            <Text style={[styles.genderText, gender === "male" && styles.genderSelectedText]}>Male</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <Image source={require("../assets/images/logo.png")} style={styles.logo} />
 
           <TouchableOpacity
-            style={[styles.genderBox, gender === "female" && styles.genderSelected]}
-            onPress={() => setGender("female")}
+            style={styles.googleBtn}
+            disabled={!request}
+            // onPress={() => promptAsync()}
+            onPress={() => promptAsync()}
+
           >
-            <Text style={[styles.genderText, gender === "female" && styles.genderSelectedText]}>Female</Text>
+            <Ionicons name="logo-google" size={20} color="#b700ff" />
+            <Text style={styles.googleText}>Continue with Google</Text>
+
           </TouchableOpacity>
-        </View>
+          <Text style={styles.orText}>OR</Text>
 
-        {/* PHONE */}
-        <Text style={styles.label}>Mobile Number</Text>
-
-        <View style={styles.phoneContainer}>
-          <TouchableOpacity style={styles.countryBtn} onPress={() => setCountryDropdownVisible(!countryDropdownVisible)}>
-            <Text style={styles.flagText}>{selectedCountry.flag}</Text>
-            <Ionicons name="chevron-down" size={16} color="#444" />
-          </TouchableOpacity>
-
-          {countryDropdownVisible && (
-            <View style={styles.countryDropdown}>
-              {COUNTRY_CODES.map((item) => (
-                <TouchableOpacity
-                  key={item.code}
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setSelectedCountry(item);
-                    setCountryDropdownVisible(false);
-                  }}
-                >
-                  <Text style={styles.dropdownText}>{item.flag} {item.dial}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          <Text style={styles.callingCode}>{selectedCountry.dial}</Text>
-
+          {/* USERNAME */}
+          <Text style={styles.label}>Username</Text>
           <TextInput
-            placeholder="Enter mobile number"
-            keyboardType="number-pad"
-            style={styles.phoneInput}
-            value={phone}
-            onChangeText={setPhone}
+            placeholder="Choose a username"
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
           />
-        </View>
 
-        {/* EMAIL */}
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          placeholder="Enter your email"
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-        />
+          {/* PASSWORD */}
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              placeholder="Create password"
+              secureTextEntry={!passwordVisible}
+              style={styles.inputPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+              <Ionicons name={passwordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
 
-        {/* DOB */}
-        <Text style={styles.label}>Date of Birth</Text>
-        <View style={styles.dobRow}>
-          <TouchableOpacity style={styles.dobBox} onPress={() => setShowDayDropdown(true)}>
-            <Text style={[styles.dobText, day && styles.dobTextSelected]}>{day || "Day"}</Text>
-            <Ionicons name="chevron-down" size={16} />
+          {/* CONFIRM PASSWORD */}
+          <Text style={styles.label}>Confirm Password</Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              placeholder="Confirm password"
+              secureTextEntry={!confirmPasswordVisible}
+              style={styles.inputPassword}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+            <TouchableOpacity onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)}>
+              <Ionicons name={confirmPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* GENDER */}
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.genderRow}>
+            <TouchableOpacity
+              style={[styles.genderBox, gender === "male" && styles.genderSelected]}
+              onPress={() => setGender("male")}
+            >
+              <Text style={[styles.genderText, gender === "male" && styles.genderSelectedText]}>Male</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.genderBox, gender === "female" && styles.genderSelected]}
+              onPress={() => setGender("female")}
+            >
+              <Text style={[styles.genderText, gender === "female" && styles.genderSelectedText]}>Female</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* PHONE */}
+          <Text style={styles.label}>Mobile Number</Text>
+
+          <View style={styles.phoneContainer}>
+            <TouchableOpacity style={styles.countryBtn} onPress={() => setShowCountryModal(true)}>
+              <Text style={styles.flagText}>{selectedCountry.flag}</Text>
+              <Ionicons name="chevron-down" size={16} color="#444" />
+            </TouchableOpacity>
+
+            <Modal visible={showCountryModal} transparent animationType="fade">
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                onPress={() => setShowCountryModal(false)}
+                activeOpacity={1}
+              >
+                <View style={styles.dropdownContainer}>
+                  <FlatList
+                    data={COUNTRY_CODES}
+                    keyExtractor={(item) => item.code}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setSelectedCountry(item);
+                          setShowCountryModal(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>
+                          {item.flag} {item.dial}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                </View>
+              </TouchableOpacity>
+            </Modal>
+
+
+            <Text style={styles.callingCode}>{selectedCountry.dial}</Text>
+
+            <TextInput
+              placeholder="Enter mobile number"
+              keyboardType="number-pad"
+              style={styles.phoneInput}
+              value={phone}
+              onChangeText={setPhone}
+            />
+          </View>
+
+          {/* EMAIL */}
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            placeholder="Enter your email"
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+          />
+
+          {/* DOB */}
+          <Text style={styles.label}>Date of Birth</Text>
+          <View style={styles.dobRow}>
+            <TouchableOpacity style={styles.dobBox} onPress={() => setShowDayDropdown(true)}>
+              <Text style={[styles.dobText, day && styles.dobTextSelected]}>{day || "Day"}</Text>
+              <Ionicons name="chevron-down" size={16} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.dobBox} onPress={() => setShowMonthDropdown(true)}>
+              <Text style={[styles.dobText, month && styles.dobTextSelected]}>{month || "Month"}</Text>
+              <Ionicons name="chevron-down" size={16} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.dobBox} onPress={() => setShowYearDropdown(true)}>
+              <Text style={[styles.dobText, year && styles.dobTextSelected]}>{year || "Year"}</Text>
+              <Ionicons name="chevron-down" size={16} />
+            </TouchableOpacity>
+          </View>
+
+          {renderDropdown(days, showDayDropdown, setDay, () => setShowDayDropdown(false), day)}
+          {renderDropdown(months, showMonthDropdown, setMonth, () => setShowMonthDropdown(false), month)}
+          {renderDropdown(years, showYearDropdown, setYear, () => setShowYearDropdown(false), year)}
+
+          {/* SIGNUP BUTTON */}
+          <TouchableOpacity style={styles.buttonWrapper} onPress={handleSignup}>
+            <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.gradientButton}>
+              <Text style={styles.buttonText}>
+                {loading ? "Creating..." : "Create Account"}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.dobBox} onPress={() => setShowMonthDropdown(true)}>
-            <Text style={[styles.dobText, month && styles.dobTextSelected]}>{month || "Month"}</Text>
-            <Ionicons name="chevron-down" size={16} />
-          </TouchableOpacity>
 
-          <TouchableOpacity style={styles.dobBox} onPress={() => setShowYearDropdown(true)}>
-            <Text style={[styles.dobText, year && styles.dobTextSelected]}>{year || "Year"}</Text>
-            <Ionicons name="chevron-down" size={16} />
-          </TouchableOpacity>
-        </View>
+          {/* GOOGLE SIGNUP */}
 
-        {renderDropdown(days, showDayDropdown, setDay, () => setShowDayDropdown(false), day)}
-        {renderDropdown(months, showMonthDropdown, setMonth, () => setShowMonthDropdown(false), month)}
-        {renderDropdown(years, showYearDropdown, setYear, () => setShowYearDropdown(false), year)}
 
-        {/* SIGNUP BUTTON */}
-        <TouchableOpacity style={styles.buttonWrapper} onPress={handleSignup}>
-          <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.gradientButton}>
-            <Text style={styles.buttonText}>
-              {loading ? "Creating..." : "Create Account"}
+
+          <Link href="/login-options" asChild>
+            <Text style={styles.footer}>
+              Already have an account? <Text style={styles.loginText}>Login</Text>
             </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-
-        {/* GOOGLE SIGNUP */}
-
-
-
-        <Link href="/login-options" asChild>
-          <Text style={styles.footer}>
-            Already have an account? <Text style={styles.loginText}>Login</Text>
-          </Text>
-        </Link>
-      </ScrollView>
+          </Link>
+        </ScrollView>
       </SafeAreaView>
-       </ImageBackground>
-      );
+    </ImageBackground>
+  );
 }
 
-      // ------------------------- STYLES -------------------------
-      const styles = StyleSheet.create({
-       overlay: {
-  ...StyleSheet.absoluteFillObject,
-  backgroundColor: "rgba(245, 244, 244, 0)",
-},
+// ------------------------- STYLES -------------------------
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(245, 244, 244, 0)",
+  },
 
-container: {
-  paddingHorizontal: 25,
-  paddingTop: 10,
-  paddingBottom: 40,
-  backgroundColor: "transparent", // 👈 VERY IMPORTANT
-},
-      logo: {
-        width: 120,
-      height: 120,
-      alignSelf: "center",
-      resizeMode: "contain",
-      marginTop: 25,
-
+  container: {
+    paddingHorizontal: 25,
+    paddingTop: 10,
+    paddingBottom: 40,
+    backgroundColor: "transparent", // 👈 VERY IMPORTANT
   },
-      label: {
-        fontSize: 14,
-      marginBottom: 6,
-      color: "#374151",
-  },
-      input: {
-        backgroundColor: "#F9FAFB",
-      padding: 14,
-      marginBottom: 10,
-      borderRadius: 25,
-      borderWidth: 1,
-      borderColor: "#E5E7EB",
-  },
-      passwordContainer: {
-        flexDirection: "row",
-      marginBottom: 10,
-
-      alignItems: "center",
-      backgroundColor: "#F9FAFB",
-      borderWidth: 1,
-      borderRadius: 25,
-      paddingHorizontal: 15,
-  },
-      inputPassword: {
-        flex: 1,
-      paddingVertical: 12,
-  },
-      genderRow: {
-        marginBottom: 10,
-
-      flexDirection: "row",
-      justifyContent: "space-between",
-  },
-      genderBox: {
-        flex: 1,
-      paddingVertical: 12,
-      marginHorizontal: 5,
-      borderRadius: 25,
-      borderWidth: 1,
-      borderColor: "#E5E7EB",
-      backgroundColor: "#F9FAFB",
-      alignItems: "center",
-  },
-      genderSelected: {
-        backgroundColor: "#A855F7",
-      borderColor: "#A855F7",
-  },
-      genderText: {
-        fontSize: 15,
-      color: "#111",
-  },
-      genderSelectedText: {
-        color: "#FFF",
-  },
-      phoneContainer: {
-        backgroundColor: "#F9FAFB",
-      borderWidth: 1,
-      borderColor: "#E5E7EB",
-      borderRadius: 25,
-      paddingHorizontal: 12,
-      height: 50,
-      flexDirection: "row",
-      alignItems: "center",
-      position: "relative",
-      marginBottom: 10,
+  logo: {
+    width: 120,
+    height: 120,
+    alignSelf: "center",
+    resizeMode: "contain",
+    marginTop: 25,
 
   },
-      countryBtn: {
-        flexDirection: "row",
-      alignItems: "center",
-      marginRight: 10,
+  label: {
+    fontSize: 14,
+    marginBottom: 6,
+    color: "#374151",
   },
-      flagText: {
-        fontSize: 22,
-      marginRight: 4,
+  input: {
+    backgroundColor: "#F9FAFB",
+    padding: 14,
+    marginBottom: 10,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-      callingCode: {
-        fontSize: 14,
-      color: "#111",
-      marginRight: 6,
+  passwordContainer: {
+    flexDirection: "row",
+    marginBottom: 10,
+
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderRadius: 25,
+    paddingHorizontal: 15,
   },
-      phoneInput: {
-        flex: 1,
-      fontSize: 14,
+  inputPassword: {
+    flex: 1,
+    paddingVertical: 12,
   },
-      countryDropdown: {
-        position: "absolute",
-      top: 48,
-      left: 10,
-      width: 120,
-      backgroundColor: "#FFF",
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: "#DDD",
-      zIndex: 20,
-      elevation: 5,
+  genderRow: {
+    marginBottom: 10,
+
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-      dropdownItem: {
-        padding: 10,
+  genderBox: {
+    flex: 1,
+    paddingVertical: 12,
+    marginHorizontal: 5,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+    alignItems: "center",
   },
-      dropdownText: {
-        fontSize: 14,
+  genderSelected: {
+    backgroundColor: "#A855F7",
+    borderColor: "#A855F7",
   },
-      dobRow: {
-        flexDirection: "row",
-      justifyContent: "space-between",
+  genderText: {
+    fontSize: 15,
+    color: "#111",
   },
-      dobBox: {
-        flex: 1,
-      backgroundColor: "#F9FAFB",
-      borderColor: "#E5E7EB",
-      borderWidth: 1,
-      borderRadius: 25,
-      height: 50,
-      justifyContent: "center",
-      alignItems: "center",
-      marginHorizontal: 4,
-      flexDirection: "row",
+  genderSelectedText: {
+    color: "#FFF",
   },
-      dobText: {
-        fontSize: 14,
-      color: "#6B7280",
+  phoneContainer: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 25,
+    paddingHorizontal: 12,
+    height: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
+    marginBottom: 10,
+
   },
-      dobTextSelected: {
-        color: "#111",
-      fontWeight: "500",
+  countryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 10,
   },
-      modalOverlay: {
-        flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      justifyContent: "center",
-      alignItems: "center",
+  flagText: {
+    fontSize: 22,
+    marginRight: 4,
   },
-      dropdownContainer: {
-        backgroundColor: "#FFF",
-      width: "80%",
-      maxHeight: 300,
-      borderRadius: 12,
+  callingCode: {
+    fontSize: 14,
+    color: "#111",
+    marginRight: 6,
   },
-      selectedDropdownItem: {
-        backgroundColor: "#F3F4F6",
+  phoneInput: {
+    flex: 1,
+    fontSize: 14,
   },
-      dropdownItemText: {
-        fontSize: 16,
-      textAlign: "center",
+  countryDropdown: {
+    position: "absolute",
+    top: 48,
+    left: 10,
+    width: 120,
+    backgroundColor: "#FFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DDD",
+    zIndex: 20,
+    elevation: 5,
   },
-      selectedDropdownItemText: {
-        color: "#A855F7",
-      fontWeight: "600",
+  dropdownItem: {
+    padding: 10,
   },
-      buttonWrapper: {
-        marginTop: 20,
-      borderRadius: 30,
-      overflow: "hidden",
+  dropdownText: {
+    fontSize: 14,
   },
-      gradientButton: {
-        paddingVertical: 15,
-      alignItems: "center",
+  dobRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-      buttonText: {
-        color: "#FFF",
-      fontSize: 16,
-      fontWeight: "600",
+  dobBox: {
+    flex: 1,
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+    borderWidth: 1,
+    borderRadius: 25,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 4,
+    flexDirection: "row",
   },
-      orText: {
-        textAlign: "center",
-      marginVertical: 10,
+  dobText: {
+    fontSize: 14,
+    color: "#6B7280",
   },
-      googleBtn: {
-        borderWidth: 1,
-      borderColor: "#E5E7EB",
-      paddingVertical: 12,
-      borderRadius: 30,
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
+  dobTextSelected: {
+    color: "#111",
+    fontWeight: "500",
   },
-      googleText: {
-        marginLeft: 8,
-      fontSize: 15,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-      footer: {
-        textAlign: "center",
-      marginTop: 20,
+  dropdownContainer: {
+    backgroundColor: "#FFF",
+    width: "80%",
+    maxHeight: 300,
+    borderRadius: 12,
   },
-      loginText: {
-        color: "#A855F7",
-      fontWeight: "600",
+  selectedDropdownItem: {
+    backgroundColor: "#F3F4F6",
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    textAlign: "center",
+  },
+  selectedDropdownItemText: {
+    color: "#A855F7",
+    fontWeight: "600",
+  },
+  buttonWrapper: {
+    marginTop: 20,
+    borderRadius: 30,
+    overflow: "hidden",
+  },
+  gradientButton: {
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  orText: {
+    textAlign: "center",
+    marginVertical: 10,
+  },
+  googleBtn: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingVertical: 12,
+    borderRadius: 30,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  googleText: {
+    marginLeft: 8,
+    fontSize: 15,
+  },
+  footer: {
+    textAlign: "center",
+    marginTop: 20,
+  },
+  loginText: {
+    color: "#A855F7",
+    fontWeight: "600",
   },
 });
