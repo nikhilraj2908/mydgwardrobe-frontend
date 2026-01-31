@@ -496,7 +496,8 @@ export default function OtherUserProfile() {
               <TouchableOpacity
                 style={styles.publicCard}
                 onPress={() =>
-                  router.push(`/wardrobe/items/${userId}`)
+                  // router.push(`/wardrobe/items/${userId}`)
+                  router.push(`/profile/public-wardrobe?userId=${userId}`)
                 }
                 activeOpacity={0.7}
               >

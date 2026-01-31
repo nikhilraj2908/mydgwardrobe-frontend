@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import {
   FlatList,
   Image,
+  ImageBackground,
   Modal,
   ScrollView,
   StyleSheet,
@@ -18,8 +19,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ImageBackground } from "react-native";
-
+import { useAuth } from "../context/AuthContext";
 WebBrowser.maybeCompleteAuthSession();
 
 // Create axios instance with base URL
@@ -48,14 +48,16 @@ const years = Array.from({ length: 90 }, (_, i) => (2024 - i).toString());
 
 export default function SignupScreen() {
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: "836704104886-o8pslkdrbufj18ffq6di46n3935vclhs.apps.googleusercontent.com",
-    expoClientId: "836704104886-o8pslkdrbufj18ffq6di46n3935vclhs.apps.googleusercontent.com",
-    androidClientId: "836704104886-gi3cd3vnp6ccjndc7q6mh1pdem0e9iue.apps.googleusercontent.com",
-    // iosClientId: "836704104886-tngtqtpp2fs14ipu73i0ltu27ojlrk3t.apps.googleusercontent.com",
-    // expoClientId: "836704104886-ps1rab6u5q89tie5ltfi9edbbeqeqfs6.apps.googleusercontent.com"
-  });
-  const router = useRouter();
+    expoClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
+  webClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
+  androidClientId: "857333011106-7l23nn58346k6l5cl7uqa6piiohv285p.apps.googleusercontent.com",
+  // iosClientId: "857333011106-pc1gaugs3lh4mjqdv2mip53hdo2r4k0i.apps.googleusercontent.com", // optional but you have it
+  responseType: "id_token",
+  scopes: ["profile", "email"],
+});
 
+  const router = useRouter();
+const { login } = useAuth();
   // Form states
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -83,10 +85,13 @@ export default function SignupScreen() {
 
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-    if (response?.type === "success") {
-      handleGoogleLogin(response.authentication.accessToken);
+  if (response?.type === "success") {
+    const idToken = response.params?.id_token;
+    if (idToken) {
+      handleGoogleLogin(idToken);
     }
-  }, [response]);
+  }
+}, [response]);
 
   // ---------------------- SIGNUP HANDLER ----------------------
   const handleSignup = async () => {
@@ -139,43 +144,26 @@ export default function SignupScreen() {
       setLoading(false);
     }
   };
-  const handleGoogleLogin = async (accessToken) => {
-    try {
-      const googleUser = await axios.get(
-        "https://www.googleapis.com/userinfo/v2/me",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+ const handleGoogleLogin = async (idToken) => {
+  try {
+    const res = await api.post("/api/auth/google", { idToken });
 
-      const { email, name, id, picture } = googleUser.data;
+    const { token, user } = res.data;
 
-      // 🔥 Call YOUR backend
-      const res = await api.post("/api/auth/google", {
-        email,
-        name,
-        googleId: id,
-        photo: picture,
-      });
+    // 🔥 THIS IS THE FIX
+    await login(token);
 
-      const { token, user } = res.data;
-
-      // Save token (AsyncStorage / SecureStore)
-      // await SecureStore.setItemAsync("token", token);
-
-      // Redirect based on profile status
-      if (!user.profileCompleted) {
-        router.replace("/complete-profile");
-      } else {
-        router.replace("/home");
-      }
-    } catch (err) {
-      console.log("Google login error:", err.response?.data || err.message);
-      alert("Google login failed");
+    if (!user.profileCompleted) {
+      router.replace("/complete-profile");
+    } else {
+      router.replace("/(tabs)/profile");
     }
-  };
+  } catch (error) {
+    console.log("Google login error:", error.response?.data || error.message);
+    alert("Google login failed");
+  }
+};
+
 
   // ---------------------- DROPDOWN UI ----------------------
   const renderDropdown = (data, visible, onSelect, onClose, selectedValue) => (
@@ -223,7 +211,7 @@ export default function SignupScreen() {
           style={styles.googleBtn}
           disabled={!request}
           // onPress={() => promptAsync()}
-          onPress={() => promptAsync({ useProxy: true })}
+        onPress={() => promptAsync()}
 
         >
           <Ionicons name="logo-google" size={20} color="#111" />

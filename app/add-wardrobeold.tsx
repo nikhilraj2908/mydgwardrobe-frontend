@@ -354,7 +354,7 @@ export default function AddWardrobe() {
       formData.append("visibility", visibility);
 
       const res = await fetch(
-  "https://api.digiwardrobe.com/api/wardrobe/add",
+  "http://localhost:5001/api/wardrobe/add",
   {
     method: "POST",
     headers: {

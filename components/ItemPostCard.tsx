@@ -1,7 +1,8 @@
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -15,9 +16,8 @@ import {
   View
 } from "react-native";
 import api from "../api/api";
-import { useSavedItems } from "../context/SavedItemsContext";
-import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { useFollow } from "../context/FollowContext";
+import { useSavedItems } from "../context/SavedItemsContext";
 
 
 const { width } = Dimensions.get('window');
@@ -257,9 +257,21 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
 
 
   const handlePostOwnerPress = () => {
-    if (!item.user?._id) return;
-    router.push(`/profile/${item.user._id}`);
-  };
+  const ownerId =
+    typeof item.user === "string"
+      ? item.user
+      : item.user?._id;
+
+  if (!ownerId) return;
+
+  // 👤 If clicking own post → go to own profile
+  if (currentUserId && String(currentUserId) === String(ownerId)) {
+    router.push("/profile"); // 👈 your own profile screen
+  } else {
+    // 👥 Other user's profile
+    router.push(`/profile/${ownerId}`);
+  }
+};
 
 
 

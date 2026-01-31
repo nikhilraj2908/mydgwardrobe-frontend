@@ -172,7 +172,7 @@ export default function AddWardrobe() {
     const [brand, setBrand] = useState("");
     const [visibility, setVisibility] = useState<"public" | "private">("private");
     const [accessLevel, setAccessLevel] = useState<"normal" | "premium">("normal");
-
+const [useBgRemoval, setUseBgRemoval] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // State for dropdowns
@@ -365,10 +365,10 @@ export default function AddWardrobe() {
 
             if (response.data) {
                 // Add the new category to the local state
-                const newCategory = response.data.category || response.data;
-                setCategories(prev => [...prev, newCategory]);
-                setFilteredCategories(prev => [...prev, newCategory]);
-                return newCategory;
+                // const newCategory = response.data.category || response.data;
+                await fetchCategories(); // always source from backend
+                // return newCategory;
+                return response.data.category || response.data;
             }
         } catch (error: any) {
             console.error("Error creating category:", error);
@@ -522,8 +522,8 @@ export default function AddWardrobe() {
         setPrice("");
         setBrand("");
         setDescription("");
+        setVisibility("private");
 
-        setVisibility("public");
 
         setShowOtherCategoryInput(false);
         setShowOtherWardrobeInput(false);
@@ -671,6 +671,7 @@ export default function AddWardrobe() {
             formData.append("brand", brand);
             formData.append("visibility", visibility);
             formData.append("accessLevel", accessLevel);
+            
             if (description.trim()) formData.append("description", description.trim());
 
             // ✅ Log for debugging
@@ -761,8 +762,10 @@ export default function AddWardrobe() {
                 [
                     {
                         text: "OK",
-                        onPress: () => {
+                        onPress: async () => {
+                            await fetchUserWardrobes(); // 🔥 FORCE REFRESH
                             resetForm();
+
                             if (router.canGoBack()) {
                                 router.back();
                             } else {
@@ -772,6 +775,7 @@ export default function AddWardrobe() {
                     },
                 ]
             );
+
 
         } catch (err: any) {
             console.error("❌ Upload error details:", {
@@ -928,6 +932,43 @@ export default function AddWardrobe() {
                         </TouchableOpacity>
                     </View>
                 </View>
+                {/* Background Removal Toggle */}
+<View style={styles.inputContainer}>
+  <Text style={styles.inputLabel}>Image Processing</Text>
+
+  <View style={styles.visibilityRow}>
+    <TouchableOpacity
+      style={[
+        styles.visibilityBtn,
+        !useBgRemoval && styles.activeVisibility,
+      ]}
+      onPress={() => setUseBgRemoval(false)}
+    >
+      <Text style={{ color: !useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
+        ORIGINAL
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.visibilityBtn,
+        useBgRemoval && styles.activeVisibility,
+      ]}
+      onPress={() => setUseBgRemoval(true)}
+    >
+      <Text style={{ color: useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
+        REMOVE BG
+      </Text>
+    </TouchableOpacity>
+  </View>
+
+  {useBgRemoval && (
+    <Text style={{ fontSize: 12, color: "#666", marginTop: 6 }}>
+      Background will be removed using AI (may take a few seconds)
+    </Text>
+  )}
+</View>
+
 
                 {/* Category Dropdown */}
                 <View style={styles.inputContainer}>

@@ -105,7 +105,7 @@ export default function ProfileScreen() {
   const [followingCount, setFollowingCount] = useState(0);
   const { resetSaved } = useSavedItems();
   const { clearFollowing } = useFollow();
-
+  const [pendingPremiumCount, setPendingPremiumCount] = useState(0);
   // Filter premium items (public items of the logged-in user)
   // ✅ Premium items (public + premium access)
   const premiumItems = wardrobeItems.filter(
@@ -124,6 +124,20 @@ export default function ProfileScreen() {
   // ✅ All items (everything)
   const allItems = wardrobeItems;
 
+  const fetchPendingPremiumCount = async () => {
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return;
+
+    const res = await api.get("/api/premium/pending-count", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setPendingPremiumCount(res.data.count || 0);
+  };
+
+  useEffect(() => {
+    fetchPendingPremiumCount();
+  }, []);
 
   // Calculate premium worth
   useEffect(() => {
@@ -432,14 +446,14 @@ export default function ProfileScreen() {
   };
 
 
-const handlePremiumWardrobePress = () => {
-  router.push({
-    pathname: "/wardrobe/premium",
-    params: {
-      userId: user?._id,   // ✅ REQUIRED
-    },
-  });
-};
+  const handlePremiumWardrobePress = () => {
+    router.push({
+      pathname: "/wardrobe/premium",
+      params: {
+        userId: user?._id,   // ✅ REQUIRED
+      },
+    });
+  };
 
   const handleAddWardrobe = () => {
     router.push("/profile/create-wardrobe");
@@ -543,6 +557,12 @@ const handlePremiumWardrobePress = () => {
               onPress={() => router.push("/premium/requests")}
             >
               <Ionicons name="diamond" size={16} color="#fff" />
+
+              {pendingPremiumCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{pendingPremiumCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
 
             {/* Edit Profile */}
@@ -1147,4 +1167,22 @@ const createStyles = (theme: any) =>
       width: '48%',
       marginBottom: 16,
     },
+    badge: {
+      position: "absolute",
+      top: -4,
+      right: -4,
+      backgroundColor: "#EF4444",
+      borderRadius: 10,
+      minWidth: 18,
+      height: 18,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 4,
+    },
+    badgeText: {
+      color: "#fff",
+      fontSize: 11,
+      fontWeight: "700",
+    },
+
   });
