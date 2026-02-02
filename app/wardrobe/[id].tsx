@@ -236,8 +236,9 @@ export default function WardrobeDetailsScreen() {
 
 
   return (
-    <AppBackground>
+    
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+        <AppBackground>
         <View style={{ flex: 1, }}>
           {/* Header */}
           <View style={styles.header}>
@@ -438,8 +439,8 @@ export default function WardrobeDetailsScreen() {
           </Modal>
 
         </View>
+        </AppBackground>
       </SafeAreaView>
-    </AppBackground>
 
   );
 }

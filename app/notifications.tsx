@@ -13,6 +13,7 @@ import {
     View,
 } from "react-native";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
+import { SafeAreaView } from "react-native-safe-area-context";
 interface Notification {
     _id: string;
     message: string;
@@ -113,6 +114,7 @@ export default function NotificationsScreen() {
     };
 
     return (
+        <SafeAreaView>
         <AppBackground>
             <View style={styles.container}>
                 {/* ================= HEADER ================= */}
@@ -190,6 +192,7 @@ export default function NotificationsScreen() {
                 />
             </View>
         </AppBackground>
+        </SafeAreaView>
     );
 }
 
@@ -197,7 +200,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#ffffff96",
+        // backgroundColor: "#ffffff96",
         padding: 16,
         marginTop: 30,
     },

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import api from "../../api/api";
 import AppBackground from "@/components/AppBackground";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Wardrobe {
   _id: string;
@@ -150,145 +151,147 @@ export default function AllWardrobesScreen() {
      RENDER
   ================================ */
   return (
-    <AppBackground>
-    <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        {!selectionMode ? (
-          <>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="arrow-back-outline" size={24} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>All Wardrobes</Text>
-            <View style={{ width: 24 }} />
-          </>
-        ) : (
-          <>
-            <Text style={styles.headerTitle}>
-              {selectedIds.length} selected
-            </Text>
-            <View style={{ flexDirection: "row", gap: 16 }}>
-              {selectedIds.length === 1 && selectedWardrobe && (
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push({
-                      pathname: "/profile/create-wardrobe",
-                      params: {
-                        id: selectedWardrobe._id,
-                        name: selectedWardrobe.name,
-                        color: selectedWardrobe.color,
-                      },
-                    })
-                  }
-                >
-                  <Ionicons name="create-outline" size={22} />
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+      <AppBackground>
+        <View style={styles.container}>
+          {/* HEADER */}
+          <View style={styles.header}>
+            {!selectionMode ? (
+              <>
+                <TouchableOpacity onPress={() => router.back()}>
+                  <Ionicons name="arrow-back-outline" size={24} />
                 </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={confirmDelete}>
-                <Ionicons name="trash-outline" size={22} color="red" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={cancelSelection}>
-                <Ionicons name="close-outline" size={22} />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </View>
-
-      <ScrollView style={styles.scrollView}>
-        {!selectionMode && (
-          <TouchableOpacity
-            style={styles.addWardrobeBtn}
-            onPress={() => router.push("profile/create-wardrobe")}
-          >
-            <Text style={styles.addWardrobeText}>+ Add New Wardrobe</Text>
-          </TouchableOpacity>
-        )}
-
-        {wardrobes.map((w) => {
-          const selected = selectedIds.includes(w._id);
-
-          return (
-            <TouchableOpacity
-              key={w._id}
-              onPress={() => handlePress(w)}
-              onLongPress={() => handleLongPress(w._id)}
-              style={[
-                styles.wardrobeCard,
-                selected && styles.selectedCard,
-              ]}
-            >
-              <View
-                style={[
-                  styles.colorBox,
-                  { backgroundColor: w.color || "#A855F7" },
-                ]}
-              />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.wardrobeName}>{w.name}</Text>
-                <Text style={styles.itemsCount}>
-                  {w.itemCount || 0} items
+                <Text style={styles.headerTitle}>All Wardrobes</Text>
+                <View style={{ width: 24 }} />
+              </>
+            ) : (
+              <>
+                <Text style={styles.headerTitle}>
+                  {selectedIds.length} selected
                 </Text>
-              </View>
-              <Text>{formatPrice(w.totalWorth)}</Text>
-              {selectionMode ? (
-                <Ionicons
-                  name={selected ? "checkmark-circle" : "ellipse-outline"}
-                  size={22}
-                  color="#A855F7"
-                />
-              ) : (
-                <Ionicons name="chevron-forward-outline" size={22} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-    </AppBackground>
-  );
+                <View style={{ flexDirection: "row", gap: 16 }}>
+                  {selectedIds.length === 1 && selectedWardrobe && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        router.push({
+                          pathname: "/profile/create-wardrobe",
+                          params: {
+                            id: selectedWardrobe._id,
+                            name: selectedWardrobe.name,
+                            color: selectedWardrobe.color,
+                          },
+                        })
+                      }
+                    >
+                      <Ionicons name="create-outline" size={22} />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={confirmDelete}>
+                    <Ionicons name="trash-outline" size={22} color="red" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={cancelSelection}>
+                    <Ionicons name="close-outline" size={22} />
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+
+          <ScrollView style={styles.scrollView}>
+            {!selectionMode && (
+              <TouchableOpacity
+                style={styles.addWardrobeBtn}
+                onPress={() => router.push("profile/create-wardrobe")}
+              >
+                <Text style={styles.addWardrobeText}>+ Add New Wardrobe</Text>
+              </TouchableOpacity>
+            )}
+
+            {wardrobes.map((w) => {
+              const selected = selectedIds.includes(w._id);
+
+              return (
+                <TouchableOpacity
+                  key={w._id}
+                  onPress={() => handlePress(w)}
+                  onLongPress={() => handleLongPress(w._id)}
+                  style={[
+                    styles.wardrobeCard,
+                    selected && styles.selectedCard,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.colorBox,
+                      { backgroundColor: w.color || "#A855F7" },
+                    ]}
+                  />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.wardrobeName}>{w.name}</Text>
+                    <Text style={styles.itemsCount}>
+                      {w.itemCount || 0} items
+                    </Text>
+                  </View>
+                  <Text>{formatPrice(w.totalWorth)}</Text>
+                  {selectionMode ? (
+                    <Ionicons
+                      name={selected ? "checkmark-circle" : "ellipse-outline"}
+                      size={22}
+                      color="#A855F7"
+                    />
+                  ) : (
+                    <Ionicons name="chevron-forward-outline" size={22} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </AppBackground>
+    </SafeAreaView>
+      );
 }
 
-/* ===============================
-   STYLES
-================================ */
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffffa4" },
-  header: {
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+      /* ===============================
+         STYLES
+      ================================ */
+      const styles = StyleSheet.create({
+        container: {flex: 1},
+      header: {
+        paddingTop: 50,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderBottomWidth: 1,
+      borderBottomColor: "#eee",
   },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
-  scrollView: { padding: 16 },
-  addWardrobeBtn: {
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "#D8B4FE",
-    borderRadius: 20,
-    padding: 14,
-    alignItems: "center",
-    marginBottom: 16,
+      headerTitle: {fontSize: 18, fontWeight: "700" },
+      scrollView: {padding: 16 },
+      addWardrobeBtn: {
+        borderWidth: 1,
+      borderStyle: "dashed",
+      borderColor: "#D8B4FE",
+      borderRadius: 20,
+      padding: 14,
+      alignItems: "center",
+      marginBottom: 16,
   },
-  addWardrobeText: { color: "#A855F7", fontWeight: "600" },
-  wardrobeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
-    backgroundColor: "#F3E8FF",
+      addWardrobeText: {color: "#A855F7", fontWeight: "600" },
+      wardrobeCard: {
+        flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 16,
+      padding: 12,
+      marginBottom: 12,
+      backgroundColor: "#F3E8FF",
   },
-  selectedCard: {
-    borderWidth: 2,
-    borderColor: "#A855F7",
+      selectedCard: {
+        borderWidth: 2,
+      borderColor: "#A855F7",
   },
-  colorBox: { width: 40, height: 40, borderRadius: 8 },
-  wardrobeName: { fontWeight: "700" },
-  itemsCount: { color: "#777", marginTop: 4 },
+      colorBox: {width: 40, height: 40, borderRadius: 8 },
+      wardrobeName: {fontWeight: "700" },
+      itemsCount: {color: "#777", marginTop: 4 },
 });

@@ -107,41 +107,42 @@ export default function PremiumRequestsPage() {
       </View>
     );
   }
- const revoke = (requestId: string, username: string) => {
-  Alert.alert(
-    "Revoke Premium Access",
-    `Are you sure you want to revoke premium access for ${username}?`,
-    [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Revoke",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem("token");
-            if (!token) return;
+  const revoke = (requestId: string, username: string) => {
+    Alert.alert(
+      "Revoke Premium Access",
+      `Are you sure you want to revoke premium access for ${username}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Revoke",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem("token");
+              if (!token) return;
 
-            await api.post(
-              "/api/premium/revoke",
-              { requestId },
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
+              await api.post(
+                "/api/premium/revoke",
+                { requestId },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
 
-            Alert.alert("Access revoked successfully");
-            loadRequests();
-          } catch {
-            Alert.alert("Failed to revoke access");
-          }
+              Alert.alert("Access revoked successfully");
+              loadRequests();
+            } catch {
+              Alert.alert("Failed to revoke access");
+            }
+          },
         },
-      },
-    ]
-  );
-};
+      ]
+    );
+  };
 
 
   return (
-    <AppBackground>
-      <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }}>
+
+      <AppBackground>
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
@@ -232,7 +233,7 @@ export default function PremiumRequestsPage() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{req.requester.username}</Text>
 
-                 
+
 
                   <Text style={styles.subText}>
                     Access to{" "}
@@ -240,7 +241,7 @@ export default function PremiumRequestsPage() {
                       {req.item?.name || "Premium Item"}
                     </Text>
                   </Text>
-                   <Text style={styles.subText}>
+                  <Text style={styles.subText}>
                     Approved on {formatDateTime(req.updatedAt || req.createdAt)}
                   </Text>
                 </View>
@@ -248,7 +249,7 @@ export default function PremiumRequestsPage() {
 
                 <Ionicons name="checkmark-circle" size={22} color="#10B981" />
                 <TouchableOpacity
-                 onPress={() => revoke(req._id, req.requester.username)}
+                  onPress={() => revoke(req._id, req.requester.username)}
 
                 >
                   <Ionicons name="close-circle" size={20} color="#EF4444" />
@@ -259,8 +260,9 @@ export default function PremiumRequestsPage() {
           ))}
 
         </ScrollView>
-      </SafeAreaView>
-    </AppBackground>
+      </AppBackground>
+    </SafeAreaView>
+
   );
 }
 

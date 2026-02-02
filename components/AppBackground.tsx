@@ -8,6 +8,7 @@ type AppBackgroundProps = {
 
 export default function AppBackground({ children }: AppBackgroundProps) {
   return (
+    
     <ImageBackground
       source={require("../assets/images/bgallpage.png")}
       style={styles.background}

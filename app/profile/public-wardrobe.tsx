@@ -139,16 +139,16 @@ const normalizeCategoryKey = (name: string) =>
 // Helper function to get category icon
 const getCategoryIcon = (categoryName: string) => {
   const key = normalizeCategoryKey(categoryName);
-  
+
   // Try mens first, then womens
   if (CATEGORY_ICONS.mens[key]) {
     return CATEGORY_ICONS.mens[key];
   }
-  
+
   if (CATEGORY_ICONS.womens[key]) {
     return CATEGORY_ICONS.womens[key];
   }
-  
+
   return null;
 };
 
@@ -178,7 +178,7 @@ export default function PublicWardrobeScreen() {
       });
 
       setItems(res.data.items || []);
-      
+
       // Try to fetch user info
       try {
         const userRes = await api.get(`/api/user/${userId}/info`, {
@@ -205,19 +205,19 @@ export default function PublicWardrobeScreen() {
   };
 
   const getWardrobeName = (wardrobe: string | { _id: string; name: string; color?: string }): string => {
-  if (typeof wardrobe === 'string') {
-    return wardrobe;
-  }
-  return wardrobe?.name || 'No Wardrobe';
-};
+    if (typeof wardrobe === 'string') {
+      return wardrobe;
+    }
+    return wardrobe?.name || 'No Wardrobe';
+  };
 
-const getBrandName = (brand?: string | { _id: string; name: string; color?: string }): string => {
-  if (!brand) return 'No Brand';
-  if (typeof brand === 'string') {
-    return brand;
-  }
-  return brand?.name || 'No Brand';
-};
+  const getBrandName = (brand?: string | { _id: string; name: string; color?: string }): string => {
+    if (!brand) return 'No Brand';
+    if (typeof brand === 'string') {
+      return brand;
+    }
+    return brand?.name || 'No Brand';
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -231,12 +231,12 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
   // Get unique categories with counts (only from public items)
   const categoriesWithCounts = useMemo(() => {
     const categoryMap = new Map<string, number>();
-    
+
     items.forEach((item) => {
       const category = item.category;
       categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
     });
-    
+
     return Array.from(categoryMap.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count); // Sort by count descending
@@ -248,23 +248,23 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
     : items;
 
   // Sort items
- const sortedItems = [...filteredItems].sort((a, b) => {
-  switch (sortBy) {
-    case "dateOldest":
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    case "priceHigh":
-      return b.price - a.price;
-    case "priceLow":
-      return a.price - b.price;
-    case "nameAZ":
-      // Handle category as string for comparison
-      const catA = a.category;
-      const catB = b.category;
-      return catA.localeCompare(catB);
-    default:
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  }
-});
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    switch (sortBy) {
+      case "dateOldest":
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case "priceHigh":
+        return b.price - a.price;
+      case "priceLow":
+        return a.price - b.price;
+      case "nameAZ":
+        // Handle category as string for comparison
+        const catA = a.category;
+        const catB = b.category;
+        return catA.localeCompare(catB);
+      default:
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+  });
 
   // Helper to construct full image URL
   const getItemImageUrl = (item: WardrobeItem): string => {
@@ -282,7 +282,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
   const renderCategoryChip = ({ name, count }: { name: string; count: number }) => {
     const icon = getCategoryIcon(name);
     const isSelected = selectedCategory === name;
-    
+
     return (
       <TouchableOpacity
         key={name}
@@ -298,12 +298,12 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
           isSelected && styles.categoryIconContainerSelected,
         ]}>
           {icon ? (
-            <Image 
-              source={icon} 
+            <Image
+              source={icon}
               style={[
                 styles.categoryIcon,
                 isSelected && styles.categoryIconSelected
-              ]} 
+              ]}
             />
           ) : (
             <Ionicons
@@ -312,7 +312,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
               color={isSelected ? "#fff" : "#A855F7"}
             />
           )}
-          
+
           {/* Item count badge */}
           {count > 0 && (
             <View style={[
@@ -325,8 +325,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
             </View>
           )}
         </View>
-        
-        <Text 
+
+        <Text
           style={[
             styles.categoryChipLabel,
             isSelected && styles.categoryChipLabelSelected
@@ -353,7 +353,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
           source={{ uri: getItemImageUrl(item) }}
           style={styles.gridImage}
         />
-        
+
         {/* Category Badge */}
         <View style={styles.gridCategoryBadge}>
           <Text style={styles.gridCategoryText} numberOfLines={1}>
@@ -367,7 +367,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
           <Text style={styles.publicBadgeText}>Public</Text>
         </View>
       </View>
-      
+
       {/* Item Info */}
       <View style={styles.gridItemInfo}>
         <View style={styles.gridItemHeader}>
@@ -376,18 +376,18 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
           </Text>
           <Text style={styles.gridItemPrice}>₹{item.price}</Text>
         </View>
-        
-       <Text style={styles.gridItemBrand} numberOfLines={1}>
-  {getBrandName(item.brand) || getWardrobeName(item.wardrobe)}
-</Text>
-        
+
+        <Text style={styles.gridItemBrand} numberOfLines={1}>
+          {getBrandName(item.brand) || getWardrobeName(item.wardrobe)}
+        </Text>
+
         {/* Description if available */}
         {item.description && (
           <Text style={styles.gridItemDescription} numberOfLines={2}>
             {item.description}
           </Text>
         )}
-        
+
         <Text style={styles.gridItemDate}>
           {new Date(item.createdAt).toLocaleDateString()}
         </Text>
@@ -407,7 +407,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
         source={{ uri: getItemImageUrl(item) }}
         style={styles.listImage}
       />
-      
+
       <View style={styles.listItemInfo}>
         <View style={styles.listItemHeader}>
           <Text style={styles.listItemName} numberOfLines={1}>
@@ -415,26 +415,26 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
           </Text>
           <Text style={styles.listItemPrice}>₹{item.price}</Text>
         </View>
-        
+
         <View style={styles.listItemMeta}>
           <Ionicons name="business-outline" size={14} color="#666" />
-         <Text style={styles.listItemBrand} numberOfLines={1}>
-  {getBrandName(item.brand) || getWardrobeName(item.wardrobe)}
-</Text>
-          
+          <Text style={styles.listItemBrand} numberOfLines={1}>
+            {getBrandName(item.brand) || getWardrobeName(item.wardrobe)}
+          </Text>
+
           {/* Public indicator */}
           <View style={styles.listPublicIndicator}>
             <Ionicons name="earth-outline" size={10} color="#10B981" />
             <Text style={styles.listPublicText}>Public</Text>
           </View>
         </View>
-        
+
         {item.description && (
           <Text style={styles.listItemDescription} numberOfLines={2}>
             {item.description}
           </Text>
         )}
-        
+
         <View style={styles.listItemFooter}>
           <Ionicons name="calendar-outline" size={12} color="#999" />
           <Text style={styles.listItemDate}>
@@ -442,7 +442,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
           </Text>
         </View>
       </View>
-      
+
       <Ionicons name="chevron-forward" size={20} color="#ccc" />
     </TouchableOpacity>
   );
@@ -455,7 +455,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back-outline" size={24} color="#000" />
           </TouchableOpacity>
-          
+
           <View style={styles.headerUserInfo}>
             <Text style={styles.headerTitle}>
               {userInfo?.name || userInfo?.username || "User"}'s Wardrobe
@@ -464,16 +464,16 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
               {items.length} public {items.length === 1 ? 'item' : 'items'}
             </Text>
           </View>
-          
+
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
-              <Ionicons 
-                name={isGridView ? "grid-outline" : "list-outline"} 
-                size={24} 
-                color={isGridView ? "#A855F7" : "#666"} 
+              <Ionicons
+                name={isGridView ? "grid-outline" : "list-outline"}
+                size={24}
+                color={isGridView ? "#A855F7" : "#666"}
               />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.sortButton}
               onPress={() => setSortModalVisible(true)}
             >
@@ -497,7 +497,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                 </Text>
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -522,7 +522,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                     size={22}
                     color={!selectedCategory ? "#fff" : "#A855F7"}
                   />
-                  
+
                   {/* Total count badge */}
                   {items.length > 0 && (
                     <View style={[
@@ -533,8 +533,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                     </View>
                   )}
                 </View>
-                
-                <Text 
+
+                <Text
                   style={[
                     styles.categoryChipLabel,
                     !selectedCategory && styles.categoryChipLabelSelected
@@ -543,7 +543,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                   All
                 </Text>
               </TouchableOpacity>
-              
+
               {/* Category Chips */}
               {categoriesWithCounts.map(renderCategoryChip)}
             </ScrollView>
@@ -553,7 +553,7 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
         {/* Results Info */}
         <View style={styles.resultsInfo}>
           <Text style={styles.resultsText}>
-            {selectedCategory 
+            {selectedCategory
               ? `${filteredItems.length} ${filteredItems.length === 1 ? 'public item' : 'public items'} in "${selectedCategory}"`
               : `${items.length} public items in collection`
             }
@@ -561,8 +561,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
         </View>
 
         {/* Items List */}
-        <ScrollView 
-          style={styles.itemsContainer} 
+        <ScrollView
+          style={styles.itemsContainer}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.itemsContent}
         >
@@ -575,13 +575,13 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
             <View style={styles.emptyContainer}>
               <Ionicons name="lock-closed-outline" size={64} color="#E5E7EB" />
               <Text style={styles.emptyTitle}>
-                {selectedCategory 
-                  ? `No public items in "${selectedCategory}"` 
+                {selectedCategory
+                  ? `No public items in "${selectedCategory}"`
                   : "No public items available"
                 }
               </Text>
               <Text style={styles.emptySubtitle}>
-                {selectedCategory 
+                {selectedCategory
                   ? "This user doesn't have public items in this category"
                   : "This user hasn't made any items public yet"
                 }
@@ -606,10 +606,10 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
         </ScrollView>
 
         {/* Sort Modal */}
-        <Modal 
-          animationType="slide" 
-          transparent 
-          visible={sortModalVisible} 
+        <Modal
+          animationType="slide"
+          transparent
+          visible={sortModalVisible}
           onRequestClose={() => setSortModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
@@ -620,12 +620,12 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                   <Ionicons name="close" size={24} color="#333" />
                 </TouchableOpacity>
               </View>
-              
+
               <View style={styles.sortSection}>
                 <Text style={styles.sortSectionTitle}>By Date</Text>
                 <View style={styles.sortButtons}>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "dateNewest" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "dateNewest" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("dateNewest");
                       setSortModalVisible(false);
@@ -635,8 +635,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                       Newest First
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "dateOldest" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "dateOldest" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("dateOldest");
                       setSortModalVisible(false);
@@ -652,8 +652,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
               <View style={styles.sortSection}>
                 <Text style={styles.sortSectionTitle}>By Price</Text>
                 <View style={styles.sortButtons}>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "priceHigh" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "priceHigh" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("priceHigh");
                       setSortModalVisible(false);
@@ -663,8 +663,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                       Price: High to Low
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "priceLow" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "priceLow" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("priceLow");
                       setSortModalVisible(false);
@@ -679,8 +679,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
 
               <View style={styles.sortSection}>
                 <Text style={styles.sortSectionTitle}>By Name</Text>
-                <TouchableOpacity 
-                  style={[styles.sortBtn, sortBy === "nameAZ" && styles.activeSortBtn]} 
+                <TouchableOpacity
+                  style={[styles.sortBtn, sortBy === "nameAZ" && styles.activeSortBtn]}
                   onPress={() => {
                     setSortBy("nameAZ");
                     setSortModalVisible(false);
@@ -692,8 +692,8 @@ const getBrandName = (brand?: string | { _id: string; name: string; color?: stri
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity 
-                style={styles.closeModalBtn} 
+              <TouchableOpacity
+                style={styles.closeModalBtn}
                 onPress={() => setSortModalVisible(false)}
               >
                 <Text style={styles.closeModalText}>Cancel</Text>
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  
+
   // Header
   header: {
     flexDirection: "row",
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
     color: "#A855F7",
     fontWeight: "600",
   },
-  
+
   // Categories Section
   categoriesSection: {
     backgroundColor: "#ffffffff",
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     gap: 12,
   },
-  
+
   // Category Chips
   categoryChip: {
     alignItems: "center",
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
-  categoryCountTextSelected:{
+  categoryCountTextSelected: {
     color: "#A855F7",
   },
   categoryChipLabel: {
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
     color: "#A855F7",
     fontWeight: "700",
   },
-  
+
   // Results Info
   resultsInfo: {
     paddingHorizontal: 16,
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     color: "#4B5563",
     fontWeight: "500",
   },
-  
+
   // Items Container
   itemsContainer: {
     flex: 1,
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
   itemsContent: {
     padding: 16,
   },
-  
+
   // Loading State
   loadingContainer: {
     flex: 1,
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginTop: 16,
   },
-  
+
   // Empty State
   emptyContainer: {
     alignItems: "center",
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  
+
   // Grid View
   gridContainer: {
     flexDirection: "row",
@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#9CA3AF",
   },
-  
+
   // List View
   listContainer: {
     gap: 12,
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#9CA3AF",
   },
-  
+
   // Sort Modal
   modalOverlay: {
     flex: 1,

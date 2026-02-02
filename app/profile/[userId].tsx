@@ -346,8 +346,9 @@ export default function OtherUserProfile() {
   const publishedCoverImage = wardrobes.find(w => w.coverImage)?.coverImage || null;
 
   return (
-    <AppBackground>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+
+    <AppBackground>
         <View style={styles.container}>
           {/* Header */}
           <WardrobeHeader
@@ -698,8 +699,9 @@ export default function OtherUserProfile() {
             </View>
           </Modal>
         </View>
-      </SafeAreaView>
     </AppBackground>
+      </SafeAreaView>
+
   );
 }
 
@@ -707,7 +709,7 @@ export default function OtherUserProfile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff70",
+    // backgroundColor: "#ffffff70",
   },
   scrollView: {
     flex: 1,

@@ -43,7 +43,7 @@ export default function ItemDetails() {
     const [selectedComment, setSelectedComment] = useState<any>(null);
     const [showCommentActions, setShowCommentActions] = useState(false);
     const { isFollowing, toggleFollow, ready } = useFollow();
-const [activeIndex, setActiveIndex] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     // const [isFollowing, setIsFollowing] = useState(false);
     // const [followLoading, setFollowLoading] = useState(false);
@@ -276,281 +276,282 @@ const [activeIndex, setActiveIndex] = useState(0);
 
 
 
-            const images: string[] =
-  Array.isArray(item.images) && item.images.length > 0
-    ? item.images
-        .map((img: string) => resolveImageUrl(img))
-        .filter(Boolean) as string[]
-    : [];
+    const images: string[] =
+        Array.isArray(item.images) && item.images.length > 0
+            ? item.images
+                .map((img: string) => resolveImageUrl(img))
+                .filter(Boolean) as string[]
+            : [];
     return (
-        <AppBackground>
-         <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <View style={styles.container}>
-            <WardrobeHeader title="Item Details" onBack={() => router.back()} />
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* IMAGE */}
-                {/* OWNER */}
-                <View style={styles.itemHeaderContainer}>
-                    <View style={styles.ownerTopRow}>
-                        <TouchableOpacity
-                            style={styles.ownerLeft}
-                            onPress={handleOwnerPress}
-                        >
-                            {item.user?.photo ? (
-                                <Image
-  source={{
-    uri: resolveImageUrl(item.user.photo) ??
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        item.user?.username || "User"
-      )}&background=E9D5FF&color=6B21A8&size=128`
-  }}
-  style={styles.ownerAvatar}
-/>
+        <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+            <AppBackground>
+            <View style={styles.container}>
+                <WardrobeHeader title="Item Details" onBack={() => router.back()} />
 
-                            ) : (
-                                <View style={styles.ownerAvatarFallback}>
-                                    <Text style={styles.ownerInitial}>
-                                        {item.user?.username?.[0]?.toUpperCase() || "U"}
-                                    </Text>
-                                </View>
-                            )}
-
-                            <View>
-                                <Text style={styles.ownerUsername}>@{item.user?.username}</Text>
-                                <Text style={styles.ownerSub}>Item Owner</Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        {/* FOLLOW BUTTON */}
-                        {ready && (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                    {/* IMAGE */}
+                    {/* OWNER */}
+                    <View style={styles.itemHeaderContainer}>
+                        <View style={styles.ownerTopRow}>
                             <TouchableOpacity
-                                style={[
-                                    styles.followBtn,
-                                    followed && styles.followingBtn,
-                                    isSelf && styles.disabledBtn,
-                                ]}
-                                onPress={handleFollowToggle}
-                                disabled={isSelf}
+                                style={styles.ownerLeft}
+                                onPress={handleOwnerPress}
                             >
-                                <Ionicons
-                                    name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
-                                    size={16}
-                                    color="#fff"
-                                />
-                                <Text style={styles.followText}>
-                                    {isSelf ? "You" : followed ? "Following" : "Follow"}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-                {images.length > 0 ? (
-                    <ScrollView
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.imageSlider}
-                    >
-                        {images.map((img, index) => (
-                            <Image
-  key={index}
-  source={{ uri: img }}
-  style={styles.image}
-/>
-                        ))}
-                    </ScrollView>
-                ) : (
-                    <View style={[styles.image, styles.noImage]}>
-                        <Ionicons name="image-outline" size={60} color="#ccc" />
-                        <Text style={{ color: "#999", marginTop: 8 }}>No images</Text>
-                    </View>
-                )}
+                                {item.user?.photo ? (
+                                    <Image
+                                        source={{
+                                            uri: resolveImageUrl(item.user.photo) ??
+                                                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                    item.user?.username || "User"
+                                                )}&background=E9D5FF&color=6B21A8&size=128`
+                                        }}
+                                        style={styles.ownerAvatar}
+                                    />
 
-
-
-                {/* ACTIONS */}
-                <View style={styles.actionRow}>
-                    {/* LIKE */}
-                    <View style={styles.leftActions}>
-                        <TouchableOpacity onPress={handleLike} style={styles.actionBtn}>
-                            <Image
-                                source={require("../../../assets/icons/like.png")}
-                                style={[
-                                    styles.actionImageIcon,
-                                    liked && { tintColor: "#A855F7" },
-                                ]}
-                            />
-                            <Text>{likes}</Text>
-                        </TouchableOpacity>
-
-                        {/* COMMENT */}
-                        <TouchableOpacity
-                            onPress={() => setShowComments(true)}
-                            style={styles.actionBtn}
-                        >
-                            <Image
-                                source={require("../../../assets/icons/comment.png")}
-                                style={styles.actionImageIcon}
-                            />
-                            <Text>{commentCount}</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* SAVE */}
-                    <TouchableOpacity onPress={() => toggleSave(item._id)}>
-                        <Image
-                            source={
-                                saved
-                                    ? require("../../../assets/icons/bookmark-saved.png")
-                                    : require("../../../assets/icons/bookmark.png")
-                            }
-                            style={[
-                                styles.actionImageIconbookmark,
-                                saved && { tintColor: "#A855F7" },
-                            ]}
-                        />
-                    </TouchableOpacity>
-                </View>
-
-                {/* DETAILS */}
-                <View style={styles.details}>
-                    <Text style={styles.brand}>{item.brand}</Text>
-                    <Text style={styles.title}>{item.title || item.wardrobe?.name}</Text>
-                    <Text style={styles.price}>₹{item.price}</Text>
-
-                    <Text style={styles.descTitle}>Description</Text>
-                    <Text style={styles.desc}>{item.description}</Text>
-
-                    <View style={styles.metaRow}>
-                        <Text style={styles.meta}>Wardrobe: {item.wardrobe?.name}</Text>
-                        <Text style={styles.meta}>
-                            Added: {new Date(item.createdAt).toDateString()}
-                        </Text>
-                    </View>
-                </View>
-            </ScrollView>
-            <Modal
-                visible={showComments}
-                animationType="slide"
-                onRequestClose={() => setShowComments(false)}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <TouchableOpacity onPress={() => setShowComments(false)}>
-                            <Ionicons name="arrow-back" size={24} />
-                        </TouchableOpacity>
-                        <Text style={styles.modalTitle}>Comments</Text>
-                        <View style={{ width: 24 }} />
-                    </View>
-
-                    <ScrollView contentContainerStyle={styles.commentsList}>
-                        {comments.map((comment) => (
-
-                            <View key={comment._id} style={styles.commentItem}>
-                                <View style={styles.commentUser}>
-                                    {/* Avatar */}
-                                    {comment.user?.photo ? (
-                                        <Image
-  source={{
-    uri: resolveImageUrl(comment.user.photo) ??
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        comment.user?.username || "User"
-      )}&background=E9D5FF&color=6B21A8&size=128`
-  }}
-  style={styles.commentAvatar}
-/>
-
-                                    ) : (
-                                        <View style={styles.commentAvatarPlaceholder}>
-                                            <Text style={styles.commentInitial}>
-                                                {comment.user?.username?.charAt(0).toUpperCase() || "U"}
-                                            </Text>
-                                        </View>
-
-                                    )}
-
-                                    {/* Content */}
-                                    <View style={styles.commentContent}>
-                                        <View style={styles.commentHeaderRow}>
-                                            <Text style={styles.commentUsername}>
-                                                {comment.user?.username || "User"}
-                                            </Text>
-
-                                            {canDeleteComment(comment) && (
-                                                <TouchableOpacity
-                                                    onPress={() => {
-                                                        setSelectedComment(comment);
-                                                        setShowCommentActions(true);
-                                                    }}
-                                                >
-                                                    <Ionicons name="ellipsis-vertical" size={16} />
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
-
-                                        <Text style={styles.commentText}>{comment.text}</Text>
-
-                                        <Text style={styles.commentTime}>
-                                            {formatCommentTime(comment.createdAt)}
+                                ) : (
+                                    <View style={styles.ownerAvatarFallback}>
+                                        <Text style={styles.ownerInitial}>
+                                            {item.user?.username?.[0]?.toUpperCase() || "U"}
                                         </Text>
                                     </View>
+                                )}
+
+                                <View>
+                                    <Text style={styles.ownerUsername}>@{item.user?.username}</Text>
+                                    <Text style={styles.ownerSub}>Item Owner</Text>
                                 </View>
-                            </View>
-                        ))}
+                            </TouchableOpacity>
 
-
-                    </ScrollView>
-
-                    <View style={styles.modalCommentInput}>
-                        <TextInput
-                            placeholder="Add a comment..."
-                            value={commentText}
-                            onChangeText={setCommentText}
-                            style={styles.modalInput}
-                        />
-                        <TouchableOpacity onPress={handleComment}>
-                            <Ionicons name="send" size={22} color="#A855F7" />
-                        </TouchableOpacity>
+                            {/* FOLLOW BUTTON */}
+                            {ready && (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.followBtn,
+                                        followed && styles.followingBtn,
+                                        isSelf && styles.disabledBtn,
+                                    ]}
+                                    onPress={handleFollowToggle}
+                                    disabled={isSelf}
+                                >
+                                    <Ionicons
+                                        name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
+                                        size={16}
+                                        color="#fff"
+                                    />
+                                    <Text style={styles.followText}>
+                                        {isSelf ? "You" : followed ? "Following" : "Follow"}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
-                </View>
-            </Modal>
-            <Modal
-                transparent
-                visible={showCommentActions}
-                animationType="fade"
-                onRequestClose={() => setShowCommentActions(false)}
-            >
-                <TouchableOpacity
-                    style={styles.overlay}
-                    onPress={() => setShowCommentActions(false)}
-                >
-                    <View style={styles.actionSheet}>
-                        <TouchableOpacity
-                            style={styles.deleteBtn}
-                            onPress={() => {
-                                Alert.alert(
-                                    "Delete Comment",
-                                    "Are you sure you want to delete this comment?",
-                                    [
-                                        { text: "Cancel", style: "cancel" },
-                                        { text: "Delete", style: "destructive", onPress: handleDeleteComment },
-                                    ]
-                                );
-                            }}
+                    {images.length > 0 ? (
+                        <ScrollView
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.imageSlider}
                         >
-                            <Text style={styles.deleteText}>Delete</Text>
+                            {images.map((img, index) => (
+                                <Image
+                                    key={index}
+                                    source={{ uri: img }}
+                                    style={styles.image}
+                                />
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <View style={[styles.image, styles.noImage]}>
+                            <Ionicons name="image-outline" size={60} color="#ccc" />
+                            <Text style={{ color: "#999", marginTop: 8 }}>No images</Text>
+                        </View>
+                    )}
+
+
+
+                    {/* ACTIONS */}
+                    <View style={styles.actionRow}>
+                        {/* LIKE */}
+                        <View style={styles.leftActions}>
+                            <TouchableOpacity onPress={handleLike} style={styles.actionBtn}>
+                                <Image
+                                    source={require("../../../assets/icons/like.png")}
+                                    style={[
+                                        styles.actionImageIcon,
+                                        liked && { tintColor: "#A855F7" },
+                                    ]}
+                                />
+                                <Text>{likes}</Text>
+                            </TouchableOpacity>
+
+                            {/* COMMENT */}
+                            <TouchableOpacity
+                                onPress={() => setShowComments(true)}
+                                style={styles.actionBtn}
+                            >
+                                <Image
+                                    source={require("../../../assets/icons/comment.png")}
+                                    style={styles.actionImageIcon}
+                                />
+                                <Text>{commentCount}</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* SAVE */}
+                        <TouchableOpacity onPress={() => toggleSave(item._id)}>
+                            <Image
+                                source={
+                                    saved
+                                        ? require("../../../assets/icons/bookmark-saved.png")
+                                        : require("../../../assets/icons/bookmark.png")
+                                }
+                                style={[
+                                    styles.actionImageIconbookmark,
+                                    saved && { tintColor: "#A855F7" },
+                                ]}
+                            />
                         </TouchableOpacity>
                     </View>
-                </TouchableOpacity>
-            </Modal>
 
-        </View>
+                    {/* DETAILS */}
+                    <View style={styles.details}>
+                        <Text style={styles.brand}>{item.brand}</Text>
+                        <Text style={styles.title}>{item.title || item.wardrobe?.name}</Text>
+                        <Text style={styles.price}>₹{item.price}</Text>
+
+                        <Text style={styles.descTitle}>Description</Text>
+                        <Text style={styles.desc}>{item.description}</Text>
+
+                        <View style={styles.metaRow}>
+                            <Text style={styles.meta}>Wardrobe: {item.wardrobe?.name}</Text>
+                            <Text style={styles.meta}>
+                                Added: {new Date(item.createdAt).toDateString()}
+                            </Text>
+                        </View>
+                    </View>
+                </ScrollView>
+                <Modal
+                    visible={showComments}
+                    animationType="slide"
+                    onRequestClose={() => setShowComments(false)}
+                >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <TouchableOpacity onPress={() => setShowComments(false)}>
+                                <Ionicons name="arrow-back" size={24} />
+                            </TouchableOpacity>
+                            <Text style={styles.modalTitle}>Comments</Text>
+                            <View style={{ width: 24 }} />
+                        </View>
+
+                        <ScrollView contentContainerStyle={styles.commentsList}>
+                            {comments.map((comment) => (
+
+                                <View key={comment._id} style={styles.commentItem}>
+                                    <View style={styles.commentUser}>
+                                        {/* Avatar */}
+                                        {comment.user?.photo ? (
+                                            <Image
+                                                source={{
+                                                    uri: resolveImageUrl(comment.user.photo) ??
+                                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                            comment.user?.username || "User"
+                                                        )}&background=E9D5FF&color=6B21A8&size=128`
+                                                }}
+                                                style={styles.commentAvatar}
+                                            />
+
+                                        ) : (
+                                            <View style={styles.commentAvatarPlaceholder}>
+                                                <Text style={styles.commentInitial}>
+                                                    {comment.user?.username?.charAt(0).toUpperCase() || "U"}
+                                                </Text>
+                                            </View>
+
+                                        )}
+
+                                        {/* Content */}
+                                        <View style={styles.commentContent}>
+                                            <View style={styles.commentHeaderRow}>
+                                                <Text style={styles.commentUsername}>
+                                                    {comment.user?.username || "User"}
+                                                </Text>
+
+                                                {canDeleteComment(comment) && (
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            setSelectedComment(comment);
+                                                            setShowCommentActions(true);
+                                                        }}
+                                                    >
+                                                        <Ionicons name="ellipsis-vertical" size={16} />
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+
+                                            <Text style={styles.commentText}>{comment.text}</Text>
+
+                                            <Text style={styles.commentTime}>
+                                                {formatCommentTime(comment.createdAt)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            ))}
+
+
+                        </ScrollView>
+
+                        <View style={styles.modalCommentInput}>
+                            <TextInput
+                                placeholder="Add a comment..."
+                                value={commentText}
+                                onChangeText={setCommentText}
+                                style={styles.modalInput}
+                            />
+                            <TouchableOpacity onPress={handleComment}>
+                                <Ionicons name="send" size={22} color="#A855F7" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+                <Modal
+                    transparent
+                    visible={showCommentActions}
+                    animationType="fade"
+                    onRequestClose={() => setShowCommentActions(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.overlay}
+                        onPress={() => setShowCommentActions(false)}
+                    >
+                        <View style={styles.actionSheet}>
+                            <TouchableOpacity
+                                style={styles.deleteBtn}
+                                onPress={() => {
+                                    Alert.alert(
+                                        "Delete Comment",
+                                        "Are you sure you want to delete this comment?",
+                                        [
+                                            { text: "Cancel", style: "cancel" },
+                                            { text: "Delete", style: "destructive", onPress: handleDeleteComment },
+                                        ]
+                                    );
+                                }}
+                            >
+                                <Text style={styles.deleteText}>Delete</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
+
+            </View>
+        </AppBackground >
         </SafeAreaView>
-        </AppBackground>
     );
 } const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#ffffffdc" },
+    container: { flex: 1 },
     center: { flex: 1, justifyContent: "center", alignItems: "center" },
     itemHeaderContainer: {
         paddingHorizontal: 16,
@@ -568,7 +569,7 @@ const [activeIndex, setActiveIndex] = useState(0);
     image: {
         width: SCREEN_WIDTH,
         height: 420,
-          resizeMode: "contain", 
+        resizeMode: "contain",
     },
 
     actionRow: {

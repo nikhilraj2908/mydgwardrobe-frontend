@@ -89,8 +89,9 @@ export default function CreateWardrobe() {
   };
 
   return (
-    <AppBackground>
           <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+
+    <AppBackground>
       <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -159,8 +160,9 @@ export default function CreateWardrobe() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
     </AppBackground>
+    </SafeAreaView>
+
 
   );
 }

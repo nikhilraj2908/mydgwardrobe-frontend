@@ -247,7 +247,14 @@ useFocusEffect(
   const DEFAULT_IMAGE =
     "https://ui-avatars.com/api/?name=Item&background=random";
 
- 
+ const getBrandLabel = (item: WardrobeItem) => {
+  if (item.brand && item.brand.trim().length > 0) {
+    return item.brand;
+  }
+
+  return "No Brand";
+};
+
 const getItemImageUrl = (item: WardrobeItem): string => {
   const imagePath =
     item.images?.[0] ||
@@ -354,8 +361,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
         </View>
         
         <Text style={styles.gridItemBrand} numberOfLines={1}>
-          {item.brand || item.wardrobe || "No Brand"}
-        </Text>
+  {getBrandLabel(item)}
+</Text>
         
         {/* Description if available */}
         {item.description && (
@@ -395,8 +402,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
         <View style={styles.listItemMeta}>
           <Ionicons name="business-outline" size={14} color="#666" />
           <Text style={styles.listItemBrand} numberOfLines={1}>
-            {item.brand || item.wardrobe || "No Brand"}
-          </Text>
+  {getBrandLabel(item)}
+</Text>
         </View>
         
         {item.description && (

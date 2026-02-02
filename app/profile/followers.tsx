@@ -5,13 +5,13 @@ import { useFollow } from "@/context/FollowContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
@@ -28,11 +28,11 @@ export default function FollowersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
- useEffect(() => {
-  if (ready) {
-    fetchUsers();
-  }
-}, [activeTab, ready]);
+  useEffect(() => {
+    if (ready) {
+      fetchUsers();
+    }
+  }, [activeTab, ready]);
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -46,19 +46,19 @@ export default function FollowersPage() {
   };
 
   const renderItem = ({ item }: any) => {
-   const followed = ready ? isFollowing(item._id) : false;
+    const followed = ready ? isFollowing(item._id) : false;
 
     return (
-        
+
       <TouchableOpacity
         style={styles.userRow}
         onPress={() => router.push(`/profile/${item._id}`)}
         activeOpacity={0.8}
       >
         <Image
-    source={{ uri: resolveImageUrl(item.photo) }}
-    style={styles.avatar}
-  />
+          source={{ uri: resolveImageUrl(item.photo) }}
+          style={styles.avatar}
+        />
 
         <View style={styles.userInfo}>
           <Text style={styles.username}>{item.username}</Text>
@@ -85,55 +85,57 @@ export default function FollowersPage() {
   };
 
   return (
-    <AppBackground>
-     <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-    <View style={styles.container}>
-      {/* ✅ HEADER */}
-      <WardrobeHeader
-        onBack={() => router.back()}
-        showFilters={false}
-      />
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
 
-      {/* ✅ TABS */}
-      <View style={styles.tabs}>
-        {["followers", "following"].map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[
-              styles.tab,
-              activeTab === t && styles.activeTab,
-            ]}
-            onPress={() => setActiveTab(t as any)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === t && styles.activeTabText,
-              ]}
-            >
-              {t.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <AppBackground>
+        <View style={styles.container}>
+          {/* ✅ HEADER */}
+          <WardrobeHeader
+            onBack={() => router.back()}
+            showFilters={false}
+          />
 
-      {/* ✅ LIST */}
-      {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#A855F7" />
+          {/* ✅ TABS */}
+          <View style={styles.tabs}>
+            {["followers", "following"].map(t => (
+              <TouchableOpacity
+                key={t}
+                style={[
+                  styles.tab,
+                  activeTab === t && styles.activeTab,
+                ]}
+                onPress={() => setActiveTab(t as any)}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === t && styles.activeTabText,
+                  ]}
+                >
+                  {t.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* ✅ LIST */}
+          {loading ? (
+            <View style={styles.loader}>
+              <ActivityIndicator size="large" color="#A855F7" />
+            </View>
+          ) : (
+            <FlatList
+              data={users}
+              keyExtractor={item => item._id}
+              renderItem={renderItem}
+              contentContainerStyle={{ paddingBottom: 30 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </View>
-      ) : (
-        <FlatList
-          data={users}
-          keyExtractor={item => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 30 }}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </View>
+      </AppBackground>
     </SafeAreaView>
-    </AppBackground>
+
   );
 }
 
