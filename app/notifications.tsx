@@ -114,7 +114,7 @@ export default function NotificationsScreen() {
     };
 
     return (
-        <SafeAreaView>
+        <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <AppBackground>
             <View style={styles.container}>
                 {/* ================= HEADER ================= */}
@@ -200,9 +200,8 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        // backgroundColor: "#ffffff96",
         padding: 16,
-        marginTop: 30,
+        paddingTop: 0,
     },
 
     header: {

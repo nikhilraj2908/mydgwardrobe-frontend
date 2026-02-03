@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logo: {
-    width: 90,
-    height: 90,
+    width: 105,
+    height: 60,
     alignSelf: "center",
     marginVertical: 20,
   },

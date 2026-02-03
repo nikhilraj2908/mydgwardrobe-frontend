@@ -48,7 +48,13 @@ export default function WardrobeDetailsScreen() {
   const [moving, setMoving] = useState(false);
   const [renderVersion, setRenderVersion] = useState(0);
 
+  const getBrandLabel = (item: WardrobeItem) => {
+    if (item.brand && item.brand.trim().length > 0) {
+      return item.brand;
+    }
 
+    return "No Brand";
+  };
   const fetchWardrobes = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -217,10 +223,10 @@ export default function WardrobeDetailsScreen() {
   };
 
 
- useEffect(() => {
-  fetchItems();
-  fetchWardrobes();
-}, [wardrobeId, isPublicView]);
+  useEffect(() => {
+    fetchItems();
+    fetchWardrobes();
+  }, [wardrobeId, isPublicView]);
 
 
   const sortedItems = [...items].sort((a, b) => {
@@ -236,9 +242,9 @@ export default function WardrobeDetailsScreen() {
 
 
   return (
-    
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <AppBackground>
+
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+      <AppBackground>
         <View style={{ flex: 1, }}>
           {/* Header */}
           <View style={styles.header}>
@@ -303,10 +309,11 @@ export default function WardrobeDetailsScreen() {
                 sortedItems.map((item) => {
                   const imagePath = getFirstItemImage(item);
                   const isSelected = selectedItemIds.includes(item._id);
-                  return (
+                  const itemKey = `${item._id}-${renderVersion}-${isSelected ? 'selected' : 'normal'}`;
 
+                  return (
                     <TouchableOpacity
-                      key={item._id}
+                      key={itemKey} // Unique key that changes on selection/deselection
                       activeOpacity={0.9}
                       onPress={() =>
                         itemSelectionMode
@@ -320,31 +327,52 @@ export default function WardrobeDetailsScreen() {
                       }}
                       style={[
                         isGridView ? styles.gridItem : styles.listItem,
-
-                        // ✅ selected highlight
                         isSelected && styles.selectedItem,
-
-                        // ✅ dim others when in selection mode
-                        itemSelectionMode && !isSelected && styles.dimmedItem,
                       ]}
                     >
-                      {imagePath ? (
-                        <Image
-                          source={{ uri: imagePath }}
-                          style={isGridView ? styles.gridImage : styles.listImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={isGridView ? styles.gridImagePlaceholder : styles.listImagePlaceholder}>
-                          <Ionicons name="shirt-outline" size={36} color="#A855F7" />
-                        </View>
-                      )}
+                      <View style={styles.imageContainer}>
+                        {imagePath ? (
+                          <Image
+                            key={`image-${itemKey}`} // Unique image key
+                            source={{ uri: imagePath }}
+                            style={[
+                              isGridView ? styles.gridImage : styles.listImage,
+                              itemSelectionMode && !isSelected && { opacity: 0.3 }
+                            ]}
+                            resizeMode="cover"
+                            onError={(e) => console.log('Image error for', item._id, e.nativeEvent.error)}
+                          />
+                        ) : (
+                          <View style={isGridView ? styles.gridImagePlaceholder : styles.listImagePlaceholder}>
+                            <Ionicons name="shirt-outline" size={36} color="#A855F7" />
+                          </View>
+                        )}
 
-                      <View style={isGridView ? { padding: 8 } : { flex: 1, paddingLeft: 12 }}>
+                        {/* Selection indicator */}
+                        {itemSelectionMode && (
+                          <View style={[
+                            styles.selectionIndicator,
+                            isSelected ? styles.selectedIndicator : styles.unselectedIndicator
+                          ]}>
+                            {isSelected ? (
+                              <Ionicons name="checkmark-circle" size={24} color="#A855F7" />
+                            ) : (
+                              <View style={styles.unselectedCircle} />
+                            )}
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={[
+                        isGridView ? { padding: 8 } : { flex: 1, paddingLeft: 12 },
+                        itemSelectionMode && !isSelected && styles.dimmedContent
+                      ]}>
                         <Text style={styles.itemName}>{item.category}</Text>
                         {!isGridView && (
                           <>
-                            <Text style={styles.itemCategory}>{item.brand || item.wardrobe}</Text>
+                            <Text style={styles.itemCategory}>
+                              {getBrandLabel(item)}
+                            </Text>
                             <Text style={styles.itemPrice}>₹{item.price}</Text>
                             <Text style={styles.itemDate}>
                               Added: {new Date(item.createdAt).toLocaleDateString()}
@@ -439,8 +467,8 @@ export default function WardrobeDetailsScreen() {
           </Modal>
 
         </View>
-        </AppBackground>
-      </SafeAreaView>
+      </AppBackground>
+    </SafeAreaView>
 
   );
 }
@@ -520,6 +548,50 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
+  // Add these styles to your StyleSheet:
 
+  imageContainer: {
+    position: 'relative',
+  },
+
+  selectionIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  selectedIndicator: {
+    // Already has icon
+  },
+
+  unselectedIndicator: {
+    borderWidth: 2,
+    borderColor: '#A855F7',
+  },
+
+  unselectedCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A855F7',
+    backgroundColor: 'transparent',
+  },
+
+  dimmedContent: {
+    opacity: 0.6, // Only dim the text, not the image
+  },
+
+  // Remove or comment out the old dimmedItem style:
+  // dimmedItem: {
+  //   opacity: 0.5,
+  // },
 
 });

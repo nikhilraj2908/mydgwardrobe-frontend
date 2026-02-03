@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type SearchItem =
   | {
@@ -109,99 +110,101 @@ export default function SearchModal({ visible, onClose, onSearch }: Props) {
 
   /* ================= SELECT ================= */
   const handleSelect = (item: SearchItem) => {
-  onClose();
-  setQuery("");
-  setSuggestions([]);
+    onClose();
+    setQuery("");
+    setSuggestions([]);
 
-  if (item.type === "user") {
-    router.push(`/profile/${item._id}`);
-  } else {
-    onSearch(item.label); // redirect through parent
-  }
-};
+    if (item.type === "user") {
+      router.push(`/profile/${item._id}`);
+    } else {
+      onSearch(item.label); // redirect through parent
+    }
+  };
 
 
 
   return (
-    <Modal visible={visible} animationType="fade" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          {/* Search Box */}
-          <View style={styles.searchBox}>
-            <Image
-              source={require("../assets/icons/search.png")}
-              style={styles.headerIcon}
-            />
-            <TextInput
-              autoFocus
-              placeholder="Search outfits, brands..."
-              value={query}
-              onChangeText={setQuery}
-              onSubmitEditing={() => {
-                if (query.trim()) {
-                  onSearch(query.trim());
-                  setQuery("");
-                  setSuggestions([]);
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+      <Modal visible={visible} animationType="fade" transparent>
+        <View style={styles.overlay}>
+          <View style={styles.modalContainer}>
+            {/* Search Box */}
+            <View style={styles.searchBox}>
+              <Image
+                source={require("../assets/icons/search.png")}
+                style={styles.headerIcon}
+              />
+              <TextInput
+                autoFocus
+                placeholder="Search outfits, brands..."
+                value={query}
+                onChangeText={setQuery}
+                onSubmitEditing={() => {
+                  if (query.trim()) {
+                    onSearch(query.trim());
+                    setQuery("");
+                    setSuggestions([]);
+                  }
+                }}
+                style={styles.input}
+              />
+
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={20} color="#555" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Suggestions */}
+            <FlatList
+              data={suggestions}
+              keyExtractor={(item) => item._id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => {
+                if (item.type === "user") {
+                  return (
+                    <TouchableOpacity
+                      style={styles.suggestion}
+                      onPress={() => handleSelect(item)}
+                    >
+                      <Ionicons
+                        name="person-circle-outline"
+                        size={20}
+                        color="#A855F7"
+                        style={{ marginHorizontal: 10 }}
+                      />
+                      <Text style={styles.suggestionText}>
+                        {item.username}
+                      </Text>
+                    </TouchableOpacity>
+                  );
                 }
-              }}
-              style={styles.input}
-            />
 
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={20} color="#555" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Suggestions */}
-          <FlatList
-            data={suggestions}
-            keyExtractor={(item) => item._id}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => {
-              if (item.type === "user") {
                 return (
                   <TouchableOpacity
                     style={styles.suggestion}
                     onPress={() => handleSelect(item)}
                   >
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={20}
-                      color="#A855F7"
-                      style={{ marginHorizontal: 10 }}
+                    <Image
+                      source={require("../assets/icons/search.png")}
+                      style={styles.searchIcon}
                     />
                     <Text style={styles.suggestionText}>
-                      {item.username}
+                      {item.label}
                     </Text>
                   </TouchableOpacity>
                 );
+              }}
+              ListEmptyComponent={
+                query && !loading ? (
+                  <Text style={styles.emptyText}>No results found</Text>
+                ) : null
               }
+            />
 
-              return (
-                <TouchableOpacity
-                  style={styles.suggestion}
-                  onPress={() => handleSelect(item)}
-                >
-                  <Image
-                    source={require("../assets/icons/search.png")}
-                    style={styles.searchIcon}
-                  />
-                  <Text style={styles.suggestionText}>
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            }}
-            ListEmptyComponent={
-              query && !loading ? (
-                <Text style={styles.emptyText}>No results found</Text>
-              ) : null
-            }
-          />
-
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+    </SafeAreaView>
   );
 }
 

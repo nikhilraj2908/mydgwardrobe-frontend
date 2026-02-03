@@ -1,3 +1,5 @@
+import AppBackground from "@/components/AppBackground";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -14,10 +16,8 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import api from "../../api/api";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AppBackground from "@/components/AppBackground";
-
+import api from "../../api/api";
 interface UserProfile {
   _id: string;
   username: string;
@@ -79,11 +79,7 @@ export default function EditProfileScreen() {
 
       // Set profile image if exists
       if (userData.photo) {
-        setProfileImage(
-          userData.photo.startsWith("http")
-            ? userData.photo
-            : `${baseURL}${userData.photo}`
-        );
+       setProfileImage(resolveImageUrl(userData.photo));
       }
 
 

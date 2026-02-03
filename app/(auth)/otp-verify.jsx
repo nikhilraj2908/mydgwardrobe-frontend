@@ -4,13 +4,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   Alert,
+  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  ImageBackground
+  View
 } from "react-native";
 
 import api from "../../api/api"; // ✅ Axios instance
@@ -38,31 +38,41 @@ export default function OtpVerify() {
   // -------------------------------------------------------------------
   // ✅ VERIFY OTP (Axios Version)
   // -------------------------------------------------------------------
-  const verifyCode = async () => {
-    const code = otp.join("");
+ const verifyCode = async () => {
+  const code = otp.join("");
 
-    if (code.length !== 4) {
-      Alert.alert("Error", "Please enter complete OTP");
-      return;
-    }
+  if (code.length !== 4) {
+    Alert.alert("Error", "Please enter complete OTP");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const res = await api.post("/api/auth/verify-mobile-login", {
-        email,
-        otp: code,
-      });
+  try {
+    const res = await api.post("/api/auth/verify-mobile-login", {
+      email,
+      otp: code,
+    });
 
-      // Use the auth context login function (it will redirect to profile)
-      await login(res.data.token);
+    await login(res.data.token);
 
-      Alert.alert("Success", "Logged in successfully!");
-    } catch (err) {
-      setLoading(false);
-      Alert.alert("Error", err.response?.data?.message || "Invalid OTP");
-    }
-  };
+    setLoading(false); // ✅ FIX 1: stop loader
+
+    Alert.alert("Success", "Logged in successfully!", [
+      {
+        text: "OK",
+        onPress: () => {
+          router.replace("/home"); // ✅ FIX 2: redirect to home
+        },
+      },
+    ]);
+
+  } catch (err) {
+    setLoading(false);
+    Alert.alert("Error", err.response?.data?.message || "Invalid OTP");
+  }
+};
+
 
 
   // -------------------------------------------------------------------

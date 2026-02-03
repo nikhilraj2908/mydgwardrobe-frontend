@@ -1,6 +1,6 @@
 // components/AppBackground.tsx
 import React, { ReactNode } from "react";
-import { ImageBackground, View, StyleSheet } from "react-native";
+import { ImageBackground, StyleSheet, View } from "react-native";
 
 type AppBackgroundProps = {
   children: ReactNode;
@@ -8,21 +8,24 @@ type AppBackgroundProps = {
 
 export default function AppBackground({ children }: AppBackgroundProps) {
   return (
-    
-    <ImageBackground
-      source={require("../assets/images/bgallpage.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      {/* Optional overlay */}
-      <View style={styles.overlay} />
-
-      {children}
-    </ImageBackground>
+    <View style={styles.base}>
+      <ImageBackground
+        source={require("../assets/images/bgallpage.png")}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <View style={styles.overlay} />
+        {children}
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  base: {
+    flex: 1,
+    backgroundColor: "#FFFFFF", // ✅ prevents black bleed
+  },
   background: {
     flex: 1,
     width: "100%",
@@ -30,6 +33,6 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0)", // adjust if needed
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
 });

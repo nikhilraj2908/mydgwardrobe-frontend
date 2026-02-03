@@ -358,7 +358,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 5
   },
   logoText: {
     fontSize: 22,

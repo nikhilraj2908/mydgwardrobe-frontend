@@ -2,33 +2,31 @@ import WardrobeHeader from "@/components/WardrobeHeader";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import AppBackground from "@/components/AppBackground";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
+import { useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
-  FlatList,
   Image,
-  ListRenderItemInfo,
   Modal,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  BackHandler,
-  ScrollView
+  View
 } from "react-native";
 import api from "../../api/api";
 import { useSavedItems } from "../../context/SavedItemsContext";
-import AppBackground from "@/components/AppBackground";
-import { useLocalSearchParams } from "expo-router";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
 const GAP = 8;
 const COLUMN_WIDTH = (SCREEN_WIDTH - (GAP * (NUM_COLUMNS + 1))) / NUM_COLUMNS;
-import { resolveImageUrl } from "@/utils/resolveImageUrl";
 
 interface CategoryItem {
   _id: string;
@@ -505,18 +503,10 @@ export default function Explore() {
         />
 
         {/* Gradient Overlay */}
-        <View style={styles.categoryGradient}>
-          <View style={styles.categoryOverlay}>
-            <Text style={styles.categoryTitle} numberOfLines={1}>
-              {item.name}
-            </Text>
-            {item.itemCount !== undefined && (
-              <Text style={styles.categoryCount}>
-                {item.itemCount} {item.itemCount === 1 ? "item" : "items"}
-              </Text>
-            )}
-          </View>
+        <View style={styles.categoryBottomBar}>
+          <Text style={styles.categoryTitle}>{item.name}</Text>
         </View>
+
 
         {/* Decorative element for some cards */}
         {(index % 5 === 0 || index % 7 === 0) && (
@@ -1723,4 +1713,15 @@ const styles = StyleSheet.create({
     color: "#A855F7",
     fontWeight: "600",
   },
+  categoryBottomBar: {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  backgroundColor: "rgba(0,0,0,0.7)",
+  paddingVertical: 4,
+  paddingHorizontal: 8,
+  alignItems: "center",
+  justifyContent: "center",
+},
 });

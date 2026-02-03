@@ -3,12 +3,12 @@ import AppBackground from "@/components/AppBackground";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -132,16 +132,16 @@ const normalizeCategoryKey = (name: string) =>
 // Helper function to get category icon
 const getCategoryIcon = (categoryName: string) => {
   const key = normalizeCategoryKey(categoryName);
-  
+
   // Try mens first, then womens
   if (CATEGORY_ICONS.mens[key]) {
     return CATEGORY_ICONS.mens[key];
   }
-  
+
   if (CATEGORY_ICONS.womens[key]) {
     return CATEGORY_ICONS.womens[key];
   }
-  
+
   return null;
 };
 
@@ -155,9 +155,15 @@ export default function AllWardrobeItemsScreen() {
   const { userId } = useLocalSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [userGender, setUserGender] = useState<"mens" | "womens" | "unisex">("unisex");
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const itemSelectionMode = selectedItemIds.length > 0;
 
+  // Update your cancelItemSelection function
+
+  const [moveModalVisible, setMoveModalVisible] = useState(false);
+  const [wardrobes, setWardrobes] = useState<any[]>([]);
+  const [moving, setMoving] = useState(false);
   // const SERVER_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
-
   const fetchItems = async () => {
     try {
       setLoading(true);
@@ -181,7 +187,7 @@ export default function AllWardrobeItemsScreen() {
         });
 
         setItems(res.data);
-        
+
         // Try to get user gender
         try {
           const userRes = await api.get("/api/user/me", {
@@ -200,23 +206,135 @@ export default function AllWardrobeItemsScreen() {
       setLoading(false);
     }
   };
+  const handleItemPress = (id: string) => {
+    if (itemSelectionMode) {
+      toggleItemSelect(id);
+    } else {
+      router.push(`/wardrobe/item/${id}`);
+    }
+  };
 
-useFocusEffect(
-  useCallback(() => {
-    setSelectedCategory(null);
+  const handleItemLongPress = (id: string) => {
+    if (!itemSelectionMode) {
+      setSelectedItemIds([id]);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedCategory(null);
+      fetchItems();
+    }, [userId])
+  );
+
+  const toggleItemSelect = (id: string) => {
+    setSelectedItemIds(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    );
+  };
+
+  const cancelItemSelection = () => {
+    setSelectedItemIds([]);
+  };
+  const fetchWardrobes = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      const res = await api.get("/api/wardrobe/list", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setWardrobes(res.data.wardrobes || []);
+    } catch (err) {
+      console.error("Error fetching wardrobes", err);
+    }
+  };
+  useEffect(() => {
+    fetchWardrobes();
+  }, []);
+
+  const confirmItemDelete = () => {
+    const isSingle = selectedItemIds.length === 1;
+
+    Alert.alert(
+      isSingle ? "Delete item?" : "Delete items?",
+      isSingle
+        ? "This item will be permanently deleted."
+        : "All selected items will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: isSingle
+            ? deleteSingleItem
+            : deleteMultipleItems,
+        },
+      ]
+    );
+  };
+
+  const deleteSingleItem = async () => {
+    const token = await AsyncStorage.getItem("token");
+    await api.delete(`/api/wardrobe/item/${selectedItemIds[0]}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    cancelItemSelection();
     fetchItems();
-  }, [userId])
-);
+  };
+
+  const deleteMultipleItems = async () => {
+    const token = await AsyncStorage.getItem("token");
+    await api.delete("/api/wardrobe/items/bulk-delete", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { itemIds: selectedItemIds },
+    });
+    cancelItemSelection();
+    fetchItems();
+  };
+  const handleMoveToWardrobe = async (targetWardrobeId: string, targetName: string) => {
+    try {
+      setMoving(true);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      if (selectedItemIds.length === 1) {
+        await api.put(
+          `/api/wardrobe/${selectedItemIds[0]}/move`,
+          { targetWardrobeId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        await api.put(
+          `/api/wardrobe/move-bulk`,
+          { itemIds: selectedItemIds, targetWardrobeId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+
+      Alert.alert("Moved successfully");
+      setMoveModalVisible(false);
+      cancelItemSelection();
+      fetchItems();
+    } catch {
+      Alert.alert("Error", "Failed to move items");
+    } finally {
+      setMoving(false);
+    }
+  };
 
   // Get unique categories with counts
   const categoriesWithCounts = useMemo(() => {
     const categoryMap = new Map<string, number>();
-    
+
     items.forEach((item) => {
       const category = item.category;
       categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
     });
-    
+
     return Array.from(categoryMap.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count); // Sort by count descending
@@ -247,30 +365,28 @@ useFocusEffect(
   const DEFAULT_IMAGE =
     "https://ui-avatars.com/api/?name=Item&background=random";
 
- const getBrandLabel = (item: WardrobeItem) => {
-  if (item.brand && item.brand.trim().length > 0) {
-    return item.brand;
-  }
+  const getBrandLabel = (item: WardrobeItem) => {
+    if (item.brand && item.brand.trim().length > 0) {
+      return item.brand;
+    }
 
-  return "No Brand";
-};
+    return "No Brand";
+  };
 
-const getItemImageUrl = (item: WardrobeItem): string => {
-  const imagePath =
-    item.images?.[0] ||
-    item.imageUrl ||
-    null;
+  const getItemImageUrl = (item: WardrobeItem): string | undefined => {
+    const imagePath =
+      item.images?.[0] ||
+      item.imageUrl ||
+      undefined;
 
-  return imagePath
-    ? resolveImageUrl(imagePath)
-    : DEFAULT_IMAGE;
-};
+    return resolveImageUrl(imagePath);
+  };
 
   // Render category chip
   const renderCategoryChip = ({ name, count }: { name: string; count: number }) => {
     const icon = getCategoryIcon(name);
     const isSelected = selectedCategory === name;
-    
+
     return (
       <TouchableOpacity
         key={name}
@@ -286,12 +402,12 @@ const getItemImageUrl = (item: WardrobeItem): string => {
           isSelected && styles.categoryIconContainerSelected,
         ]}>
           {icon ? (
-            <Image 
-              source={icon} 
+            <Image
+              source={icon}
               style={[
                 styles.categoryIcon,
                 isSelected && styles.categoryIconSelected
-              ]} 
+              ]}
             />
           ) : (
             <Ionicons
@@ -300,7 +416,7 @@ const getItemImageUrl = (item: WardrobeItem): string => {
               color={isSelected ? "#fff" : "#A855F7"}
             />
           )}
-          
+
           {/* Item count badge */}
           {count > 0 && (
             <View style={[
@@ -314,8 +430,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
             </View>
           )}
         </View>
-        
-        <Text 
+
+        <Text
           style={[
             styles.categoryChipLabel,
             isSelected && styles.categoryChipLabelSelected
@@ -329,100 +445,165 @@ const getItemImageUrl = (item: WardrobeItem): string => {
   };
 
   // Render item card for grid view
-  const renderGridViewItem = (item: WardrobeItem) => (
-    <TouchableOpacity
-      key={item._id}
-      activeOpacity={0.9}
-      style={styles.gridItem}
-      onPress={() => router.push(`/wardrobe/item/${item._id}`)}
-    >
-      {/* Item Image */}
-      <View style={styles.gridImageContainer}>
-        <Image
-          source={{ uri: getItemImageUrl(item) }}
-          style={styles.gridImage}
-        />
-        
-        {/* Category Badge */}
-        <View style={styles.gridCategoryBadge}>
-          <Text style={styles.gridCategoryText} numberOfLines={1}>
-            {item.category}
-          </Text>
+  // Render item card for grid view
+  const renderGridViewItem = (item: WardrobeItem) => {
+    const imageUri = getItemImageUrl(item);
+    const isSelected = selectedItemIds.includes(item._id);
+    const itemKey = `${item._id}-${itemSelectionMode ? 'select' : 'normal'}-${isSelected ? 'selected' : 'unselected'}`;
+
+    return (
+      <TouchableOpacity
+        key={`${item._id}-${isSelected ? "selected" : "normal"}`}
+        activeOpacity={0.85}
+        delayLongPress={300}
+        onPress={() => handleItemPress(item._id)}
+        onLongPress={() => handleItemLongPress(item._id)}
+        style={[
+          styles.gridItem,
+          isSelected && styles.selectedItem,
+        ]}
+      >
+
+        <View style={styles.gridImageContainer}>
+          <Image
+            key={`image-${itemKey}`} // Unique key for image
+            source={
+              imageUri
+                ? { uri: imageUri }
+                : require("../../assets/images/bg.jpg")
+            }
+            style={styles.gridImage}
+            onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+          />
+
+          {/* Dimming overlay instead of opacity */}
+          {itemSelectionMode && !isSelected && (
+            <View style={styles.dimOverlay} />
+          )}
+
+          {/* Selection indicator */}
+          {itemSelectionMode && (
+            <View style={[
+              styles.selectionIndicator,
+              isSelected ? styles.selectedIndicator : styles.unselectedIndicator
+            ]}>
+              {isSelected ? (
+                <Ionicons name="checkmark-circle" size={24} color="#A855F7" />
+              ) : (
+                <View style={styles.unselectedCircle} />
+              )}
+            </View>
+          )}
+
+          <View style={styles.gridCategoryBadge}>
+            <Text style={styles.gridCategoryText} numberOfLines={1}>
+              {item.category}
+            </Text>
+          </View>
         </View>
-      </View>
-      
-      {/* Item Info */}
-      <View style={styles.gridItemInfo}>
-        <View style={styles.gridItemHeader}>
-          <Text style={styles.gridItemName} numberOfLines={1}>
-            {item.category}
+
+        {/* Item Info */}
+        <View style={[
+          styles.gridItemInfo,
+          itemSelectionMode && !isSelected && styles.dimmedTextContainer
+        ]}>
+          <View style={styles.gridItemHeader}>
+            <Text style={styles.gridItemName} numberOfLines={1}>
+              {item.category}
+            </Text>
+            <Text style={styles.gridItemPrice}>₹{item.price}</Text>
+          </View>
+
+          <Text style={styles.gridItemBrand} numberOfLines={1}>
+            {getBrandLabel(item)}
           </Text>
-          <Text style={styles.gridItemPrice}>₹{item.price}</Text>
+
+          {item.description && (
+            <Text style={styles.gridItemDescription} numberOfLines={2}>
+              {item.description}
+            </Text>
+          )}
+          <View style={styles.listItemFooter}>
+            <Ionicons name="calendar-outline" size={12} color="#999" />
+            <Text style={styles.listItemDate}>
+              Added: {new Date(item.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
         </View>
-        
-        <Text style={styles.gridItemBrand} numberOfLines={1}>
-  {getBrandLabel(item)}
-</Text>
-        
-        {/* Description if available */}
-        {item.description && (
-          <Text style={styles.gridItemDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        )}
-        
-        <Text style={styles.gridItemDate}>
-          {new Date(item.createdAt).toLocaleDateString()}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   // Render item card for list view
-  const renderListViewItem = (item: WardrobeItem) => (
-    <TouchableOpacity
-      key={item._id}
-      activeOpacity={0.9}
-      style={styles.listItem}
-      onPress={() => router.push(`/wardrobe/item/${item._id}`)}
-    >
-      <Image
-        source={{ uri: getItemImageUrl(item) }}
-        style={styles.listImage}
-      />
-      
-      <View style={styles.listItemInfo}>
-        <View style={styles.listItemHeader}>
-          <Text style={styles.listItemName} numberOfLines={1}>
-            {item.category}
-          </Text>
-          <Text style={styles.listItemPrice}>₹{item.price}</Text>
-        </View>
-        
-        <View style={styles.listItemMeta}>
-          <Ionicons name="business-outline" size={14} color="#666" />
+  const renderListViewItem = (item: WardrobeItem) => {
+    const imageUri = getItemImageUrl(item);
+    const isSelected = selectedItemIds.includes(item._id);
+
+    return (
+      <TouchableOpacity
+        key={`${item._id}-${isSelected ? "selected" : "normal"}`}
+        activeOpacity={0.85}
+        delayLongPress={300}
+        onPress={() => handleItemPress(item._id)}
+        onLongPress={() => handleItemLongPress(item._id)}
+        style={[
+          styles.listItem,
+          isSelected && styles.selectedItem,
+          itemSelectionMode && !isSelected && styles.dimmedListItem
+        ]}
+      >
+        {/* Image */}
+        <Image
+          source={
+            imageUri
+              ? { uri: imageUri }
+              : require("../../assets/images/bg.jpg")
+          }
+          style={styles.listImage}
+        />
+
+        {/* Info */}
+        <View style={styles.listItemInfo}>
+          <View style={styles.listItemHeader}>
+            <Text style={styles.listItemName} numberOfLines={1}>
+              {item.category}
+            </Text>
+            <Text style={styles.listItemPrice}>₹{item.price}</Text>
+          </View>
+
           <Text style={styles.listItemBrand} numberOfLines={1}>
-  {getBrandLabel(item)}
-</Text>
-        </View>
-        
-        {item.description && (
-          <Text style={styles.listItemDescription} numberOfLines={2}>
-            {item.description}
+            {getBrandLabel(item)}
           </Text>
+
+          {item.description && (
+            <Text style={styles.listItemDescription} numberOfLines={2}>
+              {item.description}
+            </Text>
+          )}
+
+          <View style={styles.listItemFooter}>
+            <Ionicons name="calendar-outline" size={12} color="#999" />
+            <Text style={styles.listItemDate}>
+              Added: {new Date(item.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Selection Indicator */}
+        {itemSelectionMode && (
+          <View style={styles.listSelectionIndicator}>
+            {isSelected ? (
+              <Ionicons name="checkmark-circle" size={22} color="#A855F7" />
+            ) : (
+              <View style={styles.unselectedCircle} />
+            )}
+          </View>
         )}
-        
-        <View style={styles.listItemFooter}>
-          <Ionicons name="calendar-outline" size={12} color="#999" />
-          <Text style={styles.listItemDate}>
-            Added: {new Date(item.createdAt).toLocaleDateString()}
-          </Text>
-        </View>
-      </View>
-      
-      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
+
+
 
   return (
     <AppBackground>
@@ -432,16 +613,16 @@ const getItemImageUrl = (item: WardrobeItem): string => {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back-outline" size={24} color="#000" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Wardrobe</Text>
+          <Text style={styles.headerTitle}>All Items</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
-              <Ionicons 
-                name={isGridView ? "grid-outline" : "list-outline"} 
-                size={24} 
-                color={isGridView ? "#A855F7" : "#666"} 
+              <Ionicons
+                name={isGridView ? "grid-outline" : "list-outline"}
+                size={24}
+                color={isGridView ? "#A855F7" : "#666"}
               />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.sortButton}
               onPress={() => setSortModalVisible(true)}
             >
@@ -450,6 +631,43 @@ const getItemImageUrl = (item: WardrobeItem): string => {
             </TouchableOpacity>
           </View>
         </View>
+        {itemSelectionMode && (
+          <View style={styles.selectionBar}>
+            <Text style={styles.selectionText}>
+              {selectedItemIds.length} selected
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 16 }}>
+              {selectedItemIds.length === 1 && (
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/add-wardrobe",
+                      params: {
+                        mode: "edit",
+                        itemId: selectedItemIds[0],
+                      },
+                    })
+                  }
+                >
+                  <Ionicons name="create-outline" size={22} color="#A855F7" />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity onPress={() => setMoveModalVisible(true)}>
+                <Ionicons name="swap-horizontal-outline" size={22} color="#6366F1" />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={confirmItemDelete}>
+                <Ionicons name="trash-outline" size={22} color="#EF4444" />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={cancelItemSelection}>
+                <Ionicons name="close-outline" size={24} color="#555" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Categories Filter Section */}
         <View style={styles.categoriesSection}>
@@ -464,7 +682,7 @@ const getItemImageUrl = (item: WardrobeItem): string => {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -489,7 +707,7 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                   size={22}
                   color={!selectedCategory ? "#fff" : "#A855F7"}
                 />
-                
+
                 {/* Total count badge */}
                 {items.length > 0 && (
                   <View style={[
@@ -500,8 +718,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                   </View>
                 )}
               </View>
-              
-              <Text 
+
+              <Text
                 style={[
                   styles.categoryChipLabel,
                   !selectedCategory && styles.categoryChipLabelSelected
@@ -510,7 +728,7 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                 All
               </Text>
             </TouchableOpacity>
-            
+
             {/* Category Chips */}
             {categoriesWithCounts.map(renderCategoryChip)}
           </ScrollView>
@@ -519,7 +737,7 @@ const getItemImageUrl = (item: WardrobeItem): string => {
         {/* Results Info */}
         <View style={styles.resultsInfo}>
           <Text style={styles.resultsText}>
-            {selectedCategory 
+            {selectedCategory
               ? `${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'} in "${selectedCategory}"`
               : `${items.length} items in collection`
             }
@@ -527,10 +745,11 @@ const getItemImageUrl = (item: WardrobeItem): string => {
         </View>
 
         {/* Items List */}
-        <ScrollView 
-          style={styles.itemsContainer} 
+        <ScrollView
+          style={styles.itemsContainer}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.itemsContent}
+          keyboardShouldPersistTaps="handled"
         >
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -544,7 +763,7 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                 {selectedCategory ? `No items in ${selectedCategory}` : "No items found"}
               </Text>
               <Text style={styles.emptySubtitle}>
-                {selectedCategory 
+                {selectedCategory
                   ? "Try selecting a different category"
                   : "Start by adding items to your wardrobe"
                 }
@@ -560,12 +779,48 @@ const getItemImageUrl = (item: WardrobeItem): string => {
             </View>
           )}
         </ScrollView>
+        {/* Move Modal */}
+        <Modal
+          animationType="slide"
+          transparent
+          visible={moveModalVisible}
+          onRequestClose={() => setMoveModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Move to wardrobe</Text>
+
+              <ScrollView>
+                {wardrobes
+                  .filter(w => !selectedItemIds.includes(w._id)) // optional safety
+                  .map(w => (
+                    <TouchableOpacity
+                      key={w._id}
+                      style={styles.moveWardrobeItem}
+                      disabled={moving}
+                      onPress={() => handleMoveToWardrobe(w._id, w.name)}
+                    >
+                      <Text style={styles.moveWardrobeText}>{w.name}</Text>
+                      <Ionicons name="chevron-forward" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ))}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.closeModalBtn}
+                onPress={() => setMoveModalVisible(false)}
+              >
+                <Text style={styles.closeModalText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Sort Modal */}
-        <Modal 
-          animationType="slide" 
-          transparent 
-          visible={sortModalVisible} 
+        <Modal
+          animationType="slide"
+          transparent
+          visible={sortModalVisible}
           onRequestClose={() => setSortModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
@@ -576,12 +831,12 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                   <Ionicons name="close" size={24} color="#333" />
                 </TouchableOpacity>
               </View>
-              
+
               <View style={styles.sortSection}>
                 <Text style={styles.sortSectionTitle}>By Date</Text>
                 <View style={styles.sortButtons}>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "dateNewest" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "dateNewest" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("dateNewest");
                       setSortModalVisible(false);
@@ -591,8 +846,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                       Newest First
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "dateOldest" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "dateOldest" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("dateOldest");
                       setSortModalVisible(false);
@@ -608,8 +863,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
               <View style={styles.sortSection}>
                 <Text style={styles.sortSectionTitle}>By Price</Text>
                 <View style={styles.sortButtons}>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "priceHigh" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "priceHigh" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("priceHigh");
                       setSortModalVisible(false);
@@ -619,8 +874,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                       Price: High to Low
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.sortBtn, sortBy === "priceLow" && styles.activeSortBtn]} 
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "priceLow" && styles.activeSortBtn]}
                     onPress={() => {
                       setSortBy("priceLow");
                       setSortModalVisible(false);
@@ -635,8 +890,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
 
               <View style={styles.sortSection}>
                 <Text style={styles.sortSectionTitle}>By Name</Text>
-                <TouchableOpacity 
-                  style={[styles.sortBtn, sortBy === "nameAZ" && styles.activeSortBtn]} 
+                <TouchableOpacity
+                  style={[styles.sortBtn, sortBy === "nameAZ" && styles.activeSortBtn]}
                   onPress={() => {
                     setSortBy("nameAZ");
                     setSortModalVisible(false);
@@ -648,8 +903,8 @@ const getItemImageUrl = (item: WardrobeItem): string => {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity 
-                style={styles.closeModalBtn} 
+              <TouchableOpacity
+                style={styles.closeModalBtn}
                 onPress={() => setSortModalVisible(false)}
               >
                 <Text style={styles.closeModalText}>Cancel</Text>
@@ -668,7 +923,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  
+
   // Header
   header: {
     flexDirection: "row",
@@ -705,7 +960,7 @@ const styles = StyleSheet.create({
     color: "#A855F7",
     fontWeight: "600",
   },
-  
+
   // Categories Section
   categoriesSection: {
     backgroundColor: "#ffffffff",
@@ -745,7 +1000,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     gap: 12,
   },
-  
+
   // Category Chips
   categoryChip: {
     alignItems: "center",
@@ -803,8 +1058,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
-  categoryCountTextSelected:{
-color: "#A855F7",
+  categoryCountTextSelected: {
+    color: "#A855F7",
   },
   categoryChipLabel: {
     fontSize: 11,
@@ -817,7 +1072,7 @@ color: "#A855F7",
     color: "#A855F7",
     fontWeight: "700",
   },
-  
+
   // Results Info
   resultsInfo: {
     paddingHorizontal: 16,
@@ -829,7 +1084,7 @@ color: "#A855F7",
     color: "#4B5563",
     fontWeight: "500",
   },
-  
+
   // Items Container
   itemsContainer: {
     flex: 1,
@@ -837,7 +1092,7 @@ color: "#A855F7",
   itemsContent: {
     padding: 16,
   },
-  
+
   // Loading State
   loadingContainer: {
     flex: 1,
@@ -850,7 +1105,7 @@ color: "#A855F7",
     color: "#6B7280",
     marginTop: 16,
   },
-  
+
   // Empty State
   emptyContainer: {
     alignItems: "center",
@@ -870,7 +1125,7 @@ color: "#A855F7",
     marginTop: 8,
     maxWidth: 250,
   },
-  
+
   // Grid View
   gridContainer: {
     flexDirection: "row",
@@ -889,15 +1144,7 @@ color: "#A855F7",
     shadowRadius: 4,
     elevation: 3,
   },
-  gridImageContainer: {
-    position: "relative",
-    width: "100%",
-    height: 160,
-  },
-  gridImage: {
-    width: "100%",
-    height: "100%",
-  },
+
   gridCategoryBadge: {
     position: "absolute",
     top: 10,
@@ -948,7 +1195,7 @@ color: "#A855F7",
     fontSize: 10,
     color: "#9CA3AF",
   },
-  
+
   // List View
   listContainer: {
     gap: 12,
@@ -1017,7 +1264,7 @@ color: "#A855F7",
     fontSize: 11,
     color: "#9CA3AF",
   },
-  
+
   // Sort Modal
   modalOverlay: {
     flex: 1,
@@ -1089,8 +1336,126 @@ color: "#A855F7",
     borderRadius: 12,
   },
   closeModalText: {
-    color: "#374151",
+    color: "#A855F7",
     fontWeight: "600",
     fontSize: 16,
   },
+  selectionBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FAF5FF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+  },
+  selectionText: {
+    fontWeight: "600",
+    color: "#444",
+  },
+  selectedItem: {
+    borderWidth: 2,
+    borderColor: "#A855F7",
+  },
+  // With this:
+
+  // Add this to your styles object (you can place it after the gridImageContainer style):
+  // In your styles object, add or update these styles:
+
+  // Grid View - Add this
+  gridImageContainer: {
+    position: "relative",
+    width: "100%",
+    height: 160,
+  },
+
+
+
+  selectedIndicator: {
+    // Already has the checkmark icon
+  },
+
+  // Add these styles to your StyleSheet:
+
+  // Dimming overlay
+  dimOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    zIndex: 1,
+  },
+
+  // Dimmed text container
+  dimmedTextContainer: {
+    opacity: 0.6,
+  },
+
+  // Selection indicator styles
+  selectionIndicator: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 2,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  unselectedIndicator: {
+    borderWidth: 2,
+    borderColor: "#A855F7",
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+  },
+  unselectedCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#A855F7",
+    backgroundColor: "transparent",
+  },
+
+  // Grid image
+  gridImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 8,
+  },
+  dimmedListItem: {
+    opacity: 0.6,
+  },
+
+  // Right-side selection icon
+  listSelectionIndicator: {
+    marginLeft: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // Add renderVersion to your ScrollView key
+
+
+  moveWardrobeItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EDE9FE",
+  },
+
+  moveWardrobeText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+  },
+
 });
