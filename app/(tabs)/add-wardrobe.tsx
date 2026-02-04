@@ -769,7 +769,7 @@ export default function AddWardrobe() {
                             if (router.canGoBack()) {
                                 router.back();
                             } else {
-                                router.replace("/(tabs)/home");
+                                router.replace("/home");
                             }
                         },
                     },
@@ -882,7 +882,13 @@ export default function AddWardrobe() {
             <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()}>
+                    <TouchableOpacity onPress={() => {
+                        if (router.canGoBack()) {
+                            router.back();
+                        } else {
+                            router.replace("/home");
+                        }
+                    }}>
                         <Ionicons name="arrow-back" size={24} color="#333" />
                     </TouchableOpacity>
                     <Text style={styles.title}>{isEdit ? "Edit Item" : "Add to Wardrobe"}</Text>
@@ -1096,7 +1102,7 @@ export default function AddWardrobe() {
                 </View>
 
 
-              
+
                 {/* Visibility */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Visibility</Text>

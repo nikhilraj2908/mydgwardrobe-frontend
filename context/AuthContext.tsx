@@ -20,17 +20,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     checkAuthStatus();
   }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      setIsAuthenticated(!!token);
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const checkAuthStatus = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    console.log("🔐 TOKEN FOUND:", token);
+    setIsAuthenticated(!!token);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const login = async (token: string) => {
     try {

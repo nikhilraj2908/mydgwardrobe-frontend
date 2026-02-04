@@ -642,7 +642,7 @@ export default function AllWardrobeItemsScreen() {
                 <TouchableOpacity
                   onPress={() =>
                     router.push({
-                      pathname: "/(tabs)/add-wardrobe",
+                      pathname: "/add-wardrobe",
                       params: {
                         mode: "edit",
                         itemId: selectedItemIds[0],

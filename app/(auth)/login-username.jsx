@@ -43,7 +43,7 @@ export default function LoginWithUsername() {
 
       // Now navigate to profile
       Alert.alert("Success", "Login successful!");
-      router.replace('/(tabs)/profile');
+      router.replace('/profile');
 
     } catch (err) {
       setLoading(false);

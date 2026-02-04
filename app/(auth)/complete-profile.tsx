@@ -70,7 +70,7 @@ export default function CompleteProfile() {
             await api.post("/api/auth/complete-profile", payload);
 
             Alert.alert("Success", "Profile completed successfully");
-            router.replace("/(tabs)/profile");
+            router.replace("/profile");
         } catch (err: any) {
             Alert.alert("Error", err.response?.data?.message || "Profile update failed");
         } finally {

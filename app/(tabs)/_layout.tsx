@@ -92,7 +92,7 @@ export default function TabsLayout() {
                   activeOpacity={0.8}
                   onPress={() => {
                     router.replace({
-                      pathname: "/(tabs)/add-wardrobe",
+                      pathname: "/add-wardrobe",
                       params: { mode: "create" }, // 🔥 FORCE CREATE MODE
                     });
                   }}

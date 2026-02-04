@@ -1,27 +1,17 @@
-import { Slot } from "expo-router";
-import * as Linking from "expo-linking";
+import { Slot, Stack } from "expo-router";
 import * as Font from "expo-font";
 import { useEffect, useState } from "react";
+import { View, ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { SavedItemsProvider } from "../context/SavedItemsContext";
 import { FollowProvider } from "@/context/FollowContext";
-import { AuthProvider } from "../context/AuthContext";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import { ThemeProvider } from "./theme/ThemeContext";
+import AuthGate from "@/components/AuthGate";
+/* ---------------- AUTH GATE ---------------- */
 
-export const linking = {
-  prefixes: ["mydgwardrobe://"],
-  config: {
-    screens: {
-      "(auth)": {
-        screens: {
-          "reset-password": "reset-password",
-        },
-      },
-    },
-  },
-};
-
+/* ---------------- ROOT ---------------- */
 export default function RootLayout() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -31,22 +21,24 @@ export default function RootLayout() {
     }).then(() => setFontsLoaded(true));
   }, []);
 
-  // ⛔ Prevent rendering until font is ready
   if (!fontsLoaded) {
-    return null; // or splash / loader
+    return null;
   }
 
   return (
     <AuthProvider>
-      <SafeAreaProvider>
-        <FollowProvider>
-          <SavedItemsProvider>
-            <ThemeProvider>
-             <Slot />
-            </ThemeProvider>
-          </SavedItemsProvider>
-        </FollowProvider>
-      </SafeAreaProvider>
-    </AuthProvider>
+  <SafeAreaProvider>
+    <FollowProvider>
+      <SavedItemsProvider>
+        <ThemeProvider>
+          <AuthGate>
+            <Slot />
+          </AuthGate>
+        </ThemeProvider>
+      </SavedItemsProvider>
+    </FollowProvider>
+  </SafeAreaProvider>
+</AuthProvider>
+
   );
 }

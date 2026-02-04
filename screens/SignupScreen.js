@@ -155,7 +155,7 @@ const [showCountryModal, setShowCountryModal] = useState(false);
       if (!user.profileCompleted) {
         router.replace("/complete-profile");
       } else {
-        router.replace("/(tabs)/profile");
+        router.replace("/profile");
       }
     } catch (error) {
       console.log("Google login error:", error.response?.data || error.message);

@@ -62,7 +62,7 @@ export default function OtpVerify() {
       {
         text: "OK",
         onPress: () => {
-          router.replace("/home"); // ✅ FIX 2: redirect to home
+        router.replace("/profile"); // ✅ FIX 2: redirect to home
         },
       },
     ]);
