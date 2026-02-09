@@ -13,10 +13,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/api";
 
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
+
+interface Category {
+  _id: string;
+  name: string;
+  type: string;
+}
+
 interface WardrobeItem {
   _id: string;
-  wardrobe: string;
-  category: string;
+  wardrobe: any;
+  category: string | Category;
   price: number;
   brand?: string;
   imageUrl: string;
@@ -159,9 +166,11 @@ export default function WardrobeDetailsScreen() {
         });
 
         const filteredItems = res.data.filter(
-          (item: WardrobeItem) => item.wardrobe === wardrobeId
+          (item: any) =>
+            typeof item.wardrobe === "string"
+              ? item.wardrobe === wardrobeId
+              : item.wardrobe?._id === wardrobeId
         );
-
         setItems(filteredItems);
         return;
       }
@@ -234,7 +243,20 @@ export default function WardrobeDetailsScreen() {
       case "dateOldest": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       case "priceHigh": return b.price - a.price;
       case "priceLow": return a.price - b.price;
-      case "nameAZ": return a.category.localeCompare(b.category);
+      case "nameAZ": {
+        const nameA =
+          typeof a.category === "string"
+            ? a.category
+            : a.category?.name || "";
+
+        const nameB =
+          typeof b.category === "string"
+            ? b.category
+            : b.category?.name || "";
+
+        return nameA.localeCompare(nameB);
+      }
+
       case "dateNewest":
       default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
@@ -367,7 +389,11 @@ export default function WardrobeDetailsScreen() {
                         isGridView ? { padding: 8 } : { flex: 1, paddingLeft: 12 },
                         itemSelectionMode && !isSelected && styles.dimmedContent
                       ]}>
-                        <Text style={styles.itemName}>{item.category}</Text>
+                        <Text style={styles.itemName}>
+                          {typeof item.category === "string"
+                            ? item.category
+                            : item.category?.name}
+                        </Text>
                         {!isGridView && (
                           <>
                             <Text style={styles.itemCategory}>

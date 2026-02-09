@@ -258,7 +258,7 @@ export default function AllWardrobesScreen() {
       const styles = StyleSheet.create({
         container: {flex: 1},
       header: {
-        paddingTop: 50,
+        
       paddingHorizontal: 16,
       paddingBottom: 12,
       flexDirection: "row",

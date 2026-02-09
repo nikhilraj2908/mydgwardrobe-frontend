@@ -91,7 +91,7 @@ const CATEGORY_ICONS = {
         swimwear: require("../../assets/categories/mens/Swimwear.png"),
         leatherjackets: require("../../assets/categories/mens/LeatherJackets.png"),
         casualwear: require("../../assets/categories/mens/CasualWear.png"),
-        "t-shirts": require("../../assets/categories/mens/T-Shirts.png"),
+        tshirts: require("../../assets/categories/mens/T-Shirts.png"),
     },
 
     womens: {
@@ -135,7 +135,7 @@ const CATEGORY_ICONS = {
         tanktops: require("../../assets/categories/womens/TankTop.png"),
         traditionalwear: require("../../assets/categories/womens/TraditionalWear.png"),
         trousers: require("../../assets/categories/womens/Trouser.png"),
-        't-shirts': require("../../assets/categories/womens/Tshirt.png"),
+        tshirts: require("../../assets/categories/womens/Tshirt.png"),
         vests: require("../../assets/categories/womens/Vest.png"),
         tops: require("../../assets/categories/womens/Top.png"),
         skirts: require("../../assets/categories/womens/Skirt.png"),
@@ -146,9 +146,10 @@ const CATEGORY_ICONS = {
 
 };
 
-
 const normalizeCategoryKey = (name: string) =>
-    name.toLowerCase().replace(/\s+/g, "");
+    name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
 
 export default function AddWardrobe() {
     const router = useRouter();
@@ -184,14 +185,14 @@ export default function AddWardrobe() {
     const [showOtherCategoryInput, setShowOtherCategoryInput] = useState(false);
 
     // Category API states
-    const [categories, setCategories] = useState<Category[]>([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
     const [description, setDescription] = useState("");
-
+    const [exploreCategories, setExploreCategories] = useState<Category[]>([]);
+    const [userCategories, setUserCategories] = useState<Category[]>([]);
     const params = useLocalSearchParams();
-
+    const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const mode = (params.mode as "create" | "edit") || "create";
     const itemId = params.itemId as string | undefined;
 
@@ -221,11 +222,12 @@ export default function AddWardrobe() {
 
                 const item = res.data;
 
-                setCategory(
-                    typeof item.category === "string"
-                        ? item.category
-                        : item.category?.name || ""
-                );
+                if (item.category && typeof item.category === "object") {
+                    setSelectedCategory(item.category);
+                    setCategory(item.category.name);
+                    setCategoryType(item.category.type);
+                }
+
 
                 setWardrobe(
                     typeof item.wardrobe === "string"
@@ -276,7 +278,7 @@ export default function AddWardrobe() {
                 style={styles.categoryCard}
                 onPress={() => handleCategorySelect(item)}
                 onLongPress={() => {
-                    if (!item._id.startsWith("default-")) {
+                    if (userCategories.some(c => c._id === item._id)) {
                         handleDeleteCategory(item._id);
                     }
                 }}
@@ -300,50 +302,31 @@ export default function AddWardrobe() {
     const fetchCategories = async () => {
         try {
             setLoadingCategories(true);
-            const response = await api.get("/api/categories");
 
-            if (response.data && Array.isArray(response.data)) {
-                setCategories(response.data);
-                setFilteredCategories(response.data);
-            } else {
-                // If API returns empty or invalid data, use defaults
-                console.warn("No categories returned from API, using defaults");
-                const defaultCategoriesList: Category[] = [
-                    ...DEFAULT_CATEGORIES.mens.map(name => ({
-                        _id: `default-mens-${name.toLowerCase().replace(/\s+/g, '-')}`,
-                        name,
-                        type: 'mens' as const
-                    })),
-                    ...DEFAULT_CATEGORIES.womens.map(name => ({
-                        _id: `default-womens-${name.toLowerCase().replace(/\s+/g, '-')}`,
-                        name,
-                        type: 'womens' as const
-                    }))
-                ];
-                setCategories(defaultCategoriesList);
-                setFilteredCategories(defaultCategoriesList);
-            }
-        } catch (error) {
-            console.error("Error fetching categories:", error);
-            // Fallback to default categories if API fails
-            const defaultCategoriesList: Category[] = [
-                ...DEFAULT_CATEGORIES.mens.map(name => ({
-                    _id: `default-mens-${name.toLowerCase().replace(/\s+/g, '-')}`,
-                    name,
-                    type: 'mens' as const
-                })),
-                ...DEFAULT_CATEGORIES.womens.map(name => ({
-                    _id: `default-womens-${name.toLowerCase().replace(/\s+/g, '-')}`,
-                    name,
-                    type: 'womens' as const
-                }))
-            ];
-            setCategories(defaultCategoriesList);
-            setFilteredCategories(defaultCategoriesList);
+            const token = await AsyncStorage.getItem("token");
+
+            const [exploreRes, userRes] = await Promise.all([
+                api.get("/api/categories"), // scope: explore
+                api.get("/api/categories/user", {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+            ]);
+
+            setExploreCategories(exploreRes.data || []);
+            setUserCategories(userRes.data || []);
+
+            // used only for search
+            setFilteredCategories([
+                ...(exploreRes.data || []),
+                ...(userRes.data || []),
+            ]);
+        } catch (err) {
+            console.error("FETCH CATEGORY ERROR:", err);
         } finally {
             setLoadingCategories(false);
         }
     };
+
 
     /* ================= CREATE NEW CATEGORY ================= */
     const createNewCategory = async (categoryName: string, type: "mens" | "womens" | "unisex") => {
@@ -401,13 +384,16 @@ export default function AddWardrobe() {
                                 return;
                             }
 
-                            await api.delete(`/api/categories${categoryId}`, {
+                            await api.delete(`/api/categories/${categoryId}`, {
                                 headers: { Authorization: `Bearer ${token}` },
                             });
 
                             // Remove from local state
-                            setCategories(prev => prev.filter(cat => cat._id !== categoryId));
+                            setExploreCategories(prev => prev.filter(cat => cat._id !== categoryId));
+                            setUserCategories(prev => prev.filter(cat => cat._id !== categoryId));
+
                             setFilteredCategories(prev => prev.filter(cat => cat._id !== categoryId));
+
 
                             Alert.alert("Success", "Category deleted successfully");
                         } catch (error: any) {
@@ -451,21 +437,49 @@ export default function AddWardrobe() {
     const handleSearch = (query: string) => {
         setSearchQuery(query);
         if (query.trim() === "") {
-            setFilteredCategories(categories);
+            setFilteredCategories([
+                ...exploreCategories,
+                ...userCategories,
+            ]);
         } else {
-            const filtered = categories.filter(cat =>
+            const allCategories = [...exploreCategories, ...userCategories];
+
+            const filtered = allCategories.filter(cat =>
                 cat.name.toLowerCase().includes(query.toLowerCase())
             );
+
+            setFilteredCategories(filtered);
+
             setFilteredCategories(filtered);
         }
     };
 
     /* ================= IMAGE PICKERS ================= */
+    // const pickFromGallery = async () => {
+    //     const res = await ImagePicker.launchImageLibraryAsync({
+    //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    //         allowsEditing: true,   // ✅ crop enabled
+    //         aspect: [4, 5],        // Instagram-style
+    //         quality: 0.9,
+    //     });
+
+    //     if (!res.canceled && res.assets.length > 0) {
+    //         const a = res.assets[0]; // take first image for editing
+
+    //         router.push({
+    //             pathname: "/image-editor",
+    //             params: { uri: a.uri },
+    //         });
+    //     }
+
+    // };
+
     const pickFromGallery = async () => {
         const res = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsMultipleSelection: true,
-            quality: 0.8,
+            allowsEditing: true,   // ✅ crop enabled
+            // aspect: [4, 5],       
+            quality: 0.9,
         });
 
         if (!res.canceled) {
@@ -480,6 +494,7 @@ export default function AddWardrobe() {
             ]);
         }
     };
+
     const normalizeImageUrl = (path: string) => {
         if (!path) return "";
         if (path.startsWith("http")) return path;
@@ -488,10 +503,28 @@ export default function AddWardrobe() {
 
 
 
+    // const pickFromCamera = async () => {
+    //     const res = await ImagePicker.launchCameraAsync({
+    //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    //         quality: 0.8,
+    //     });
+
+    //     if (!res.canceled && res.assets?.length) {
+    //         const a = res.assets[0];
+
+    //         router.push({
+    //             pathname: "/image-editor",
+    //             params: { uri: a.uri },
+    //         });
+    //     }
+
+    // };
+
     const pickFromCamera = async () => {
         const res = await ImagePicker.launchCameraAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.8,
+             allowsEditing: true, 
         });
 
         if (!res.canceled && res.assets?.length) {
@@ -533,17 +566,22 @@ export default function AddWardrobe() {
 
 
     /* ================= CATEGORY SELECTION ================= */
-    const handleCategorySelect = async (selectedCategory: Category | "other") => {
-        if (selectedCategory === "other") {
+    const handleCategorySelect = (item: Category | "other") => {
+        if (item === "other") {
             setShowOtherCategoryInput(true);
             setCategory("");
+            setSelectedCategory(null);
             setShowCategoryDropdown(false);
-        } else {
-            setCategory(selectedCategory.name);
-            setShowOtherCategoryInput(false);
-            setShowCategoryDropdown(false);
+            return;
         }
+
+        setSelectedCategory(item);       // ✅ STORE FULL OBJECT
+        setCategory(item.name);          // UI display only
+        setCategoryType(item.type);      // sync type
+        setShowOtherCategoryInput(false);
+        setShowCategoryDropdown(false);
     };
+
 
     /* ================= WARDROBE SELECTION ================= */
     const handleWardrobeSelect = (selectedWardrobe: string) => {
@@ -570,7 +608,8 @@ export default function AddWardrobe() {
         if (showOtherCategoryInput && customCategory) {
             const newCategory = await createNewCategory(customCategory, categoryType);
             if (!newCategory) return;
-            finalCategory = newCategory.name;
+            setSelectedCategory(newCategory);
+            finalCategory = newCategory._id;
         }
 
         const finalWardrobe = showOtherWardrobeInput && customWardrobe ? customWardrobe : wardrobe;
@@ -665,13 +704,19 @@ export default function AddWardrobe() {
             }
 
             // ✅ Append other fields
-            formData.append("category", finalCategory);
+            if (!selectedCategory) {
+                Alert.alert("Error", "Please select a valid category");
+                return;
+            }
+
+            formData.append("category", selectedCategory._id);
+            formData.append("categoryType", selectedCategory.type);
             formData.append("wardrobe", finalWardrobe);
             formData.append("price", price || "0");
             formData.append("brand", brand);
             formData.append("visibility", visibility);
             formData.append("accessLevel", accessLevel);
-
+            formData.append("gender", selectedCategory.type);
             if (description.trim()) formData.append("description", description.trim());
 
             // ✅ Log for debugging
@@ -807,7 +852,7 @@ export default function AddWardrobe() {
             onPress={() => handleCategorySelect(item)}
             onLongPress={() => {
                 // Only allow deletion for non-default categories
-                if (!item._id.startsWith('default-')) {
+                if (userCategories.some(c => c._id === item._id)) {
                     handleDeleteCategory(item._id);
                 }
             }}
@@ -871,9 +916,12 @@ export default function AddWardrobe() {
 
         const newCategory = await createNewCategory(customCategory, categoryType);
         if (newCategory) {
+            setSelectedCategory(newCategory);
             setCategory(newCategory.name);
-            setShowOtherCategoryInput(false);
+            setCategoryType(newCategory.type);
             Alert.alert("Success", "Category created successfully!");
+
+            setShowOtherCategoryInput(false);
         }
     };
 
@@ -1253,7 +1301,7 @@ export default function AddWardrobe() {
                                                         style={styles.searchResultItem}
                                                         onPress={() => handleCategorySelect(item)}
                                                         onLongPress={() => {
-                                                            if (!item._id.startsWith('default-')) {
+                                                            if (userCategories.some(c => c._id === item._id)) {
                                                                 handleDeleteCategory(item._id);
                                                             }
                                                         }}
@@ -1290,12 +1338,19 @@ export default function AddWardrobe() {
                                     ) : (
                                         // Show categorized view when not searching
                                         <>
-                                            {renderCategorySection("Men's Categories", categories, 'mens')}
-                                            {renderCategorySection("Women's Categories", categories, 'womens')}
+                                            {renderCategorySection("Explore – Men", exploreCategories, "mens")}
+                                            {renderCategorySection("Explore – Women", exploreCategories, "womens")}
+
+                                            {userCategories.length > 0 && (
+                                                <>
+                                                    {renderCategorySection("Others", userCategories, "mens")}
+                                                    {renderCategorySection("Others", userCategories, "womens")}
+                                                </>
+                                            )}
 
                                             {/* Unisex Categories */}
-                                            {categories.filter(cat => cat.type === 'unisex').length > 0 && (
-                                                renderCategorySection("Unisex Categories", categories, 'unisex')
+                                            {exploreCategories.filter(cat => cat.type === 'unisex').length > 0 && (
+                                                renderCategorySection("Unisex Categories", exploreCategories, 'unisex')
                                             )}
                                         </>
                                     )}

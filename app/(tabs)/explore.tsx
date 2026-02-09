@@ -58,7 +58,13 @@ interface ExploreItem {
   likes: number;
   isLiked?: boolean;
   price?: number;
-  category?: string;
+
+  category?: {
+    _id: string;
+    name: string;
+    type: "mens" | "womens" | "unisex";
+  };
+
   brand?: string;
   wardrobe?: {
     _id: string;
@@ -379,15 +385,25 @@ export default function Explore() {
   //   fetchItemsByCategory(category.name, 1, true);
   // };
   const handleCategorySelect = (category: CategoryItem) => {
+    // Set the active category with its ID AND type
     setActiveCategory(category.name);
     setMode("items");
     setItems([]);
     setPage(1);
     setHasMore(true);
+
+    // Fetch items immediately when category is selected
+    fetchItemsByCategory(category._id, category.type, 1, true);
   };
 
   // Fetch items by category
-  const fetchItemsByCategory = async (categoryName: string, pageNum = 1, shouldReset = false) => {
+  // Update this function in your Explore component
+  const fetchItemsByCategory = async (
+    categoryId: string,
+    categoryType: "mens" | "womens" | "unisex",
+    pageNum = 1,
+    shouldReset = false
+  ) => {
     try {
       if (pageNum === 1) {
         setLoading(true);
@@ -397,12 +413,27 @@ export default function Explore() {
         page: pageNum,
         limit: 20,
         sort: sortBy,
-        category: categoryName,
+        category: categoryId,
       };
+
+      // Handle gender filtering logic
+      if (selectedGender === "unisex") {
+        // When "All" is selected, we should see items from all genders
+        // Don't send gender filter, or send all genders
+        params.gender = "unisex"; // Or don't send at all to get all
+      } else {
+        // For specific gender (mens/womens), show items of that gender AND unisex items
+        // The backend should handle this with $in operator
+        params.gender = selectedGender;
+      }
+
+      console.log("Fetching with params:", params); // Debug log
 
       const res = await api.get("/api/wardrobe/explore", { params });
       const newItems = res.data?.items || res.data || [];
       const total = res.data?.total || newItems.length;
+
+      console.log("Received items:", newItems.length, "Total:", total); // Debug log
 
       setTotalItems(total);
 
@@ -455,13 +486,19 @@ export default function Explore() {
 
   useEffect(() => {
     if (mode === "items" && activeCategory) {
-      setItems([]);
-      setPage(1);
-      setHasMore(true);
-      fetchItemsByCategory(activeCategory, 1, true);
-    }
-  }, [activeCategory, sortBy]);
+      // Find the category to get its ID and type
+      const category = categories.find(cat =>
+        cat.name.toLowerCase() === activeCategory.toLowerCase()
+      );
 
+      if (category) {
+        setItems([]);
+        setPage(1);
+        setHasMore(true);
+        fetchItemsByCategory(category._id, category.type, 1, true);
+      }
+    }
+  }, [activeCategory, sortBy, selectedGender, mode]); // Added selectedGender dependency
   // Enhanced getCategoryImage function
   const getCategoryImageForItem = (category: CategoryItem) => {
     const categoryName = category.name.toLowerCase();
@@ -503,10 +540,18 @@ export default function Explore() {
         />
 
         {/* Gradient Overlay */}
-        <View style={styles.categoryBottomBar}>
-          <Text style={styles.categoryTitle}>{item.name}</Text>
+        <View style={styles.categoryGradient}>
+          <View style={styles.categoryOverlay}>
+            <Text style={styles.categoryTitle} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {item.itemCount !== undefined && (
+              <Text style={styles.categoryCount}>
+                {item.itemCount} {item.itemCount === 1 ? "item" : "items"}
+              </Text>
+            )}
+          </View>
         </View>
-
 
         {/* Decorative element for some cards */}
         {(index % 5 === 0 || index % 7 === 0) && (
@@ -655,6 +700,13 @@ export default function Explore() {
               <Text style={styles.itemBrand}>
                 {String(item.brand || "Brand")}
               </Text>
+              {item.category?.name && (
+                <View style={[styles.categoryTag, { backgroundColor: "#A855F7" }]}>
+                  <Text style={styles.categoryTagText}>
+                    {item.category.name}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -954,7 +1006,15 @@ export default function Explore() {
           mode === "items" ? (
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => activeCategory && fetchItemsByCategory(activeCategory, 1, true)}
+              onRefresh={() => {
+                const category = categories.find(cat =>
+                  cat.name.toLowerCase() === activeCategory.toLowerCase()
+                );
+
+                if (category) {
+                  fetchItemsByCategory(category._id, category.type, 1, true);
+                }
+              }}
               colors={["#A855F7"]}
               tintColor="#A855F7"
             />
@@ -967,7 +1027,14 @@ export default function Explore() {
               contentSize.height - 100;
 
             if (isCloseToBottom) {
-              fetchItemsByCategory(activeCategory, page + 1, false);
+              // Find the category again
+              const category = categories.find(cat =>
+                cat.name.toLowerCase() === activeCategory.toLowerCase()
+              );
+
+              if (category) {
+                fetchItemsByCategory(category._id, category.type, page + 1, false);
+              }
             }
           }
         }}
@@ -1043,57 +1110,63 @@ export default function Explore() {
     }
   };
 
-  const performSearch = async (searchValue: string) => {
-    try {
-      // Search users
-      const userRes = await api.get("/api/user/search", {
-        params: { q: searchValue.trim() },
-      });
-      const users = userRes.data.users || [];
+const performSearch = async (searchValue: string) => {
+  try {
+    const trimmed = searchValue.trim();
+    if (!trimmed) return;
 
-      // Filter categories based on search term (case-insensitive)
-      const searchTerm = searchValue.toLowerCase().trim();
-      const filteredCategories = categories.filter(category => {
-        const categoryName = category.name.toLowerCase();
+    const lower = trimmed.toLowerCase();
 
-        // Check if search term matches category name or related terms
-        if (categoryName.includes(searchTerm)) {
-          return true;
-        }
+    // 1️⃣ Search users
+    const userRes = await api.get("/api/user/search", {
+      params: { q: trimmed },
+    });
+    const users = userRes.data.users || [];
 
-        // Check for related terms (e.g., "shirt" should match "t-shirt", "polo shirt", etc.)
-        const relatedTerms: Record<string, string[]> = {
-          "shirt": ["shirt", "t-shirt", "tshirt", "polo", "poloshirt", "blouse", "top"],
-          "pant": ["pant", "trouser", "jeans", "leggings", "cargo", "chino"],
-          "jacket": ["jacket", "coat", "blazer", "hoodie", "sweater"],
-          "shoe": ["shoe", "sneaker", "footwear", "boot", "sandal"],
-          "dress": ["dress", "gown", "frock", "jumpsuit", "romper"],
-          "accessory": ["accessory", "watch", "belt", "bag", "wallet", "jewelry"],
-        };
+    // 2️⃣ Search categories locally
+    const filteredCategories = categories.filter(category =>
+      category.name.toLowerCase().includes(lower)
+    );
 
-        // Check if any related term matches
-        for (const [key, terms] of Object.entries(relatedTerms)) {
-          if (searchTerm.includes(key) || searchTerm === key) {
-            for (const term of terms) {
-              if (categoryName.includes(term)) {
-                return true;
-              }
-            }
-          }
-        }
+    // 3️⃣ Search items (ONLY to detect brand match)
+    const itemRes = await api.get("/api/wardrobe/explore", {
+      params: {
+        search: trimmed,
+        gender: selectedGender,
+        page: 1,
+        limit: 20,
+      },
+    });
 
-        return false;
-      });
+    const foundItems: ExploreItem[] = itemRes.data?.items || [];
 
-      setSearchResults({
-        categories: filteredCategories,
-        users: users
-      });
-    } catch (err) {
-      console.error("Search error:", err);
-      setSearchResults({ categories: [], users: [] });
+    // 4️⃣ 🔥 BRAND MATCH LOGIC (NEW)
+    const matchedBrandItems = foundItems.filter(
+      item => item.brand?.toLowerCase() === lower
+    );
+
+    if (matchedBrandItems.length > 0) {
+      // ✅ Brand search → go directly to items
+      setMode("items");
+      setItems(matchedBrandItems);
+      setTotalItems(itemRes.data?.total || matchedBrandItems.length);
+      setActiveCategory(null);
+      return;
     }
-  };
+
+    // 5️⃣ Otherwise → normal search behaviour
+    setMode("categories");
+    setSearchResults({
+      categories: filteredCategories,
+      users,
+    });
+
+  } catch (err) {
+    console.error("Search error:", err);
+    setSearchResults({ categories: [], users: [] });
+  }
+};
+
 
   const clearSearch = () => {
     setSearch("");
@@ -1713,15 +1786,4 @@ const styles = StyleSheet.create({
     color: "#A855F7",
     fontWeight: "600",
   },
-  categoryBottomBar: {
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  right: 0,
-  backgroundColor: "rgba(0,0,0,0.7)",
-  paddingVertical: 4,
-  paddingHorizontal: 8,
-  alignItems: "center",
-  justifyContent: "center",
-},
 });

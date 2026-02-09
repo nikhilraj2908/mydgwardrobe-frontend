@@ -20,8 +20,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
-WebBrowser.maybeCompleteAuthSession();
+// WebBrowser.maybeCompleteAuthSession();
 
+
+// const redirectUri = AuthSession.makeRedirectUri({
+//   scheme: "mydgwardrobe",
+//   path: "expo-development-client/?url=http%3A%2F%2F10.73.254.96%3A8081",
+// });
+// console.log("Redirect URI:", redirectUri);
 // Create axios instance with base URL
 // const API_URL = process.env.EXPO_PUBLIC_API_URL ;
 const API_URL = Constants.expoConfig.extra.apiBaseUrl;
@@ -48,14 +54,14 @@ const years = Array.from({ length: 90 }, (_, i) => (2024 - i).toString());
 
 export default function SignupScreen() {
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
-    webClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
-    androidClientId: "857333011106-7l23nn58346k6l5cl7uqa6piiohv285p.apps.googleusercontent.com",
-    // iosClientId: "857333011106-pc1gaugs3lh4mjqdv2mip53hdo2r4k0i.apps.googleusercontent.com", // optional but you have it
-    responseType: "id_token",
-    scopes: ["profile", "email"],
-  });
+  androidClientId: "857333011106-7l23nn58346k6l5cl7uqa6piiohv285p.apps.googleusercontent.com",
 
+  webClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
+
+  scopes: ["profile", "email"],
+  
+
+});
   const router = useRouter();
   const { login } = useAuth();
   // Form states
@@ -72,7 +78,7 @@ export default function SignupScreen() {
   // Phone
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [phone, setPhone] = useState("");
-const [showCountryModal, setShowCountryModal] = useState(false);
+  const [showCountryModal, setShowCountryModal] = useState(false);
   // DOB
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -83,14 +89,36 @@ const [showCountryModal, setShowCountryModal] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    if (response?.type === "success") {
-      const idToken = response.params?.id_token;
-      if (idToken) {
-        handleGoogleLogin(idToken);
-      }
+useEffect(() => {
+  if (!response) return;
+
+  console.log("Google Response Type:", response.type);
+  console.log("Full Response:", JSON.stringify(response, null, 2));
+
+  if (response.type === "success") {
+    console.log("✅ Authentication Success!");
+    console.log("Access Token:", response.authentication?.accessToken);
+    console.log("ID Token:", response.authentication?.idToken);
+    
+    const accessToken = response.authentication?.accessToken;
+    if (!accessToken) {
+      alert("No access token received from Google");
+      return;
     }
-  }, [response]);
+    
+    // Send to backend for verification
+    handleGoogleLogin(accessToken);
+  }
+
+  if (response.type === "error") {
+    console.error("❌ Google Auth Error:", response.error);
+    alert(`Google authentication failed: ${response.error}`);
+  }
+
+  if (response.type === "dismiss") {
+    console.log("User cancelled Google login");
+  }
+}, [response]);
 
   // ---------------------- SIGNUP HANDLER ----------------------
   const handleSignup = async () => {
@@ -143,12 +171,12 @@ const [showCountryModal, setShowCountryModal] = useState(false);
       setLoading(false);
     }
   };
-  const handleGoogleLogin = async (idToken) => {
+  const handleGoogleLogin = async (accessToken) => {
     try {
-      const res = await api.post("/api/auth/google", { idToken });
+       const res = await api.post("/api/auth/google", { accessToken });
 
       const { token, user } = res.data;
-
+console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
       // 🔥 THIS IS THE FIX
       await login(token);
 
@@ -214,7 +242,7 @@ const [showCountryModal, setShowCountryModal] = useState(false);
             style={styles.googleBtn}
             disabled={!request}
             // onPress={() => promptAsync()}
-            onPress={() => promptAsync()}
+          onPress={() => promptAsync({ useProxy: true })}
 
           >
             <Ionicons name="logo-google" size={20} color="#b700ff" />

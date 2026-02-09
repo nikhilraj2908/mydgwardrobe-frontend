@@ -19,13 +19,20 @@ import {
   View
 } from "react-native";
 import api from "../../api/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface WardrobeItem {
   _id: string;
   wardrobe: string;
-  category: string;
+
+  category: {
+    _id: string;
+    name: string;
+    type: "mens" | "womens" | "unisex";
+  };
+
   price: number;
   brand?: string;
   imageUrl?: string;
@@ -33,6 +40,7 @@ interface WardrobeItem {
   createdAt: string;
   description?: string;
 }
+
 
 // Category Icons - Same as in add-wardrobe
 const CATEGORY_ICONS = {
@@ -331,18 +339,26 @@ export default function AllWardrobeItemsScreen() {
     const categoryMap = new Map<string, number>();
 
     items.forEach((item) => {
-      const category = item.category;
-      categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+      const categoryName = item.category?.name;
+      if (!categoryName) return;
+
+      categoryMap.set(
+        categoryName,
+        (categoryMap.get(categoryName) || 0) + 1
+      );
     });
 
     return Array.from(categoryMap.entries())
       .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count); // Sort by count descending
+      .sort((a, b) => b.count - a.count);
   }, [items]);
+
 
   // Filter items based on selected category
   const filteredItems = selectedCategory
-    ? items.filter((item) => item.category === selectedCategory)
+    ? items.filter(
+      (item) => item.category?.name === selectedCategory
+    )
     : items;
 
   // Sort items
@@ -355,7 +371,9 @@ export default function AllWardrobeItemsScreen() {
       case "priceLow":
         return a.price - b.price;
       case "nameAZ":
-        return a.category.localeCompare(b.category);
+        return (a.category?.name || "").localeCompare(
+          b.category?.name || ""
+        );
       default:
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
@@ -497,7 +515,7 @@ export default function AllWardrobeItemsScreen() {
 
           <View style={styles.gridCategoryBadge}>
             <Text style={styles.gridCategoryText} numberOfLines={1}>
-              {item.category}
+              {item.category?.name}
             </Text>
           </View>
         </View>
@@ -509,7 +527,7 @@ export default function AllWardrobeItemsScreen() {
         ]}>
           <View style={styles.gridItemHeader}>
             <Text style={styles.gridItemName} numberOfLines={1}>
-              {item.category}
+              {item.category?.name}
             </Text>
             <Text style={styles.gridItemPrice}>₹{item.price}</Text>
           </View>
@@ -566,7 +584,7 @@ export default function AllWardrobeItemsScreen() {
         <View style={styles.listItemInfo}>
           <View style={styles.listItemHeader}>
             <Text style={styles.listItemName} numberOfLines={1}>
-              {item.category}
+              {item.category?.name}
             </Text>
             <Text style={styles.listItemPrice}>₹{item.price}</Text>
           </View>
@@ -606,314 +624,316 @@ export default function AllWardrobeItemsScreen() {
 
 
   return (
-    <AppBackground>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back-outline" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>All Items</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
-              <Ionicons
-                name={isGridView ? "grid-outline" : "list-outline"}
-                size={24}
-                color={isGridView ? "#A855F7" : "#666"}
-              />
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+      <AppBackground>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back-outline" size={24} color="#000" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.sortButton}
-              onPress={() => setSortModalVisible(true)}
-            >
-              <Ionicons name="filter-outline" size={18} color="#A855F7" />
-              <Text style={styles.sortButtonText}>Sort</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        {itemSelectionMode && (
-          <View style={styles.selectionBar}>
-            <Text style={styles.selectionText}>
-              {selectedItemIds.length} selected
-            </Text>
-
-            <View style={{ flexDirection: "row", gap: 16 }}>
-              {selectedItemIds.length === 1 && (
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push({
-                      pathname: "/add-wardrobe",
-                      params: {
-                        mode: "edit",
-                        itemId: selectedItemIds[0],
-                      },
-                    })
-                  }
-                >
-                  <Ionicons name="create-outline" size={22} color="#A855F7" />
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity onPress={() => setMoveModalVisible(true)}>
-                <Ionicons name="swap-horizontal-outline" size={22} color="#6366F1" />
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={confirmItemDelete}>
-                <Ionicons name="trash-outline" size={22} color="#EF4444" />
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={cancelItemSelection}>
-                <Ionicons name="close-outline" size={24} color="#555" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Categories Filter Section */}
-        <View style={styles.categoriesSection}>
-          <View style={styles.categoriesHeader}>
-            <Text style={styles.categoriesTitle}>Categories</Text>
-            <TouchableOpacity
-              onPress={() => setSelectedCategory(null)}
-              style={styles.clearFilterButton}
-            >
-              <Text style={styles.clearFilterText}>
-                {selectedCategory ? "Clear" : `Total: ${items.length}`}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.categoriesScrollView}
-            contentContainerStyle={styles.categoriesContent}
-          >
-            {/* All Items Chip */}
-            <TouchableOpacity
-              onPress={() => setSelectedCategory(null)}
-              style={[
-                styles.categoryChip,
-                !selectedCategory && styles.categoryChipSelected,
-              ]}
-              activeOpacity={0.8}
-            >
-              <View style={[
-                styles.categoryIconContainer,
-                !selectedCategory && styles.categoryIconContainerSelected,
-              ]}>
+            <Text style={styles.headerTitle}>All Items</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
                 <Ionicons
-                  name="apps-outline"
-                  size={22}
-                  color={!selectedCategory ? "#fff" : "#A855F7"}
+                  name={isGridView ? "grid-outline" : "list-outline"}
+                  size={24}
+                  color={isGridView ? "#A855F7" : "#666"}
                 />
-
-                {/* Total count badge */}
-                {items.length > 0 && (
-                  <View style={[
-                    styles.categoryCountBadge,
-                    !selectedCategory && styles.categoryCountBadgeSelected
-                  ]}>
-                    <Text style={styles.categoryCountText}>{items.length}</Text>
-                  </View>
-                )}
-              </View>
-
-              <Text
-                style={[
-                  styles.categoryChipLabel,
-                  !selectedCategory && styles.categoryChipLabelSelected
-                ]}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sortButton}
+                onPress={() => setSortModalVisible(true)}
               >
-                All
-              </Text>
-            </TouchableOpacity>
-
-            {/* Category Chips */}
-            {categoriesWithCounts.map(renderCategoryChip)}
-          </ScrollView>
-        </View>
-
-        {/* Results Info */}
-        <View style={styles.resultsInfo}>
-          <Text style={styles.resultsText}>
-            {selectedCategory
-              ? `${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'} in "${selectedCategory}"`
-              : `${items.length} items in collection`
-            }
-          </Text>
-        </View>
-
-        {/* Items List */}
-        <ScrollView
-          style={styles.itemsContainer}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.itemsContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color="#A855F7" size="large" />
-              <Text style={styles.loadingText}>Loading your items...</Text>
+                <Ionicons name="filter-outline" size={18} color="#A855F7" />
+                <Text style={styles.sortButtonText}>Sort</Text>
+              </TouchableOpacity>
             </View>
-          ) : sortedItems.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="shirt-outline" size={64} color="#E5E7EB" />
-              <Text style={styles.emptyTitle}>
-                {selectedCategory ? `No items in ${selectedCategory}` : "No items found"}
+          </View>
+          {itemSelectionMode && (
+            <View style={styles.selectionBar}>
+              <Text style={styles.selectionText}>
+                {selectedItemIds.length} selected
               </Text>
-              <Text style={styles.emptySubtitle}>
-                {selectedCategory
-                  ? "Try selecting a different category"
-                  : "Start by adding items to your wardrobe"
-                }
-              </Text>
-            </View>
-          ) : isGridView ? (
-            <View style={styles.gridContainer}>
-              {sortedItems.map(renderGridViewItem)}
-            </View>
-          ) : (
-            <View style={styles.listContainer}>
-              {sortedItems.map(renderListViewItem)}
+
+              <View style={{ flexDirection: "row", gap: 16 }}>
+                {selectedItemIds.length === 1 && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push({
+                        pathname: "/add-wardrobe",
+                        params: {
+                          mode: "edit",
+                          itemId: selectedItemIds[0],
+                        },
+                      })
+                    }
+                  >
+                    <Ionicons name="create-outline" size={22} color="#A855F7" />
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity onPress={() => setMoveModalVisible(true)}>
+                  <Ionicons name="swap-horizontal-outline" size={22} color="#6366F1" />
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={confirmItemDelete}>
+                  <Ionicons name="trash-outline" size={22} color="#EF4444" />
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={cancelItemSelection}>
+                  <Ionicons name="close-outline" size={24} color="#555" />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
-        </ScrollView>
-        {/* Move Modal */}
-        <Modal
-          animationType="slide"
-          transparent
-          visible={moveModalVisible}
-          onRequestClose={() => setMoveModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Move to wardrobe</Text>
 
-              <ScrollView>
-                {wardrobes
-                  .filter(w => !selectedItemIds.includes(w._id)) // optional safety
-                  .map(w => (
-                    <TouchableOpacity
-                      key={w._id}
-                      style={styles.moveWardrobeItem}
-                      disabled={moving}
-                      onPress={() => handleMoveToWardrobe(w._id, w.name)}
-                    >
-                      <Text style={styles.moveWardrobeText}>{w.name}</Text>
-                      <Ionicons name="chevron-forward" size={20} color="#999" />
-                    </TouchableOpacity>
-                  ))}
-              </ScrollView>
-
+          {/* Categories Filter Section */}
+          <View style={styles.categoriesSection}>
+            <View style={styles.categoriesHeader}>
+              <Text style={styles.categoriesTitle}>Categories</Text>
               <TouchableOpacity
-                style={styles.closeModalBtn}
-                onPress={() => setMoveModalVisible(false)}
+                onPress={() => setSelectedCategory(null)}
+                style={styles.clearFilterButton}
               >
-                <Text style={styles.closeModalText}>Cancel</Text>
+                <Text style={styles.clearFilterText}>
+                  {selectedCategory ? "Clear" : `Total: ${items.length}`}
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
 
-        {/* Sort Modal */}
-        <Modal
-          animationType="slide"
-          transparent
-          visible={sortModalVisible}
-          onRequestClose={() => setSortModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Sort By</Text>
-                <TouchableOpacity onPress={() => setSortModalVisible(false)}>
-                  <Ionicons name="close" size={24} color="#333" />
-                </TouchableOpacity>
-              </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.categoriesScrollView}
+              contentContainerStyle={styles.categoriesContent}
+            >
+              {/* All Items Chip */}
+              <TouchableOpacity
+                onPress={() => setSelectedCategory(null)}
+                style={[
+                  styles.categoryChip,
+                  !selectedCategory && styles.categoryChipSelected,
+                ]}
+                activeOpacity={0.8}
+              >
+                <View style={[
+                  styles.categoryIconContainer,
+                  !selectedCategory && styles.categoryIconContainerSelected,
+                ]}>
+                  <Ionicons
+                    name="apps-outline"
+                    size={22}
+                    color={!selectedCategory ? "#fff" : "#A855F7"}
+                  />
 
-              <View style={styles.sortSection}>
-                <Text style={styles.sortSectionTitle}>By Date</Text>
-                <View style={styles.sortButtons}>
-                  <TouchableOpacity
-                    style={[styles.sortBtn, sortBy === "dateNewest" && styles.activeSortBtn]}
-                    onPress={() => {
-                      setSortBy("dateNewest");
-                      setSortModalVisible(false);
-                    }}
-                  >
-                    <Text style={sortBy === "dateNewest" ? styles.activeSortText : styles.sortText}>
-                      Newest First
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.sortBtn, sortBy === "dateOldest" && styles.activeSortBtn]}
-                    onPress={() => {
-                      setSortBy("dateOldest");
-                      setSortModalVisible(false);
-                    }}
-                  >
-                    <Text style={sortBy === "dateOldest" ? styles.activeSortText : styles.sortText}>
-                      Oldest First
-                    </Text>
-                  </TouchableOpacity>
+                  {/* Total count badge */}
+                  {items.length > 0 && (
+                    <View style={[
+                      styles.categoryCountBadge,
+                      !selectedCategory && styles.categoryCountBadgeSelected
+                    ]}>
+                      <Text style={styles.categoryCountText}>{items.length}</Text>
+                    </View>
+                  )}
                 </View>
-              </View>
 
-              <View style={styles.sortSection}>
-                <Text style={styles.sortSectionTitle}>By Price</Text>
-                <View style={styles.sortButtons}>
-                  <TouchableOpacity
-                    style={[styles.sortBtn, sortBy === "priceHigh" && styles.activeSortBtn]}
-                    onPress={() => {
-                      setSortBy("priceHigh");
-                      setSortModalVisible(false);
-                    }}
-                  >
-                    <Text style={sortBy === "priceHigh" ? styles.activeSortText : styles.sortText}>
-                      Price: High to Low
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.sortBtn, sortBy === "priceLow" && styles.activeSortBtn]}
-                    onPress={() => {
-                      setSortBy("priceLow");
-                      setSortModalVisible(false);
-                    }}
-                  >
-                    <Text style={sortBy === "priceLow" ? styles.activeSortText : styles.sortText}>
-                      Price: Low to High
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.sortSection}>
-                <Text style={styles.sortSectionTitle}>By Name</Text>
-                <TouchableOpacity
-                  style={[styles.sortBtn, sortBy === "nameAZ" && styles.activeSortBtn]}
-                  onPress={() => {
-                    setSortBy("nameAZ");
-                    setSortModalVisible(false);
-                  }}
+                <Text
+                  style={[
+                    styles.categoryChipLabel,
+                    !selectedCategory && styles.categoryChipLabelSelected
+                  ]}
                 >
-                  <Text style={sortBy === "nameAZ" ? styles.activeSortText : styles.sortText}>
-                    Category A to Z
-                  </Text>
+                  All
+                </Text>
+              </TouchableOpacity>
+
+              {/* Category Chips */}
+              {categoriesWithCounts.map(renderCategoryChip)}
+            </ScrollView>
+          </View>
+
+          {/* Results Info */}
+          <View style={styles.resultsInfo}>
+            <Text style={styles.resultsText}>
+              {selectedCategory
+                ? `${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'} in "${selectedCategory}"`
+                : `${items.length} items in collection`
+              }
+            </Text>
+          </View>
+
+          {/* Items List */}
+          <ScrollView
+            style={styles.itemsContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.itemsContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#A855F7" size="large" />
+                <Text style={styles.loadingText}>Loading your items...</Text>
+              </View>
+            ) : sortedItems.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="shirt-outline" size={64} color="#E5E7EB" />
+                <Text style={styles.emptyTitle}>
+                  {selectedCategory ? `No items in ${selectedCategory}` : "No items found"}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {selectedCategory
+                    ? "Try selecting a different category"
+                    : "Start by adding items to your wardrobe"
+                  }
+                </Text>
+              </View>
+            ) : isGridView ? (
+              <View style={styles.gridContainer}>
+                {sortedItems.map(renderGridViewItem)}
+              </View>
+            ) : (
+              <View style={styles.listContainer}>
+                {sortedItems.map(renderListViewItem)}
+              </View>
+            )}
+          </ScrollView>
+          {/* Move Modal */}
+          <Modal
+            animationType="slide"
+            transparent
+            visible={moveModalVisible}
+            onRequestClose={() => setMoveModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Move to wardrobe</Text>
+
+                <ScrollView>
+                  {wardrobes
+                    .filter(w => !selectedItemIds.includes(w._id)) // optional safety
+                    .map(w => (
+                      <TouchableOpacity
+                        key={w._id}
+                        style={styles.moveWardrobeItem}
+                        disabled={moving}
+                        onPress={() => handleMoveToWardrobe(w._id, w.name)}
+                      >
+                        <Text style={styles.moveWardrobeText}>{w.name}</Text>
+                        <Ionicons name="chevron-forward" size={20} color="#999" />
+                      </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={styles.closeModalBtn}
+                  onPress={() => setMoveModalVisible(false)}
+                >
+                  <Text style={styles.closeModalText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                style={styles.closeModalBtn}
-                onPress={() => setSortModalVisible(false)}
-              >
-                <Text style={styles.closeModalText}>Cancel</Text>
-              </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
-      </View>
-    </AppBackground>
+          </Modal>
+
+          {/* Sort Modal */}
+          <Modal
+            animationType="slide"
+            transparent
+            visible={sortModalVisible}
+            onRequestClose={() => setSortModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Sort By</Text>
+                  <TouchableOpacity onPress={() => setSortModalVisible(false)}>
+                    <Ionicons name="close" size={24} color="#333" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.sortSection}>
+                  <Text style={styles.sortSectionTitle}>By Date</Text>
+                  <View style={styles.sortButtons}>
+                    <TouchableOpacity
+                      style={[styles.sortBtn, sortBy === "dateNewest" && styles.activeSortBtn]}
+                      onPress={() => {
+                        setSortBy("dateNewest");
+                        setSortModalVisible(false);
+                      }}
+                    >
+                      <Text style={sortBy === "dateNewest" ? styles.activeSortText : styles.sortText}>
+                        Newest First
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.sortBtn, sortBy === "dateOldest" && styles.activeSortBtn]}
+                      onPress={() => {
+                        setSortBy("dateOldest");
+                        setSortModalVisible(false);
+                      }}
+                    >
+                      <Text style={sortBy === "dateOldest" ? styles.activeSortText : styles.sortText}>
+                        Oldest First
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.sortSection}>
+                  <Text style={styles.sortSectionTitle}>By Price</Text>
+                  <View style={styles.sortButtons}>
+                    <TouchableOpacity
+                      style={[styles.sortBtn, sortBy === "priceHigh" && styles.activeSortBtn]}
+                      onPress={() => {
+                        setSortBy("priceHigh");
+                        setSortModalVisible(false);
+                      }}
+                    >
+                      <Text style={sortBy === "priceHigh" ? styles.activeSortText : styles.sortText}>
+                        Price: High to Low
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.sortBtn, sortBy === "priceLow" && styles.activeSortBtn]}
+                      onPress={() => {
+                        setSortBy("priceLow");
+                        setSortModalVisible(false);
+                      }}
+                    >
+                      <Text style={sortBy === "priceLow" ? styles.activeSortText : styles.sortText}>
+                        Price: Low to High
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.sortSection}>
+                  <Text style={styles.sortSectionTitle}>By Name</Text>
+                  <TouchableOpacity
+                    style={[styles.sortBtn, sortBy === "nameAZ" && styles.activeSortBtn]}
+                    onPress={() => {
+                      setSortBy("nameAZ");
+                      setSortModalVisible(false);
+                    }}
+                  >
+                    <Text style={sortBy === "nameAZ" ? styles.activeSortText : styles.sortText}>
+                      Category A to Z
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.closeModalBtn}
+                  onPress={() => setSortModalVisible(false)}
+                >
+                  <Text style={styles.closeModalText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        </View>
+      </AppBackground>
+    </SafeAreaView>
   );
 }
 
@@ -930,9 +950,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 15,
-    paddingTop: 45,
-    backgroundColor: "#fff",
+    paddingVertical: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
@@ -963,7 +982,6 @@ const styles = StyleSheet.create({
 
   // Categories Section
   categoriesSection: {
-    backgroundColor: "#ffffffff",
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,

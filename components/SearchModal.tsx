@@ -70,12 +70,19 @@ export default function SearchModal({ visible, onClose, onSearch }: Props) {
 
         // unique categories
         const categorySuggestions: SearchItem[] = Array.from(
-          new Set(exploreItems.map((x: any) => (x.category || "").trim()).filter(Boolean))
-        ).slice(0, 8).map((cat) => ({
-          type: "item",
-          _id: `cat-${cat}`,
-          label: cat,
-        }));
+          new Set(
+            exploreItems
+              .map((x: any) => x.category?.name)
+              .filter(Boolean)
+          )
+        )
+          .slice(0, 8)
+          .map((cat) => ({
+            type: "item",
+            _id: `cat-${cat}`,
+            label: cat,
+          }));
+
 
         // unique brands
         const brandSuggestions: SearchItem[] = Array.from(

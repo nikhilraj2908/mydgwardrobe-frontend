@@ -9,6 +9,8 @@ import { FollowProvider } from "@/context/FollowContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { ThemeProvider } from "./theme/ThemeContext";
 import AuthGate from "@/components/AuthGate";
+import * as WebBrowser from "expo-web-browser"; // ✅ ADD
+WebBrowser.maybeCompleteAuthSession();   
 /* ---------------- AUTH GATE ---------------- */
 
 /* ---------------- ROOT ---------------- */
@@ -27,18 +29,18 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-  <SafeAreaProvider>
-    <FollowProvider>
-      <SavedItemsProvider>
-        <ThemeProvider>
-          <AuthGate>
-            <Slot />
-          </AuthGate>
-        </ThemeProvider>
-      </SavedItemsProvider>
-    </FollowProvider>
-  </SafeAreaProvider>
-</AuthProvider>
+      <SafeAreaProvider>
+        <FollowProvider>
+          <SavedItemsProvider>
+            <ThemeProvider>
+              <AuthGate>
+                <Slot />
+              </AuthGate>
+            </ThemeProvider>
+          </SavedItemsProvider>
+        </FollowProvider>
+      </SafeAreaProvider>
+    </AuthProvider>
 
   );
 }
