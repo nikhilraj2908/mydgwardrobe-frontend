@@ -18,7 +18,8 @@ import api from "../../api/api";
 import { useAuth } from "../../context/AuthContext";
 
 export default function CompleteProfile() {
-    const { token } = useAuth();
+
+    const { token, login } = useAuth();
     const [showCountryModal, setShowCountryModal] = useState(false);
     const [username, setUsername] = useState("");
     const [gender, setGender] = useState<"Male" | "Female" | null>(null);
@@ -52,6 +53,7 @@ export default function CompleteProfile() {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const years = Array.from({ length: 90 }, (_, i) => (2024 - i).toString());
 
+    // In your CompleteProfile.tsx - Update submitProfile function
     const submitProfile = async () => {
         if (!phone || !gender || !day || !month || !year) {
             Alert.alert("Error", "Please complete all required fields");
@@ -67,17 +69,33 @@ export default function CompleteProfile() {
             const payload: any = { mobile, gender, dob };
             if (username.trim()) payload.username = username;
 
-            await api.post("/api/auth/complete-profile", payload);
+            const response = await api.post(
+                "/api/auth/complete-profile",
+                payload,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
-            Alert.alert("Success", "Profile completed successfully");
+            console.log("✅ Profile completion response:", response.data);
+
+            // ✅ Update profileCompleted in context
+            await login(token!, true);
+
+            console.log("✅ Profile completed, redirecting...");
+
+            // Redirect to profile
             router.replace("/profile");
+
         } catch (err: any) {
+            console.log("❌ Profile completion error:", err?.response?.data || err.message);
             Alert.alert("Error", err.response?.data?.message || "Profile update failed");
         } finally {
             setLoading(false);
         }
     };
-
     // DROPDOWN MODAL (REUSED FROM SIGNUP)
     const renderDropdown = (data, visible, onSelect, onClose, selectedValue) => (
         <Modal visible={visible} transparent animationType="fade">

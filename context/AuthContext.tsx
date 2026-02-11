@@ -1,83 +1,119 @@
-// context/AuthContext.tsx
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
+// D:\nikhil\MyFirstApp\context\AuthContext.tsx
+import React, { createContext, useState, useContext, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 
 interface AuthContextType {
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string) => Promise<void>;
+  hydrated: boolean;
+  authInProgress: boolean;   // ✅ ADD
+  profileCompleted: boolean | null;
+  login: (token: string, profileCompleted: boolean) => Promise<void>;
   logout: () => Promise<void>;
-  clearAuth: () => Promise<void>; // Add this for ProfileScreen logout
+  clearAuth: () => Promise<void>;
+  setAuthInProgress: (v: boolean) => void; // ✅ ADD
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [profileCompleted, setProfileCompleted] = useState<boolean | null>(null);
+  const [authInProgress, setAuthInProgress] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    checkAuthStatus();
-  }, []);
-const checkAuthStatus = async () => {
-  try {
-    const token = await AsyncStorage.getItem("token");
-    console.log("🔐 TOKEN FOUND:", token);
-    setIsAuthenticated(!!token);
-  } catch (e) {
-    console.error(e);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    const loadAuth = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem("token");
+        const storedProfileCompleted = await AsyncStorage.getItem("profileCompleted");
 
-  const login = async (token: string) => {
+        console.log("🔐 TOKEN FOUND:", storedToken);
+        console.log("📋 Profile Completed:", storedProfileCompleted);
+
+        if (storedToken) {
+          setToken(storedToken);
+          setProfileCompleted(storedProfileCompleted === "true");
+        } else {
+          setToken(null);
+          setProfileCompleted(null);
+        }
+      } catch (error) {
+        console.error("Error loading auth data:", error);
+      } finally {
+        setHydrated(true);   // ✅ THIS IS THE KEY
+        setIsLoading(false);
+      }
+    };
+
+    loadAuth();
+  }, []);
+
+
+  // In AuthContext.tsx
+  const login = async (jwt: string, completed: boolean) => {
+    console.log("💾 AuthContext.login called");
+    console.log("   Token:", jwt.substring(0, 20) + "...");
+    console.log("   Profile completed:", completed);
+
     try {
-      await AsyncStorage.setItem('token', token);
-      setIsAuthenticated(true);
-      // Don't navigate here, let the component handle it
-      return Promise.resolve();
+      await AsyncStorage.setItem("token", jwt);
+      console.log("   ✅ Token saved to AsyncStorage");
+
+      await AsyncStorage.setItem("profileCompleted", completed ? 'true' : 'false');
+      console.log("   ✅ ProfileCompleted saved to AsyncStorage");
+
+      setToken(jwt);
+      setProfileCompleted(completed);
+ setAuthInProgress(false);
+      console.log("   ✅ State updated in AuthContext");
+      console.log("   ✅ Login completed successfully");
     } catch (error) {
-      console.error('Error logging in:', error);
+      console.log("   ❌ Error in login function:", error);
       throw error;
     }
   };
 
   const logout = async () => {
-    try {
-      await AsyncStorage.removeItem('token');
-      setIsAuthenticated(false);
-      router.replace('/(auth)/welcome');
-    } catch (error) {
-      console.error('Error logging out:', error);
-      throw error;
-    }
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("profileCompleted");
+    setToken(null);
+    setProfileCompleted(null);
+    router.replace("/(auth)/welcome");
   };
 
-  // Add this function for ProfileScreen to use
   const clearAuth = async () => {
-    await AsyncStorage.removeItem('token');
-    setIsAuthenticated(false);
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("profileCompleted");
+    setToken(null);
+    setProfileCompleted(null);
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      isLoading, 
-      login, 
-      logout,
-      clearAuth 
-    }}>
+    <AuthContext.Provider
+      value={{
+        token,
+        isAuthenticated: !!token,
+        isLoading,
+        hydrated,
+        authInProgress,
+        profileCompleted,
+        login,
+        logout,
+        clearAuth,
+        setAuthInProgress,
+      }}
+    >
+
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
 };

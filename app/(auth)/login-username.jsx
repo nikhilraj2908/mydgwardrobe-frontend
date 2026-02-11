@@ -39,7 +39,8 @@ export default function LoginWithUsername() {
       });
 
       // Call login to save token
-      await login(res.data.token);
+      await login(res.data.token, res.data.user.profileCompleted);
+
 
       // Now navigate to profile
       Alert.alert("Success", "Login successful!");

@@ -115,83 +115,86 @@ export default function NotificationsScreen() {
 
     return (
         <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <AppBackground>
-            <View style={styles.container}>
-                {/* ================= HEADER ================= */}
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                            <Ionicons name="arrow-back" size={22} color="#000" />
+            <AppBackground>
+                <View style={styles.container}>
+                    {/* ================= HEADER ================= */}
+                    <View style={styles.header}>
+                        <View style={styles.headerLeft}>
+                            <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+                                <Ionicons name="arrow-back" size={22} color="#000" />
+                            </TouchableOpacity>
+                            <Text style={styles.title}>Notifications</Text>
+                        </View>
+
+                        <TouchableOpacity onPress={markAllRead}>
+                            <Text style={styles.mark}>Mark all read</Text>
                         </TouchableOpacity>
-                        <Text style={styles.title}>Notifications</Text>
                     </View>
 
-                    <TouchableOpacity onPress={markAllRead}>
-                        <Text style={styles.mark}>Mark all read</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* ================= LIST ================= */}
-                <FlatList
-                    data={notifications}
-                    keyExtractor={(item) => item._id}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={async () => {
-                                // ✅ mark ONLY this notification
-                                if (!item.read) {
-                                    await markSingleRead(item._id);
-                                }
-                                if (item.type === "follow") {
-                                    router.push(`/profile/${item.actor._id}`);
-                                    return;
-                                }
-
-                                // 👉 navigate to item
-                                if (item.item) {
-                                    if (item.type === "comment") {
-                                        router.push({
-                                            pathname: `/wardrobe/item/${item.item}`,
-                                            params: { openComments: "true" },
-                                        });
-                                    } else {
-                                        router.push(`/wardrobe/item/${item.item}`);
+                    {/* ================= LIST ================= */}
+                    <FlatList
+                        data={notifications}
+                        keyExtractor={(item) => item._id}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={async () => {
+                                    // ✅ mark ONLY this notification
+                                    if (!item.read) {
+                                        await markSingleRead(item._id);
                                     }
-                                }
-                            }}
-                        >
-                            <View style={styles.card}>
-                                <Image
-                                    source={
-                                        item.actor.photo
-                                            ? { uri: resolveImageUrl(item.actor.photo) }
-                                            : require("../assets/icons/person-round.png")
+                                    if (item.type === "follow") {
+                                        if (item.type === "follow" && item.actor?._id) {
+                                            router.push(`/profile/${item.actor._id}`);
+                                            return;
+                                        }
+                                        return;
                                     }
-                                    style={styles.avatar}
-                                />
+
+                                    // 👉 navigate to item
+                                    if (item.item) {
+                                        if (item.type === "comment") {
+                                            router.push({
+                                                pathname: `/wardrobe/item/${item.item}`,
+                                                params: { openComments: "true" },
+                                            });
+                                        } else {
+                                            router.push(`/wardrobe/item/${item.item}`);
+                                        }
+                                    }
+                                }}
+                            >
+                                <View style={styles.card}>
+                                    <Image
+                                        source={
+                                            item.actor?.photo
+                                                ? { uri: resolveImageUrl(item.actor.photo) }
+                                                : require("../assets/icons/person-round.png")
+                                        }
+                                        style={styles.avatar}
+                                    />
 
 
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.message}>
-                                        <Text style={styles.name}>
-                                            {item.actor.username}
-                                        </Text>{" "}
-                                        {item.message}
-                                    </Text>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.message}>
+                                            <Text style={styles.name}>
+                                                {item.actor?.username || "Deleted user"}
+                                            </Text>{" "}
+                                            {item.message}
+                                        </Text>
 
-                                    <Text style={styles.time}>
-                                        {formatNotificationTime(item.createdAt)}
-                                    </Text>
+                                        <Text style={styles.time}>
+                                            {formatNotificationTime(item.createdAt)}
+                                        </Text>
+                                    </View>
+
+                                    {!item.read && <View style={styles.unreadDot} />}
                                 </View>
-
-                                {!item.read && <View style={styles.unreadDot} />}
-                            </View>
-                        </TouchableOpacity>
-                    )}
-                />
-            </View>
-        </AppBackground>
+                            </TouchableOpacity>
+                        )}
+                    />
+                </View>
+            </AppBackground>
         </SafeAreaView>
     );
 }

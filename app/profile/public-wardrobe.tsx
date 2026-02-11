@@ -133,8 +133,10 @@ const CATEGORY_ICONS = {
   unisex: {},
 };
 
-const normalizeCategoryKey = (name: string) =>
-  name.toLowerCase().replace(/\s+/g, "");
+const normalizeCategoryKey = (name?: any) => {
+  if (!name || typeof name !== "string") return "";
+  return name.toLowerCase().replace(/\s+/g, "");
+};
 
 // Helper function to get category icon
 const getCategoryIcon = (categoryName: string) => {
@@ -164,7 +166,17 @@ export default function PublicWardrobeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const DEFAULT_IMAGE = "https://ui-avatars.com/api/?name=Item&background=random";
+const getCategoryName = (category: any): string => {
+    if (!category) return "Uncategorized";
 
+    if (typeof category === "string") return category;
+
+    if (typeof category === "object" && category.name) {
+      return category.name;
+    }
+
+    return "Uncategorized";
+  };
   const fetchUserPublicItems = async () => {
     try {
       setLoading(true);
@@ -233,9 +245,13 @@ export default function PublicWardrobeScreen() {
     const categoryMap = new Map<string, number>();
 
     items.forEach((item) => {
-      const category = item.category;
+      const category = getCategoryName(item.category);
+      if (!category) return;
+
       categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
     });
+
+
 
     return Array.from(categoryMap.entries())
       .map(([name, count]) => ({ name, count }))
@@ -244,7 +260,7 @@ export default function PublicWardrobeScreen() {
 
   // Filter items based on selected category
   const filteredItems = selectedCategory
-    ? items.filter((item) => item.category === selectedCategory)
+    ? items.filter((item) => getCategoryName(item.category) === selectedCategory)
     : items;
 
   // Sort items
@@ -257,10 +273,10 @@ export default function PublicWardrobeScreen() {
       case "priceLow":
         return a.price - b.price;
       case "nameAZ":
-        // Handle category as string for comparison
-        const catA = a.category;
-        const catB = b.category;
-        return catA.localeCompare(catB);
+        return getCategoryName(a.category).localeCompare(
+          getCategoryName(b.category)
+        );
+
       default:
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
@@ -277,7 +293,7 @@ export default function PublicWardrobeScreen() {
       ? resolveImageUrl(imagePath)
       : DEFAULT_IMAGE;
   };
-
+  
   // Render category chip
   const renderCategoryChip = ({ name, count }: { name: string; count: number }) => {
     const icon = getCategoryIcon(name);
@@ -357,7 +373,7 @@ export default function PublicWardrobeScreen() {
         {/* Category Badge */}
         <View style={styles.gridCategoryBadge}>
           <Text style={styles.gridCategoryText} numberOfLines={1}>
-            {item.category}
+            {getCategoryName(item.category)}
           </Text>
         </View>
 
@@ -372,7 +388,7 @@ export default function PublicWardrobeScreen() {
       <View style={styles.gridItemInfo}>
         <View style={styles.gridItemHeader}>
           <Text style={styles.gridItemName} numberOfLines={1}>
-            {item.category}
+            {getCategoryName(item.category)}
           </Text>
           <Text style={styles.gridItemPrice}>₹{item.price}</Text>
         </View>
@@ -411,7 +427,7 @@ export default function PublicWardrobeScreen() {
       <View style={styles.listItemInfo}>
         <View style={styles.listItemHeader}>
           <Text style={styles.listItemName} numberOfLines={1}>
-            {item.category}
+            {getCategoryName(item.category)}
           </Text>
           <Text style={styles.listItemPrice}>₹{item.price}</Text>
         </View>

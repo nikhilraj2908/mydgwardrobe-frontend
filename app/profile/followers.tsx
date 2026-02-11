@@ -37,7 +37,11 @@ export default function FollowersPage() {
     setLoading(true);
     try {
       const res = await api.get(`/api/follow/${activeTab}/${userId}`);
-      setUsers(res.data || []);
+      const cleanUsers = (res.data || []).filter(
+  (u: any) => u && u._id
+);
+
+setUsers(cleanUsers);
     } catch (err) {
       console.log("Failed to load followers", err);
     } finally {
@@ -45,44 +49,52 @@ export default function FollowersPage() {
     }
   };
 
-  const renderItem = ({ item }: any) => {
-    const followed = ready ? isFollowing(item._id) : false;
+ const renderItem = ({ item }: any) => {
+  if (!item || !item._id) return null;
 
-    return (
+  const followed = ready ? isFollowing(item._id) : false;
 
-      <TouchableOpacity
-        style={styles.userRow}
-        onPress={() => router.push(`/profile/${item._id}`)}
-        activeOpacity={0.8}
-      >
-        <Image
-          source={{ uri: resolveImageUrl(item.photo) }}
-          style={styles.avatar}
-        />
+  return (
+    <TouchableOpacity
+      style={styles.userRow}
+      onPress={() => router.push(`/profile/${item._id}`)}
+      activeOpacity={0.8}
+    >
+      <Image
+        source={{
+          uri: item.photo
+            ? resolveImageUrl(item.photo)
+            : "https://ui-avatars.com/api/?name=User&background=random",
+        }}
+        style={styles.avatar}
+      />
 
-        <View style={styles.userInfo}>
-          <Text style={styles.username}>{item.username}</Text>
-          <Text style={styles.bio} numberOfLines={1}>
-            {item.bio || "No bio"}
+      <View style={styles.userInfo}>
+        <Text style={styles.username}>
+          {item.username || "Deleted user"}
+        </Text>
+        <Text style={styles.bio} numberOfLines={1}>
+          {item.bio || "No bio"}
+        </Text>
+      </View>
+
+      {ready && (
+        <TouchableOpacity
+          style={[
+            styles.followBtn,
+            followed && styles.followingBtn,
+          ]}
+          onPress={() => toggleFollow(item._id)}
+        >
+          <Text style={styles.followText}>
+            {followed ? "Following" : "Follow"}
           </Text>
-        </View>
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
+  );
+};
 
-        {ready && (
-          <TouchableOpacity
-            style={[
-              styles.followBtn,
-              followed && styles.followingBtn,
-            ]}
-            onPress={() => toggleFollow(item._id)}
-          >
-            <Text style={styles.followText}>
-              {followed ? "Following" : "Follow"}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
-    );
-  };
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
@@ -126,8 +138,7 @@ export default function FollowersPage() {
           ) : (
             <FlatList
               data={users}
-              keyExtractor={item => item._id}
-              renderItem={renderItem}
+keyExtractor={(item, index) => item?._id || index.toString()}              renderItem={renderItem}
               contentContainerStyle={{ paddingBottom: 30 }}
               showsVerticalScrollIndicator={false}
             />

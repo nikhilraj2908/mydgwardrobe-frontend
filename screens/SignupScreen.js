@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import * as Google from "expo-auth-session/providers/google";
+import * as AuthSession from "expo-auth-session";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect } from "react";
 import {
   FlatList,
   Image,
@@ -20,16 +22,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
-// WebBrowser.maybeCompleteAuthSession();
-
-
-// const redirectUri = AuthSession.makeRedirectUri({
-//   scheme: "mydgwardrobe",
-//   path: "expo-development-client/?url=http%3A%2F%2F10.73.254.96%3A8081",
-// });
-// console.log("Redirect URI:", redirectUri);
+// import auth0 from "../utils/auth0";
+WebBrowser.maybeCompleteAuthSession();
 // Create axios instance with base URL
-// const API_URL = process.env.EXPO_PUBLIC_API_URL ;
 const API_URL = Constants.expoConfig.extra.apiBaseUrl;
 const api = axios.create({
   baseURL: API_URL,
@@ -37,6 +32,11 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+const { AUTH0_DOMAIN, AUTH0_CLIENT_ID } = Constants.expoConfig.extra;
+const discovery = {
+  authorizationEndpoint: `https://${AUTH0_DOMAIN}/authorize`,
+  tokenEndpoint: `https://${AUTH0_DOMAIN}/oauth/token`,
+};
 
 const COUNTRY_CODES = [
   { code: "IN", dial: "+91", flag: "🇮🇳" },
@@ -46,24 +46,14 @@ const COUNTRY_CODES = [
   { code: "CA", dial: "+1", flag: "🇨🇦" }
 ];
 
-
-
 const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const years = Array.from({ length: 90 }, (_, i) => (2024 - i).toString());
 
 export default function SignupScreen() {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-  androidClientId: "857333011106-7l23nn58346k6l5cl7uqa6piiohv285p.apps.googleusercontent.com",
-
-  webClientId: "857333011106-0l7j6c1j5glq805pq03gpab104ajc6i8.apps.googleusercontent.com",
-
-  scopes: ["profile", "email"],
-  
-
-});
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, setAuthInProgress, hydrated } = useAuth();
+
   // Form states
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -79,6 +69,7 @@ export default function SignupScreen() {
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [phone, setPhone] = useState("");
   const [showCountryModal, setShowCountryModal] = useState(false);
+
   // DOB
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -89,38 +80,45 @@ export default function SignupScreen() {
   const [showYearDropdown, setShowYearDropdown] = useState(false);
 
   const [loading, setLoading] = useState(false);
-useEffect(() => {
-  if (!response) return;
+  const [auth0Loading, setAuth0Loading] = useState(false);
 
-  console.log("Google Response Type:", response.type);
-  console.log("Full Response:", JSON.stringify(response, null, 2));
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: "mydgwardrobe",
+    path: "callback",
+  });
 
-  if (response.type === "success") {
-    console.log("✅ Authentication Success!");
-    console.log("Access Token:", response.authentication?.accessToken);
-    console.log("ID Token:", response.authentication?.idToken);
-    
-    const accessToken = response.authentication?.accessToken;
-    if (!accessToken) {
-      alert("No access token received from Google");
-      return;
-    }
-    
-    // Send to backend for verification
-    handleGoogleLogin(accessToken);
-  }
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: AUTH0_CLIENT_ID,
+      scopes: ["openid", "profile", "email"],
+      redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+      extraParams: {
+        connection: "google-oauth2",
+      },
+    },
+    discovery
+  );
+  useEffect(() => {
+    if (!request?.codeVerifier) return;
 
-  if (response.type === "error") {
-    console.error("❌ Google Auth Error:", response.error);
-    alert(`Google authentication failed: ${response.error}`);
-  }
+    const savePKCE = async () => {
+      await AsyncStorage.setItem(
+        "auth0_code_verifier",
+        request.codeVerifier
+      );
 
-  if (response.type === "dismiss") {
-    console.log("User cancelled Google login");
-  }
-}, [response]);
+      await AsyncStorage.setItem(
+        "auth0_redirect_uri",
+        redirectUri
+      );
+    };
 
-  // ---------------------- SIGNUP HANDLER ----------------------
+    savePKCE();
+  }, [request]);
+
+  // Handle regular signup
   const handleSignup = async () => {
     if (!username || !email || !password || !confirmPassword || !gender || !phone || !day || !month || !year) {
       alert("Please fill all fields");
@@ -158,52 +156,26 @@ useEffect(() => {
       console.log("Signup error:", error.response?.data || error.message);
 
       if (error.response) {
-        // Server responded with error status
         alert(error.response.data?.message || "Registration failed");
       } else if (error.request) {
-        // Request made but no response
         alert("Server not reachable. Check your connection.");
       } else {
-        // Other errors
         alert("Something went wrong");
       }
     } finally {
       setLoading(false);
-    }
-  };
-  const handleGoogleLogin = async (accessToken) => {
-    try {
-       const res = await api.post("/api/auth/google", { accessToken });
-
-      const { token, user } = res.data;
-console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
-      // 🔥 THIS IS THE FIX
-      await login(token);
-
-      if (!user.profileCompleted) {
-        router.replace("/complete-profile");
-      } else {
-        router.replace("/profile");
-      }
-    } catch (error) {
-      console.log("Google login error:", error.response?.data || error.message);
-      alert("Google login failed");
+      setAuthInProgress(false);
     }
   };
 
-
-
-
-
-
-  // ---------------------- DROPDOWN UI ----------------------
+  // Dropdown UI component
   const renderDropdown = (data, visible, onSelect, onClose, selectedValue) => (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.modalOverlay} onPress={onClose}>
         <View style={styles.dropdownContainer}>
           <FlatList
             data={data}
-            keyExtractor={(item) => item}
+            keyExtractor={(item) => item.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.dropdownItem, selectedValue === item && styles.selectedDropdownItem]}
@@ -224,7 +196,6 @@ console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
     </Modal>
   );
 
-  // ------------------------- UI -------------------------
   return (
     <ImageBackground
       source={require("../assets/images/bgallpage.png")}
@@ -238,17 +209,21 @@ console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
         <ScrollView contentContainerStyle={styles.container}>
           <Image source={require("../assets/images/logo.png")} style={styles.logo} />
 
+          {/* Auth0 Google Login Button */}
           <TouchableOpacity
             style={styles.googleBtn}
-            disabled={!request}
-            // onPress={() => promptAsync()}
-          onPress={() => promptAsync({ useProxy: true })}
-
+            onPress={() => {
+              setAuthInProgress(true);
+              promptAsync();
+            }}
           >
             <Ionicons name="logo-google" size={20} color="#b700ff" />
-            <Text style={styles.googleText}>Continue with Google</Text>
-
+            <Text style={styles.googleText}>
+              Continue with Google
+            </Text>
           </TouchableOpacity>
+
+
           <Text style={styles.orText}>OR</Text>
 
           {/* USERNAME */}
@@ -310,7 +285,6 @@ console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
 
           {/* PHONE */}
           <Text style={styles.label}>Mobile Number</Text>
-
           <View style={styles.phoneContainer}>
             <TouchableOpacity style={styles.countryBtn} onPress={() => setShowCountryModal(true)}>
               <Text style={styles.flagText}>{selectedCountry.flag}</Text>
@@ -345,9 +319,7 @@ console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
               </TouchableOpacity>
             </Modal>
 
-
             <Text style={styles.callingCode}>{selectedCountry.dial}</Text>
-
             <TextInput
               placeholder="Enter mobile number"
               keyboardType="number-pad"
@@ -364,6 +336,8 @@ console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
             style={styles.input}
             value={email}
             onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
 
           {/* DOB */}
@@ -390,18 +364,17 @@ console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
           {renderDropdown(years, showYearDropdown, setYear, () => setShowYearDropdown(false), year)}
 
           {/* SIGNUP BUTTON */}
-          <TouchableOpacity style={styles.buttonWrapper} onPress={handleSignup}>
+          <TouchableOpacity
+            style={[styles.buttonWrapper, loading && styles.disabledButton]}
+            onPress={handleSignup}
+            disabled={loading}
+          >
             <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.gradientButton}>
               <Text style={styles.buttonText}>
                 {loading ? "Creating..." : "Create Account"}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
-
-
-          {/* GOOGLE SIGNUP */}
-
-
 
           <Link href="/login-options" asChild>
             <Text style={styles.footer}>
@@ -414,18 +387,17 @@ console.log("🔥 HANDLE GOOGLE LOGIN CALLED");
   );
 }
 
-// ------------------------- STYLES -------------------------
+// Styles
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(245, 244, 244, 0)",
   },
-
   container: {
     paddingHorizontal: 25,
     paddingTop: 10,
     paddingBottom: 40,
-    backgroundColor: "transparent", // 👈 VERY IMPORTANT
+    backgroundColor: "transparent",
   },
   logo: {
     width: 120,
@@ -433,12 +405,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     resizeMode: "contain",
     marginTop: 25,
-
   },
   label: {
     fontSize: 14,
     marginBottom: 6,
     color: "#374151",
+    fontWeight: "500",
   },
   input: {
     backgroundColor: "#F9FAFB",
@@ -447,24 +419,25 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    fontSize: 14,
   },
   passwordContainer: {
     flexDirection: "row",
     marginBottom: 10,
-
     alignItems: "center",
     backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderRadius: 25,
     paddingHorizontal: 15,
+    borderColor: "#E5E7EB",
   },
   inputPassword: {
     flex: 1,
     paddingVertical: 12,
+    fontSize: 14,
   },
   genderRow: {
     marginBottom: 10,
-
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -500,7 +473,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
     marginBottom: 10,
-
   },
   countryBtn: {
     flexDirection: "row",
@@ -515,27 +487,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111",
     marginRight: 6,
+    fontWeight: "500",
   },
   phoneInput: {
     flex: 1,
-    fontSize: 14,
-  },
-  countryDropdown: {
-    position: "absolute",
-    top: 48,
-    left: 10,
-    width: 120,
-    backgroundColor: "#FFF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#DDD",
-    zIndex: 20,
-    elevation: 5,
-  },
-  dropdownItem: {
-    padding: 10,
-  },
-  dropdownText: {
     fontSize: 14,
   },
   dobRow: {
@@ -557,6 +512,7 @@ const styles = StyleSheet.create({
   dobText: {
     fontSize: 14,
     color: "#6B7280",
+    marginRight: 4,
   },
   dobTextSelected: {
     color: "#111",
@@ -573,6 +529,12 @@ const styles = StyleSheet.create({
     width: "80%",
     maxHeight: 300,
     borderRadius: 12,
+    paddingVertical: 10,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   selectedDropdownItem: {
     backgroundColor: "#F3F4F6",
@@ -580,6 +542,7 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 16,
     textAlign: "center",
+    color: "#333",
   },
   selectedDropdownItemText: {
     color: "#A855F7",
@@ -602,6 +565,8 @@ const styles = StyleSheet.create({
   orText: {
     textAlign: "center",
     marginVertical: 10,
+    color: "#666",
+    fontSize: 14,
   },
   googleBtn: {
     borderWidth: 1,
@@ -611,17 +576,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#FFF",
   },
   googleText: {
     marginLeft: 8,
     fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
   },
   footer: {
     textAlign: "center",
     marginTop: 20,
+    color: "#666",
+    fontSize: 14,
   },
   loginText: {
     color: "#A855F7",
     fontWeight: "600",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

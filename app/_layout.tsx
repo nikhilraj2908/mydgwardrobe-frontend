@@ -1,3 +1,4 @@
+// D:\nikhil\MyFirstApp\app\_layout.tsx
 import { Slot, Stack } from "expo-router";
 import * as Font from "expo-font";
 import { useEffect, useState } from "react";
@@ -9,8 +10,11 @@ import { FollowProvider } from "@/context/FollowContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { ThemeProvider } from "./theme/ThemeContext";
 import AuthGate from "@/components/AuthGate";
-import * as WebBrowser from "expo-web-browser"; // ✅ ADD
-WebBrowser.maybeCompleteAuthSession();   
+import * as WebBrowser from "expo-web-browser";
+
+// This is CRITICAL for Auth0 to work
+WebBrowser.maybeCompleteAuthSession();
+
 /* ---------------- AUTH GATE ---------------- */
 
 /* ---------------- ROOT ---------------- */
@@ -24,7 +28,11 @@ export default function RootLayout() {
   }, []);
 
   if (!fontsLoaded) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
   return (
@@ -41,6 +49,5 @@ export default function RootLayout() {
         </FollowProvider>
       </SafeAreaProvider>
     </AuthProvider>
-
   );
 }

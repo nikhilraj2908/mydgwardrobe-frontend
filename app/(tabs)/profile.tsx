@@ -1,9 +1,10 @@
+import AppBackground from "@/components/AppBackground";
 import { useFollow } from "@/context/FollowContext";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { useTheme } from "../../app/theme/ThemeContext";
 import {
   ActivityIndicator,
   Alert,
@@ -17,12 +18,11 @@ import {
   View
 } from "react-native";
 import api from "../../api/api";
+import { useTheme } from "../../app/theme/ThemeContext";
+import BoxWardrobeCard from "../../components/BoxWardrobeCard";
 import SavedGridCard from "../../components/SavedGridCard";
 import { useAuth } from "../../context/AuthContext";
 import { useSavedItems } from "../../context/SavedItemsContext";
-import AppBackground from "@/components/AppBackground";
-import { resolveImageUrl } from "@/utils/resolveImageUrl";
-import BoxWardrobeCard from "../../components/BoxWardrobeCard";
 
 interface Wardrobe {
   _id: string;
@@ -106,6 +106,7 @@ export default function ProfileScreen() {
   const { resetSaved } = useSavedItems();
   const { clearFollowing } = useFollow();
   const [pendingPremiumCount, setPendingPremiumCount] = useState(0);
+  const { token, isAuthenticated, isLoading, logout } = useAuth();
   // Filter premium items (public items of the logged-in user)
   // ✅ Premium items (public + premium access)
   const premiumItems = wardrobeItems.filter(
@@ -235,7 +236,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const { logout } = useAuth();
 
   const getWardrobeCoverImage = (wardrobeId: string) => {
     const items = wardrobeItems.filter(i => i.wardrobe === wardrobeId);
@@ -299,12 +299,11 @@ export default function ProfileScreen() {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        router.push("/login-username");
-        return;
-      }
-
+      // const token = await AsyncStorage.getItem("token");
+      // if (!token) {
+      //   router.push("/login-username");
+      //   return;
+      // }
       // 1. Fetch user's actual profile data
       const userResponse = await api.get("/api/user/me", {
         headers: { Authorization: `Bearer ${token}` },
@@ -425,9 +424,10 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
+  if (!isLoading && isAuthenticated && token) {
     fetchProfileData();
-  }, []);
-
+  }
+}, [isLoading, isAuthenticated, token]);
   const onRefresh = () => {
     setRefreshing(true);
     fetchProfileData();
