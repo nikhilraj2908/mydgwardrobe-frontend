@@ -207,7 +207,19 @@ export default function AddWardrobe() {
             };
         }, [isEdit]) // Add isEdit as dependency
     );
-
+useEffect(() => {
+  if (params.editedUri) {
+    setImages(prev => [
+      ...prev,
+      {
+        uri: params.editedUri as string,
+        isRemote: false,
+        fileName: `edited_${Date.now()}.jpg`,
+        mimeType: "image/jpeg",
+      },
+    ]);
+  }
+}, [params.editedUri]);
     useEffect(() => {
         if (!isEdit) return;
 

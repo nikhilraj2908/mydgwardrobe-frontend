@@ -1,8 +1,77 @@
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router } from "expo-router";
 import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as AuthSession from "expo-auth-session";
+import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as WebBrowser from "expo-web-browser";
+import { useAuthRequest } from "expo-auth-session";
+import { useEffect } from "react";
+
+WebBrowser.maybeCompleteAuthSession();
+
+const redirectUri = AuthSession.makeRedirectUri({
+  scheme: "mydgwardrobe",
+  path:"callback"
+});
+
+
 
 export default function LoginOptionsScreen() {
+const { AUTH0_DOMAIN, AUTH0_CLIENT_ID } = Constants.expoConfig.extra;
+
+
+
+const discovery = {
+  authorizationEndpoint: `https://${AUTH0_DOMAIN}/authorize`,
+  tokenEndpoint: `https://${AUTH0_DOMAIN}/oauth/token`,
+};
+
+const [request, response, promptAsync] = useAuthRequest(
+  {
+    clientId: AUTH0_CLIENT_ID,
+    redirectUri,
+    scopes: ["openid", "profile", "email"],
+    responseType: "code",
+    usePKCE: true,
+    extraParams: {
+      connection: "google-oauth2",
+      prompt: "select_account", // 🔥 FORCE account chooser
+    },
+  },
+  discovery
+);
+
+useEffect(() => {
+  if (!request?.codeVerifier) return;
+
+  const savePKCE = async () => {
+    await AsyncStorage.setItem(
+      "auth0_code_verifier",
+      request.codeVerifier
+    );
+
+    await AsyncStorage.setItem(
+      "auth0_redirect_uri",
+      redirectUri
+    );
+  };
+
+  savePKCE();
+}, [request]);
+
+const { setAuthInProgress } = useAuth();
+const handleGoogleLogin = async () => {
+  setAuthInProgress(true);
+  await promptAsync();
+};
+useEffect(() => {
+  if (response?.type === "error") {
+    setAuthInProgress(false);
+  }
+}, [response]);
+
   return (
     <ImageBackground
       source={require("../../assets/images/bgallpage.png")}
@@ -11,7 +80,7 @@ export default function LoginOptionsScreen() {
     >
       {/* Dark overlay to make white elements stand out */}
       <View style={styles.overlay} />
-      
+
       <View style={styles.container}>
         {/* Back Button */}
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
@@ -26,6 +95,22 @@ export default function LoginOptionsScreen() {
 
         {/* Welcome Text */}
         <Text style={styles.title}>Welcome Back</Text>
+        {/* Continue with Google */}
+        <TouchableOpacity
+          style={styles.googleButton}
+          activeOpacity={0.8}
+          onPress={handleGoogleLogin}
+        >
+          <Ionicons style={styles.googleIcon} name="logo-google" size={20} color="#b700ff" />
+          <Text style={styles.googleText}>Continue with Google</Text>
+        </TouchableOpacity>
+
+        {/* OR Divider */}
+        <View style={styles.dividerContainer}>
+          <View style={styles.line} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.line} />
+        </View>
 
         {/* Login Using Mobile Number */}
         <TouchableOpacity
@@ -66,7 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
-    
+
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -138,4 +223,51 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    paddingVertical: 14,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  googleIcon: {
+    width: 22,
+    height: 22,
+    marginRight: 10,
+    resizeMode: "contain",
+  },
+
+  googleText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+  },
+
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#DDD",
+  },
+
+  orText: {
+    marginHorizontal: 10,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#555",
+  },
+
 });

@@ -852,8 +852,6 @@ const createStyles = (theme: any) =>
       flexDirection: "row",
       alignItems: "flex-start",
       marginBottom: 20,
-      marginTop: 20,
-      paddingRight: 80,
     },
     avatarContainer: {
       position: "relative",
@@ -917,15 +915,15 @@ const createStyles = (theme: any) =>
     actionButtonsContainer: {
       position: "absolute",
       top: 16,
-      right: 16,
+      right: 1,
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 5,
     },
 
     actionBtn: {
-      width: 32,
-      height: 32,
+      width: 28 ,
+      height: 28  ,
       borderRadius: 18,
       justifyContent: "center",
       alignItems: "center",
@@ -934,6 +932,7 @@ const createStyles = (theme: any) =>
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.2,
       shadowRadius: 3,
+      
     },
 
     premiumBtn: {
@@ -951,8 +950,9 @@ const createStyles = (theme: any) =>
 
     name: {
       fontWeight: "700",
-      fontSize: 18,
+      fontSize: 17,
       marginBottom: 4,
+      maxWidth: "60%",
     },
     handle: {
       color: "#777676ff",
