@@ -284,7 +284,7 @@ export default function ItemDetails() {
             : [];
     return (
 
-        <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+        <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
             <AppBackground>
                 <View style={styles.container}>
                     <WardrobeHeader title="Item Details" onBack={() => router.back()} />

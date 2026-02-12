@@ -5,6 +5,9 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import HelpSupportPage from '../HelpSupportPage/HelpSupportPage'; // import your HelpSupportPage
+
+
 import {
   ActivityIndicator,
   Alert,

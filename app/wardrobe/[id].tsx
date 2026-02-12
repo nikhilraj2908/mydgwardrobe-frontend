@@ -265,7 +265,7 @@ export default function WardrobeDetailsScreen() {
 
   return (
 
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
       <AppBackground>
         <View style={{ flex: 1, }}>
           {/* Header */}
