@@ -13,6 +13,8 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import AppBackground from "@/components/AppBackground";
 
 /* ================= SAFE API URL ================= */
 const API_URL =
@@ -50,34 +52,62 @@ export default function AddStory() {
   }, []);
 
   /* ================= PICK IMAGE / VIDEO ================= */
+  // const pickMedia = async () => {
+  //   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //   if (status !== "granted") {
+  //     Alert.alert("Permission required", "Media access is needed");
+  //     return;
+  //   }
+
+  //   const result = await ImagePicker.launchImageLibraryAsync({
+  //     mediaTypes: ImagePicker.MediaTypeOptions.All,
+  //     quality: 0.4,
+  //     videoMaxDuration: 15,
+  //     allowsEditing: false,
+  //     base64: false,
+  //   });
+
+  //   if (!result.canceled && result.assets[0]) {
+  //     const asset = result.assets[0];
+  //     console.log("📸 Selected media:", {
+  //       uri: asset.uri,
+  //       type: asset.type,
+  //       mimeType: asset.mimeType,
+  //       fileName: asset.fileName,
+  //       fileSize: asset.fileSize,
+  //     });
+  //     setSelectedMedia(asset);
+  //   }
+  // };
+
   const pickMedia = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission required", "Media access is needed");
-      return;
-    }
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Permission required", "Media access is needed");
+    return;
+  }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      quality: 0.4,
-      videoMaxDuration: 15,
-      allowsEditing: false,
-      base64: false,
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.All, // keeps both images & videos
+    quality: 0.4,                                 // your original compression
+    videoMaxDuration: 15,                         // original video limit
+    allowsEditing: true,                          // ✅ enables crop/trim
+    // aspect: [4, 5],                              // crop ratio (adjust as needed)
+    base64: false,                               // unchanged
+  });
+
+  if (!result.canceled && result.assets[0]) {
+    const asset = result.assets[0];
+    console.log("📸 Selected media:", {
+      uri: asset.uri,
+      type: asset.type,
+      mimeType: asset.mimeType,
+      fileName: asset.fileName,
+      fileSize: asset.fileSize,
     });
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      console.log("📸 Selected media:", {
-        uri: asset.uri,
-        type: asset.type,
-        mimeType: asset.mimeType,
-        fileName: asset.fileName,
-        fileSize: asset.fileSize,
-      });
-      setSelectedMedia(asset);
-    }
-  };
-
+    setSelectedMedia(asset);
+  }
+};
   /* ================= FIX: Create proper file object for React Native ================= */
   const createFormData = () => {
     if (!selectedMedia) return null;
@@ -211,6 +241,9 @@ export default function AddStory() {
 
   /* ================= UI ================= */
   return (
+    
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+    <AppBackground>
     <View style={styles.container}>
       <Text style={styles.title}>Add Story</Text>
 
@@ -308,6 +341,8 @@ export default function AddStory() {
         <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
     </View>
+    </AppBackground>  
+    </SafeAreaView>
   );
 }
 
@@ -315,7 +350,7 @@ export default function AddStory() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    
     padding: 20,
   },
   title: {

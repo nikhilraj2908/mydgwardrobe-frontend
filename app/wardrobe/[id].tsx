@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   itemCategory: { fontSize: 12, color: "#666" },
   itemPrice: { fontWeight: "600", marginTop: 2 },
   itemDate: { fontSize: 10, color: "#999" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "flex-end" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "flex-end" ,marginBottom: 35},
   modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   modalTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
   sortSection: { marginBottom: 12 },

@@ -143,6 +143,7 @@ export default function SignupScreen() {
         gender: gender === "male" ? "Male" : "Female",
         mobile,
         dob,
+        profileCompleted: true,
       });
 
       alert("OTP sent to your email");
@@ -205,7 +206,7 @@ export default function SignupScreen() {
       {/* Light overlay for readability */}
       <View style={styles.overlay} />
 
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
         <ScrollView contentContainerStyle={styles.container}>
           <Image source={require("../assets/images/logo.png")} style={styles.logo} />
 
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
     height: 120,
     alignSelf: "center",
     resizeMode: "contain",
-    marginTop: 25,
+    // marginTop: 25,
   },
   label: {
     fontSize: 14,

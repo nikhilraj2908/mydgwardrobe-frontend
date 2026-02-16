@@ -151,7 +151,7 @@ export default function AllWardrobesScreen() {
      RENDER
   ================================ */
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
       <AppBackground>
         <View style={styles.container}>
           {/* HEADER */}

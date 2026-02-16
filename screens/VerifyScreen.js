@@ -3,17 +3,18 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import api from "../api/api";
+import { useAuth } from "../context/AuthContext";
 export default function VerifyScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams(); // ← Get email from SignupScreen
-
+  const { login } = useAuth();
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -33,57 +34,52 @@ export default function VerifyScreen() {
   };
 
   // ---------------------- VERIFY OTP ----------------------
-const submitOtp = async () => {
-  const code = otp.join("");
-
-  if (code.length !== 4) {
-    alert("Please enter the full 4-digit code");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const res = await api.post("/api/auth/verify-otp", {
-      email,
-      otp: code,
-    });
-
-    // Axios success
-    if (res.status === 200) {
-      alert("OTP Verified Successfully!");
-      router.replace("/profile/");
+  const submitOtp = async () => {
+    const code = otp.join("");
+    if (code.length !== 4) {
+      alert("Please enter the full 4-digit code");
+      return;
     }
-  } catch (err) {
-    alert(err.response?.data?.message || "Invalid OTP");
-  }
 
-  setLoading(false);
-};
+    setLoading(true);
+    try {
+      const res = await api.post("/api/auth/verify-otp", { email, otp: code });
 
-// ---------------------- RESEND OTP ----------------------
-const resendOtp = async () => {
-  setResendLoading(true);
-
-  try {
-    const res = await api.post("/api/auth/resend-otp", { email });
-
-    if (res.status === 200) {
-      alert("New OTP sent to your email!");
+      if (res.status === 200) {
+        const { token, user } = res.data;
+        await login(token, user.profileCompleted); // save token & flag
+        router.replace("/(tabs)/profile"); // go to main app (adjust route as needed)
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    alert(err.response?.data?.message || "Failed to resend OTP");
-  }
+  };
 
-  setResendLoading(false);
-};
+  // ---------------------- RESEND OTP ----------------------
+  const resendOtp = async () => {
+    setResendLoading(true);
+
+    try {
+      const res = await api.post("/api/auth/resend-otp", { email });
+
+      if (res.status === 200) {
+        alert("New OTP sent to your email!");
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to resend OTP");
+    }
+
+    setResendLoading(false);
+  };
 
   return (
     <View style={styles.container}>
       {/* Icon */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={26} color="#000" />
-            </TouchableOpacity>
+        <Ionicons name="arrow-back" size={26} color="#000" />
+      </TouchableOpacity>
       <View style={styles.iconWrapper}>
         <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.iconCircle}>
           <FontAwesome5 name="envelope" size={38} color="white" />

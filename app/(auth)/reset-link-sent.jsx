@@ -1,56 +1,56 @@
-import { View, Text, StyleSheet, TouchableOpacity,ImageBackground } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Icon from "react-native-vector-icons/Ionicons";
 
 export default function ResetLinkSent() {
   return (
-     <ImageBackground
-                      source={require("../../assets/images/bgallpage.png")}
-                      style={styles.background}
-                      resizeMode="cover"
-                    >
-                      {/* Dark overlay to make white elements stand out */}
-                      <View style={styles.overlay} />
-    <View style={styles.container}>
-      
-      {/* Back Button */}
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Icon name="arrow-back" size={22} color="#000" />
-      </TouchableOpacity>
-      {/* Icon */}
-      <View style={styles.iconBox}>
-        <Icon name="mail-open-outline" size={70} color="#A855F7" />
-      </View>
+    <ImageBackground
+      source={require("../../assets/images/bgallpage.png")}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      {/* Dark overlay to make white elements stand out */}
+      <View style={styles.overlay} />
+      <View style={styles.container}>
 
-      {/* Title */}
-      <Text style={styles.title}>Check Your Email</Text>
+        {/* Back Button */}
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Icon name="arrow-back" size={22} color="#000" />
+        </TouchableOpacity>
+        {/* Icon */}
+        <View style={styles.iconBox}>
+          <Icon name="mail-open-outline" size={70} color="#A855F7" />
+        </View>
 
-      {/* Message */}
-      <Text style={styles.message}>
-        A password reset link has been sent to your registered email address.
-        Click the link to create a new password.
-      </Text>
+        {/* Title */}
+        <Text style={styles.title}>Check Your Email</Text>
 
-      {/* Go to Login Button */}
-      <TouchableOpacity onPress={() => router.push("/(auth)/login-username")}>
-        <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.btn}>
-          <Text style={styles.btnText}>Back to Login</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* Footer */}
-      <Text style={styles.footer}>
-        Didn’t receive the email?{" "}
-        <Text
-          onPress={() => router.push("/(auth)/forgot-password")}
-          style={styles.resend}
-        >
-          Resend
+        {/* Message */}
+        <Text style={styles.message}>
+          A password reset link has been sent to your registered email address.
+          Click the link to create a new password.
         </Text>
-      </Text>
 
-    </View>
+        {/* Go to Login Button */}
+        <TouchableOpacity onPress={() => router.push("/(auth)/login-username")}>
+          <LinearGradient colors={["#A855F7", "#EC4899"]} style={styles.btn}>
+            <Text style={styles.btnText}>Back to Login</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Footer */}
+        <Text style={styles.footer}>
+          Didn’t receive the email?{" "}
+          <Text
+            onPress={() => router.push("/(auth)/forgot-password")}
+            style={styles.resend}
+          >
+            Resend
+          </Text>
+        </Text>
+
+      </View>
     </ImageBackground>
   );
 }
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     padding: 25,
     justifyContent: "center",
   },
- background: {
+  background: {
     flex: 1,
     width: "100%",
     height: "100%",
