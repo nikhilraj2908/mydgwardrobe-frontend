@@ -1,5 +1,6 @@
 import api from "@/api/api";
 import AppBackground from "@/components/AppBackground";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -12,7 +13,6 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { SafeAreaView } from "react-native-safe-area-context";
 interface Notification {
     _id: string;
@@ -114,7 +114,7 @@ export default function NotificationsScreen() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+        <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
             <AppBackground>
                 <View style={styles.container}>
                     {/* ================= HEADER ================= */}

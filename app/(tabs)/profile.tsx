@@ -4,7 +4,7 @@ import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import HelpSupportPage from '../HelpSupportPage/HelpSupportPage'; // import your HelpSupportPage
 
 
@@ -86,8 +86,12 @@ interface SavedItem {
 }
 
 export default function ProfileScreen() {
-  const theme = useTheme();
-  const styles = createStyles(theme);
+  const { theme } = useTheme();
+
+// if (!theme || !theme.colors) return null;
+
+ const styles = React.useMemo(() => createStyles(theme), [theme]);
+ 
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"myWardrobes" | "savedItems">("myWardrobes");
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -693,7 +697,7 @@ export default function ProfileScreen() {
                         color={theme.colors.primaryDark}
                       />
                     ) : (
-                      <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+                      <Ionicons name="chevron-forward-outline" size={24} color={theme.colors.textPrimary} />
                     )}
                   </TouchableOpacity>
                 );
@@ -735,7 +739,7 @@ export default function ProfileScreen() {
               )}
               {wardrobes.length === 0 && (
                 <View style={styles.emptyState}>
-                  <Ionicons name="folder-outline" size={48} color="#e677f5ff" />
+                  <Ionicons name="folder-outline" size={48} color={theme.colors.primary} />
                   <Text style={styles.emptyStateText}>No wardrobes yet</Text>
                   <Text style={styles.emptyStateSubText}>
                     Create your first wardrobe to organize your items
@@ -751,7 +755,7 @@ export default function ProfileScreen() {
                     <Text style={styles.savedCount}>{savedItems.length} saved items</Text>
                     <TouchableOpacity style={styles.sortButton}>
                       <Text style={styles.sortButtonText}>Sort by</Text>
-                      <Ionicons name="chevron-down" size={16} color="#000" />
+                      <Ionicons name="chevron-down" size={16} color={theme.colors.textPrimary} />
                     </TouchableOpacity>
                   </View>
                   {savedItems.length === 0 ? (
@@ -832,7 +836,7 @@ const createStyles = (theme: any) =>
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      backgroundColor: "#ffffffff",
+      backgroundColor: theme.colors.background,
       borderRadius: 16,
       paddingHorizontal: 16,
       paddingVertical: 10,
@@ -844,11 +848,11 @@ const createStyles = (theme: any) =>
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: "#fff",
+      backgroundColor: theme.colors.background,
     },
     loadingText: {
       marginTop: 12,
-      color: "#666",
+      color: theme.colors.textSecondary,
       fontSize: 16,
     },
     userCard: {
@@ -887,14 +891,14 @@ const createStyles = (theme: any) =>
       justifyContent: "center",
       alignItems: "center",
       borderWidth: 2,
-      borderColor: "#fff",
+      borderColor: theme.colors.border
     },
     avatarImage: {
       width: 70,
       height: 70,
       borderRadius: 35,
       borderWidth: 2,
-      borderColor: "#fff",
+      borderColor: theme.colors.border
     },
     avatarText: {
       color: theme.colors.textPrimary,
@@ -910,7 +914,7 @@ const createStyles = (theme: any) =>
       borderRadius: 12,
       backgroundColor: theme.colors.primary,
       borderWidth: 2,
-      borderColor: "#fff",
+      borderColor: theme.colors.border,
       justifyContent: "center",
       alignItems: "center",
     },
@@ -939,7 +943,7 @@ const createStyles = (theme: any) =>
     },
 
     premiumBtn: {
-      backgroundColor: "#A855F7", // or gold: "#F59E0B"
+      backgroundColor: theme.colors.primary,// or gold: "#F59E0B"
     },
 
     editBtn: {
@@ -963,7 +967,7 @@ const createStyles = (theme: any) =>
       marginBottom: 8,
     },
     bio: {
-      color: "#000000ff",
+      color: theme.colors.textPrimary,
       fontSize: 14,
       lineHeight: 20,
     },
@@ -992,7 +996,7 @@ const createStyles = (theme: any) =>
       flexDirection: "row",
       marginBottom: 20,
       marginTop: 10,
-      backgroundColor: "rgb(255, 255, 255)",
+      backgroundColor: theme.colors.background,
       borderRadius: 30,
       padding: 4,
       shadowColor: "#000",
@@ -1012,7 +1016,7 @@ const createStyles = (theme: any) =>
     },
     tabText: {
       fontWeight: "600",
-      color: "#666",
+      color: theme.colors.textSecondary,
       fontSize: 14,
     },
     activeTabText: {
@@ -1024,12 +1028,12 @@ const createStyles = (theme: any) =>
     addWardrobeBtn: {
       borderWidth: 1,
       borderStyle: "dashed",
-      borderColor: theme.colors.midary,
+      borderColor: theme.colors.middary,
       borderRadius: 20,
       padding: 14,
       alignItems: "center",
       marginBottom: 16,
-      backgroundColor: "#FAF5FF",
+      backgroundColor:theme.colors.surface,
     },
     addWardrobeText: {
       color: theme.colors.primaryDark,
@@ -1046,7 +1050,7 @@ const createStyles = (theme: any) =>
     wardrobeCard: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "#a453fc4d",
+      backgroundColor: theme.colors.card,
       borderRadius: 16,
       padding: 12,
       marginBottom: 12,
@@ -1065,7 +1069,7 @@ const createStyles = (theme: any) =>
       fontSize: 14,
     },
     itemsCount: {
-      color: "#777",
+      color: theme.colors.textSecondary,
       marginTop: 4,
       fontSize: 12,
     },
@@ -1075,13 +1079,13 @@ const createStyles = (theme: any) =>
     },
     emptyStateText: {
       fontSize: 16,
-      color: "#666",
+      color: theme.colors.textSecondary,
       marginTop: 12,
       fontWeight: "600",
     },
     emptyStateSubText: {
       fontSize: 14,
-      color: "#999",
+     color: theme.colors.textSecondary,
       marginTop: 4,
       textAlign: "center",
     },
@@ -1096,14 +1100,14 @@ const createStyles = (theme: any) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      backgroundColor: theme.colors.overlay,
       justifyContent: "flex-start",
       alignItems: "flex-end",
       paddingTop: 60,
       paddingRight: 16,
     },
     modalContent: {
-      backgroundColor: "#fff",
+      backgroundColor: theme.colors.background,
       borderRadius: 16,
       padding: 8,
       width: 200,
@@ -1123,7 +1127,7 @@ const createStyles = (theme: any) =>
     modalItemText: {
       marginLeft: 12,
       fontSize: 16,
-      color: "#333",
+     color: theme.colors.textPrimary,
       flex: 1,
     },
     modalDivider: {
