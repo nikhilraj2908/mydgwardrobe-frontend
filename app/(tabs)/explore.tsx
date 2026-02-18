@@ -560,7 +560,7 @@ export default function Explore() {
         {/* Decorative element for some cards */}
         {(index % 5 === 0 || index % 7 === 0) && (
           <View style={[styles.collageBadge, {
-            backgroundColor: index % 2 === 0 ? '#A855F7' : '#10B981'
+            backgroundColor: index % 2 === 0 ? colors.primary : '#10B981'
           }]}>
             <Ionicons
               name={index % 2 === 0 ? "trending-up" : "flash"}
@@ -686,7 +686,7 @@ export default function Explore() {
             <Ionicons
               name={isSaved ? "bookmark" : "bookmark-outline"}
               size={18}
-              color={isSaved ? "#A855F7" : "#fff"}
+              color={isSaved ? colors.primaryDark : "#fff"}
             />
           </TouchableOpacity>
         </View>
@@ -706,7 +706,7 @@ export default function Explore() {
                 {String(item.brand || "Brand")}
               </Text>
               {item.category?.name && (
-                <View style={[styles.categoryTag, { backgroundColor: "#A855F7" }]}>
+                <View style={[styles.categoryTag, { backgroundColor:  colors.primaryDark }]}>
                   <Text style={styles.categoryTagText}>
                     {item.category.name}
                   </Text>
@@ -716,7 +716,7 @@ export default function Explore() {
           </View>
 
           <View style={[styles.itemPrice, {
-            backgroundColor: index % 2 === 0 ? '#10B981' : '#A855F7'
+            backgroundColor: index % 2 === 0 ? colors.primary : '#19042c'
           }]}>
             <Text style={styles.priceText}>₹{item.price || "N/A"}</Text>
           </View>
@@ -725,7 +725,7 @@ export default function Explore() {
         {/* Optional decorative border */}
         {index % 6 === 0 && (
           <View style={[styles.collageBorder, {
-            borderColor: index % 3 === 0 ? '#A855F7' : '#F59E0B'
+            borderColor: index % 3 === 0 ? colors.primary : '#F59E0B'
           }]} />
         )}
       </TouchableOpacity>
@@ -881,7 +881,7 @@ export default function Explore() {
               setActiveCategory(null);
             }}
           >
-            <Ionicons name="grid-outline" size={16} color="#A855F7" />
+            <Ionicons name="grid-outline" size={16} color={colors.primaryDark} />
             <Text style={styles.backToCategoriesText}>All Categories</Text>
           </TouchableOpacity>
         </View>
@@ -987,7 +987,7 @@ export default function Explore() {
     if (data.length === 0 && loading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A855F7" />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
         </View>
       );
     }
@@ -1020,8 +1020,8 @@ export default function Explore() {
                   fetchItemsByCategory(category._id, category.type, 1, true);
                 }
               }}
-              colors={["#A855F7"]}
-              tintColor="#A855F7"
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           ) : undefined
         }
@@ -1059,7 +1059,7 @@ export default function Explore() {
 
         {mode === "items" && loading && page > 1 && (
           <View style={styles.footerLoader}>
-            <ActivityIndicator size="small" color="#A855F7" />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         )}
       </ScrollView>
@@ -1273,7 +1273,7 @@ export default function Explore() {
                   <Ionicons
                     name={option.icon}
                     size={20}
-                    color={sortBy === option.id ? "#A855F7" : "#666"}
+                    color={sortBy === option.id ? colors.primary: "#666"}
                   />
                   <Text
                     style={[
@@ -1284,7 +1284,7 @@ export default function Explore() {
                     {option.label}
                   </Text>
                   {sortBy === option.id && (
-                    <Ionicons name="checkmark" size={20} color="#A855F7" />
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
