@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -18,6 +18,7 @@ import api from "../api/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 const { width } = Dimensions.get("window");
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
+import { useTheme } from "@/app/theme/ThemeContext";
 /* ================= TYPES ================= */
 
 interface WardrobeSummary {
@@ -51,6 +52,9 @@ interface CollectionPostCardProps {
 
 export default function CollectionPostCard({ item }: CollectionPostCardProps) {
   const router = useRouter();
+  const { theme } = useTheme();                         // <-- get current theme
+  const colors = theme.colors;
+        const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -320,171 +324,159 @@ export default function CollectionPostCard({ item }: CollectionPostCardProps) {
     </View>
   );
 }
-
-/* ================= STYLES ================= */
-
-const styles = StyleSheet.create({
-
-
-
-  openState: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#F8FAFC",
-    padding: 14,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingBottom: 20,
-  },
-  container: {
-    paddingHorizontal: 12,
-    marginBottom: 16,
-  },
-  card: {
-    height: 340,
-    borderRadius: 28,
-    overflow: "hidden",
-    backgroundColor: "#000",
-    marginTop: 20,
-  },
-  bg: {
-    flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.25)",
-  },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#A855F7",
-  },
-  username: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#ffffffff",
-
-  },
-  handle: {
-    fontSize: 13,
-    color: "#aaaaaaff",
-    marginBottom: 18,
-  },
-  statsPill: {
-    flexDirection: "row",
-    backgroundColor: "#A855F7",
-    borderRadius: 15,
-    padding: 14,
-    width: "100%",
-    marginBottom: 16,
-  },
-  statItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statValue: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  divider: {
-    width: 2,
-    backgroundColor: "rgba(255,255,255,0.4)",
-    marginHorizontal: 25,
-  },
-  statRight: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 6,
-  },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  statText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  peekText: {
-    fontSize: 14,
-    color: "#d1ceceff",
-    fontWeight: "500",
-  },
-  closedState: {
-    ...StyleSheet.absoluteFillObject,
-  },
-
-  wardrobeCard: {
-    width: "48%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 8,
-    marginBottom: 12,
-  },
-  wardrobeImage: {
-    width: "100%",
-    height: 100,
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  wardrobeName: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  moneyStat: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  rupeeCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF", // filled circle
-    justifyContent: "center",
-    alignItems: "center",
-
-    // optional polish
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  rupeeSymbol: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#A855F7", // purple ₹
-  },
-
-  moneyValue: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    openState: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.surface,
+      padding: 14,
+    },
+    scrollContainer: {
+      flex: 1,
+    },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      paddingBottom: 20,
+    },
+    container: {
+      paddingHorizontal: 12,
+      marginBottom: 16,
+    },
+    card: {
+      height: 340,
+      borderRadius: 28,
+      overflow: "hidden",
+      backgroundColor: colors.background,
+      marginTop: 20,
+    },
+    bg: {
+      flex: 1,
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0, 0, 0, 0.25)",
+    },
+    content: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+    },
+    avatar: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    avatarText: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.primaryDark,
+    },
+    username: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: "#ffffff",
+    },
+    handle: {
+      fontSize: 13,
+      color: colors.textMuted,
+      marginBottom: 18,
+    },
+    statsPill: {
+      flexDirection: "row",
+      backgroundColor: colors.primary,
+      borderRadius: 15,
+      padding: 14,
+      width: "100%",
+      marginBottom: 16,
+    },
+    statItem: {
+      alignItems: "center",
+      flex: 1,
+    },
+    statValue: {
+      color: "#ffffff",
+      fontSize: 18,
+      fontWeight: "700",
+      marginTop: 4,
+    },
+    divider: {
+      width: 2,
+      backgroundColor: "rgba(255,255,255,0.4)",
+      marginHorizontal: 25,
+    },
+    statRight: {
+      flex: 1,
+      justifyContent: "center",
+      gap: 6,
+    },
+    statRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    statText: {
+      color: "#ffffff",
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    peekText: {
+      fontSize: 14,
+      color: "rgba(255,255,255,0.8)",
+      fontWeight: "500",
+    },
+    closedState: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    wardrobeCard: {
+      width: "48%",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 8,
+      marginBottom: 12,
+    },
+    wardrobeImage: {
+      width: "100%",
+      height: 100,
+      borderRadius: 8,
+      marginBottom: 6,
+    },
+    wardrobeName: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    moneyStat: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    rupeeCircle: {
+      width: 30,
+      height: 30,
+      borderRadius: 18,
+      backgroundColor: "#ffffff",
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    rupeeSymbol: {
+      fontSize: 18,
+      fontWeight: "800",
+      color: colors.primary,
+    },
+    moneyValue: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: "#ffffff",
+    },
+  });

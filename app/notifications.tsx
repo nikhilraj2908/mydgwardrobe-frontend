@@ -4,7 +4,7 @@ import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     FlatList,
     Image,
@@ -14,6 +14,8 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@/app/theme/ThemeContext";
+
 interface Notification {
     _id: string;
     message: string;
@@ -21,17 +23,22 @@ interface Notification {
     createdAt: string;
     item?: string;
     actor: {
+        _id?: string;
         username: string;
         photo?: string;
     };
+    type?: string;
 }
 
 export default function NotificationsScreen() {
     const router = useRouter();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
-    /* ================= LOAD ================= */
     const loadNotifications = async () => {
         const token = await AsyncStorage.getItem("token");
         if (!token) return;
@@ -44,7 +51,6 @@ export default function NotificationsScreen() {
         setUnreadCount(res.data.unreadCount);
     };
 
-    /* ================= MARK ALL ================= */
     const markAllRead = async () => {
         const token = await AsyncStorage.getItem("token");
         if (!token) return;
@@ -58,7 +64,6 @@ export default function NotificationsScreen() {
         loadNotifications();
     };
 
-    /* ================= MARK SINGLE ================= */
     const markSingleRead = async (id: string) => {
         const token = await AsyncStorage.getItem("token");
         if (!token) return;
@@ -69,7 +74,6 @@ export default function NotificationsScreen() {
             { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Optimistic UI update
         setNotifications((prev) =>
             prev.map((n) =>
                 n._id === id ? { ...n, read: true } : n
@@ -84,7 +88,6 @@ export default function NotificationsScreen() {
 
     const onBack = () => router.back();
 
-    /* ================= TIME FORMAT ================= */
     const formatNotificationTime = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -114,14 +117,13 @@ export default function NotificationsScreen() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top","bottom"]}>
             <AppBackground>
                 <View style={styles.container}>
-                    {/* ================= HEADER ================= */}
                     <View style={styles.header}>
                         <View style={styles.headerLeft}>
                             <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                                <Ionicons name="arrow-back" size={22} color="#000" />
+                                <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
                             </TouchableOpacity>
                             <Text style={styles.title}>Notifications</Text>
                         </View>
@@ -131,7 +133,6 @@ export default function NotificationsScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* ================= LIST ================= */}
                     <FlatList
                         data={notifications}
                         keyExtractor={(item) => item._id}
@@ -139,19 +140,16 @@ export default function NotificationsScreen() {
                             <TouchableOpacity
                                 activeOpacity={0.7}
                                 onPress={async () => {
-                                    // ✅ mark ONLY this notification
                                     if (!item.read) {
                                         await markSingleRead(item._id);
                                     }
                                     if (item.type === "follow") {
-                                        if (item.type === "follow" && item.actor?._id) {
+                                        if (item.actor?._id) {
                                             router.push(`/profile/${item.actor._id}`);
                                             return;
                                         }
                                         return;
                                     }
-
-                                    // 👉 navigate to item
                                     if (item.item) {
                                         if (item.type === "comment") {
                                             router.push({
@@ -173,7 +171,6 @@ export default function NotificationsScreen() {
                                         }
                                         style={styles.avatar}
                                     />
-
 
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.message}>
@@ -199,66 +196,67 @@ export default function NotificationsScreen() {
     );
 }
 
-/* ================= STYLES ================= */
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-        paddingTop: 0,
-    },
-
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 16,
-    },
-
-    headerLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-
-    backBtn: {
-        marginRight: 6,
-        padding: 4,
-    },
-
-    title: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#000",
-    },
-
-    mark: {
-        color: "#A855F7",
-        fontWeight: "600",
-        fontSize: 14,
-    },
-
-    card: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderColor: "#eee",
-    },
-
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 12,
-    },
-
-    name: { fontWeight: "700" },
-    message: { fontSize: 14 },
-    time: { fontSize: 12, color: "#999", marginTop: 4 },
-
-    unreadDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: "#A855F7",
-    },
-});
+const createStyles = (colors: any) =>
+    StyleSheet.create({
+        container: {
+            flex: 1,
+            padding: 16,
+            paddingTop: 0,
+        },
+        header: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 16,
+        },
+        headerLeft: {
+            flexDirection: "row",
+            alignItems: "center",
+        },
+        backBtn: {
+            marginRight: 6,
+            padding: 4,
+        },
+        title: {
+            fontSize: 18,
+            fontWeight: "700",
+            color: colors.textPrimary,
+        },
+        mark: {
+            color: colors.primary,
+            fontWeight: "600",
+            fontSize: 14,
+        },
+        card: {
+            flexDirection: "row",
+            alignItems: "center",
+            paddingVertical: 12,
+            borderBottomWidth: 1,
+            borderColor: colors.border,
+        },
+        avatar: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            marginRight: 12,
+        },
+        name: {
+            fontWeight: "700",
+            color: colors.textPrimary,
+        },
+        message: {
+            fontSize: 14,
+            color: colors.textSecondary,
+        },
+        time: {
+            fontSize: 12,
+            color: colors.textMuted,
+            marginTop: 4,
+        },
+        unreadDot: {
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: colors.primary,
+        },
+    });

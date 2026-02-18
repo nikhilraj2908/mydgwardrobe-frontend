@@ -1,19 +1,24 @@
 import AppBackground from '@/components/AppBackground';
 import WardrobeHeader from '@/components/WardrobeHeader';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { router } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '@/app/theme/ThemeContext';
 
 const HelpSupportPage = () => {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleBackNavigation = () => {
-    router.back(); // Use router.back() to navigate back to the previous page (Profile)
+    router.back();
   };
+
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
       <AppBackground>
-        <WardrobeHeader onBack={handleBackNavigation}/>
+        <WardrobeHeader onBack={handleBackNavigation} />
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.heading}>Help & Support</Text>
           <Text style={styles.introText}>
@@ -87,7 +92,7 @@ const HelpSupportPage = () => {
           </Text>
           <Text style={styles.text}>We’re always here to assist and resolve any problems you may face!</Text>
 
-          <TouchableOpacity style={styles.button} onPress={() => { router.push("/profile")  }}>
+          <TouchableOpacity style={styles.button} onPress={() => { router.push("/profile") }}>
             <Text style={styles.buttonText}>Back to Profile</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -96,49 +101,50 @@ const HelpSupportPage = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingBottom: 20, // Ensure space at the bottom for navigation bar
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4A4A4A',
-    marginBottom: 10,
-  },
-  introText: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4A4A4A',
-    marginTop: 20,
-  },
-  text: {
-    fontSize: 16,
-    color: '#555',
-    marginVertical: 5,
-  },
-  emailLink: {
-    fontSize: 16,
-    color: '#A855F7',
-    marginVertical: 10,
-  },
-  button: {
-    backgroundColor: '#A855F7',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 20,
-  },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontSize: 18,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      padding: 20,
+      paddingBottom: 20,
+    },
+    heading: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.textPrimary,
+      marginBottom: 10,
+    },
+    introText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginBottom: 20,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.textPrimary,
+      marginTop: 20,
+    },
+    text: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginVertical: 5,
+    },
+    emailLink: {
+      fontSize: 16,
+      color: colors.primary,
+      marginVertical: 10,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      padding: 10,
+      borderRadius: 5,
+      marginTop: 20,
+    },
+    buttonText: {
+      color: colors.textLight,
+      textAlign: 'center',
+      fontSize: 18,
+    },
+  });
 
 export default HelpSupportPage;

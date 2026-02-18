@@ -1,4 +1,4 @@
-import * as ImagePicker from "expo-image-picker";
+import ImagePicker from 'react-native-image-crop-picker';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
@@ -81,39 +81,41 @@ export default function AddStory() {
   // };
 
   const pickMedia = async () => {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== "granted") {
-    Alert.alert("Permission required", "Media access is needed");
-    return;
-  }
+    try {
+      const result = await ImagePicker.openPicker({
+        mediaType: 'any',          // images & videos
+        cropping: true,            // enable crop for images
+        freeStyleCropEnabled: true,// allow free crop
+        enableRotationGesture: true,
+        compressImageQuality: 0.6, // optional compression
+        videoMaxDuration: 15,      // limit video duration
+      });
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.All, // keeps both images & videos
-    quality: 0.4,                                 // your original compression
-    videoMaxDuration: 15,                         // original video limit
-    allowsEditing: true,                          // ✅ enables crop/trim
-    // aspect: [4, 5],                              // crop ratio (adjust as needed)
-    base64: false,                               // unchanged
-  });
+      if (result?.path) {
+        const fileObj = {
+          uri: result.path,
+          name: result.filename || `story_${Date.now()}.${result.mime?.split('/')[1] || 'jpg'}`,
+          type: result.mime || (result.path.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg'),
+          fileSize: result.size || 0,
+        };
 
-  if (!result.canceled && result.assets[0]) {
-    const asset = result.assets[0];
-    console.log("📸 Selected media:", {
-      uri: asset.uri,
-      type: asset.type,
-      mimeType: asset.mimeType,
-      fileName: asset.fileName,
-      fileSize: asset.fileSize,
-    });
-    setSelectedMedia(asset);
-  }
-};
+        console.log("📸 Selected media:", fileObj);
+        setSelectedMedia(fileObj);
+      }
+    } catch (err: any) {
+      if (err.code !== 'E_PICKER_CANCELLED') {
+        console.error('Media Picker Error:', err);
+        Alert.alert('Error', 'Failed to pick media. Try again.');
+      }
+    }
+  };
+
   /* ================= FIX: Create proper file object for React Native ================= */
   const createFormData = () => {
     if (!selectedMedia) return null;
 
     const formData = new FormData();
-    
+
     // Get file extension
     let fileExtension = 'jpg';
     if (selectedMedia.uri.includes('.mp4') || selectedMedia.type === 'video') {
@@ -125,16 +127,16 @@ export default function AddStory() {
     }
 
     // Create file name
-    const fileName = selectedMedia.fileName || 
+    const fileName = selectedMedia.fileName ||
       `story_${Date.now()}.${fileExtension}`;
 
     // Determine MIME type
     let mimeType = selectedMedia.mimeType;
     if (!mimeType) {
-      mimeType = selectedMedia.type === 'video' 
-        ? 'video/mp4' 
-        : selectedMedia.type === 'image' 
-          ? 'image/jpeg' 
+      mimeType = selectedMedia.type === 'video'
+        ? 'video/mp4'
+        : selectedMedia.type === 'image'
+          ? 'image/jpeg'
           : 'application/octet-stream';
     }
 
@@ -159,7 +161,7 @@ export default function AddStory() {
       Alert.alert("Not supported", "Story upload is available only on mobile");
       return;
     }
-    
+
     if (!selectedMedia) {
       Alert.alert("No Media", "Please select an image or video first");
       return;
@@ -204,7 +206,7 @@ export default function AddStory() {
       } catch (parseError) {
         console.error("❌ Failed to parse JSON:", parseError);
         console.error("Raw response was:", responseText);
-        
+
         // Check if it's an HTML error page
         if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
           throw new Error("Server returned HTML error page. Check backend logs.");
@@ -221,10 +223,10 @@ export default function AddStory() {
       router.back();
     } catch (err: any) {
       console.error("❌ Story upload failed:", err);
-      
+
       // More specific error messages
       let errorMessage = err.message || "Network error";
-      
+
       if (err.message.includes('Network request failed')) {
         errorMessage = "Network connection failed. Check your internet.";
       } else if (err.message.includes('JSON Parse')) {
@@ -232,7 +234,7 @@ export default function AddStory() {
       } else if (err.message.includes('HTML error page')) {
         errorMessage = "Server error. Please contact support.";
       }
-      
+
       Alert.alert("Upload Failed", errorMessage);
     } finally {
       setUploading(false);
@@ -241,107 +243,107 @@ export default function AddStory() {
 
   /* ================= UI ================= */
   return (
-    
+
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-    <AppBackground>
-    <View style={styles.container}>
-      <Text style={styles.title}>Add Story</Text>
+      <AppBackground>
+        <View style={styles.container}>
+          <Text style={styles.title}>Add Story</Text>
 
-      {networkError && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{networkError}</Text>
-        </View>
-      )}
+          {networkError && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{networkError}</Text>
+            </View>
+          )}
 
-      {/* Preview */}
-      <TouchableOpacity
-        style={styles.previewBox}
-        onPress={pickMedia}
-        disabled={uploading}
-      >
-        {selectedMedia ? (
-          <Image
-            source={{ uri: selectedMedia.uri }}
-            style={styles.previewImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderIcon}>📷</Text>
-            <Text style={styles.placeholderText}>
-              Tap to select Image or Video
-            </Text>
-            <Text style={styles.placeholderSubtext}>
-              (Max 15 seconds for videos)
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
+          {/* Preview */}
+          <TouchableOpacity
+            style={styles.previewBox}
+            onPress={pickMedia}
+            disabled={uploading}
+          >
+            {selectedMedia ? (
+              <Image
+                source={{ uri: selectedMedia.uri }}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.placeholderContainer}>
+                <Text style={styles.placeholderIcon}>📷</Text>
+                <Text style={styles.placeholderText}>
+                  Tap to select Image or Video
+                </Text>
+                <Text style={styles.placeholderSubtext}>
+                  (Max 15 seconds for videos)
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
-      {selectedMedia && (
-        <View style={styles.mediaInfo}>
-          <Text style={styles.mediaInfoText}>
-            Selected: {selectedMedia.type === 'video' ? 'Video' : 'Image'} • 
-            Size: {selectedMedia.fileSize ? `${Math.round(selectedMedia.fileSize / 1024)}KB` : 'Unknown'}
-          </Text>
-        </View>
-      )}
-
-      {/* Duration */}
-      <View style={styles.durationSection}>
-        <Text style={styles.durationLabel}>Story Duration:</Text>
-        <View style={styles.durationRow}>
-          {[5, 10, 15].map((d) => (
-            <TouchableOpacity
-              key={d}
-              style={[
-                styles.durationChip,
-                selectedDuration === d && styles.durationActive,
-              ]}
-              onPress={() => setSelectedDuration(d)}
-              disabled={uploading}
-            >
-              <Text
-                style={[
-                  styles.durationText,
-                  selectedDuration === d && styles.durationTextActive,
-                ]}
-              >
-                {d}s
+          {selectedMedia && (
+            <View style={styles.mediaInfo}>
+              <Text style={styles.mediaInfoText}>
+                Selected: {selectedMedia.type === 'video' ? 'Video' : 'Image'} •
+                Size: {selectedMedia.fileSize ? `${Math.round(selectedMedia.fileSize / 1024)}KB` : 'Unknown'}
               </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+            </View>
+          )}
 
-      {/* Upload Button */}
-      <TouchableOpacity
-        style={[
-          styles.uploadBtn,
-          (!selectedMedia || uploading) && styles.uploadBtnDisabled,
-        ]}
-        onPress={uploadStory}
-        disabled={!selectedMedia || uploading}
-      >
-        {uploading ? (
-          <View style={styles.uploadingContainer}>
-            <ActivityIndicator color="#fff" size="small" />
-            <Text style={styles.uploadingText}>Uploading...</Text>
+          {/* Duration */}
+          <View style={styles.durationSection}>
+            <Text style={styles.durationLabel}>Story Duration:</Text>
+            <View style={styles.durationRow}>
+              {[5, 10, 15].map((d) => (
+                <TouchableOpacity
+                  key={d}
+                  style={[
+                    styles.durationChip,
+                    selectedDuration === d && styles.durationActive,
+                  ]}
+                  onPress={() => setSelectedDuration(d)}
+                  disabled={uploading}
+                >
+                  <Text
+                    style={[
+                      styles.durationText,
+                      selectedDuration === d && styles.durationTextActive,
+                    ]}
+                  >
+                    {d}s
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        ) : (
-          <Text style={styles.uploadText}>Share Story</Text>
-        )}
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.cancelBtn}
-        onPress={() => router.back()}
-        disabled={uploading}
-      >
-        <Text style={styles.cancelText}>Cancel</Text>
-      </TouchableOpacity>
-    </View>
-    </AppBackground>  
+          {/* Upload Button */}
+          <TouchableOpacity
+            style={[
+              styles.uploadBtn,
+              (!selectedMedia || uploading) && styles.uploadBtnDisabled,
+            ]}
+            onPress={uploadStory}
+            disabled={!selectedMedia || uploading}
+          >
+            {uploading ? (
+              <View style={styles.uploadingContainer}>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.uploadingText}>Uploading...</Text>
+              </View>
+            ) : (
+              <Text style={styles.uploadText}>Share Story</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={() => router.back()}
+            disabled={uploading}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </AppBackground>
     </SafeAreaView>
   );
 }
@@ -350,7 +352,7 @@ export default function AddStory() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    
+
     padding: 20,
   },
   title: {

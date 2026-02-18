@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Alert,
   ScrollView,
@@ -13,6 +13,7 @@ import {
 import api from "../../api/api";
 import AppBackground from "@/components/AppBackground";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@/app/theme/ThemeContext";
 
 interface Wardrobe {
   _id: string;
@@ -24,24 +25,21 @@ interface Wardrobe {
 
 export default function AllWardrobesScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [wardrobes, setWardrobes] = useState<Wardrobe[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectionMode = selectedIds.length > 0;
-
 
   const selectedWardrobe =
     selectedIds.length === 1
       ? wardrobes.find(w => w._id === selectedIds[0])
       : null;
 
-
-  /* ===============================
-     FETCH
-  ================================ */
   const fetchWardrobes = async () => {
     try {
       setLoading(true);
@@ -61,9 +59,6 @@ export default function AllWardrobesScreen() {
     fetchWardrobes();
   }, []);
 
-  /* ===============================
-     SELECTION HANDLERS
-  ================================ */
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -86,9 +81,6 @@ export default function AllWardrobesScreen() {
 
   const cancelSelection = () => setSelectedIds([]);
 
-  /* ===============================
-     DELETE CONFIRMATION
-  ================================ */
   const confirmDelete = () => {
     const isSingle = selectedIds.length === 1;
 
@@ -108,9 +100,6 @@ export default function AllWardrobesScreen() {
     );
   };
 
-  /* ===============================
-     DELETE APIs
-  ================================ */
   const deleteSingleWardrobe = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -138,28 +127,21 @@ export default function AllWardrobesScreen() {
     }
   };
 
-  /* ===============================
-     UI HELPERS
-  ================================ */
   const formatPrice = (price: number) => {
     if (price >= 100000) return `₹${(price / 100000).toFixed(1)}L`;
     if (price >= 1000) return `₹${(price / 1000).toFixed(1)}K`;
     return `₹${price}`;
   };
 
-  /* ===============================
-     RENDER
-  ================================ */
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top","bottom"]}>
       <AppBackground>
         <View style={styles.container}>
-          {/* HEADER */}
           <View style={styles.header}>
             {!selectionMode ? (
               <>
                 <TouchableOpacity onPress={() => router.back()}>
-                  <Ionicons name="arrow-back-outline" size={24} />
+                  <Ionicons name="arrow-back-outline" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>All Wardrobes</Text>
                 <View style={{ width: 24 }} />
@@ -183,14 +165,14 @@ export default function AllWardrobesScreen() {
                         })
                       }
                     >
-                      <Ionicons name="create-outline" size={22} />
+                      <Ionicons name="create-outline" size={22} color={colors.primary} />
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={confirmDelete}>
-                    <Ionicons name="trash-outline" size={22} color="red" />
+                    <Ionicons name="trash-outline" size={22} color={colors.danger} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={cancelSelection}>
-                    <Ionicons name="close-outline" size={22} />
+                    <Ionicons name="close-outline" size={22} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
               </>
@@ -223,7 +205,7 @@ export default function AllWardrobesScreen() {
                   <View
                     style={[
                       styles.colorBox,
-                      { backgroundColor: w.color || "#A855F7" },
+                      { backgroundColor: w.color || colors.primary },
                     ]}
                   />
                   <View style={{ flex: 1, marginLeft: 12 }}>
@@ -232,15 +214,15 @@ export default function AllWardrobesScreen() {
                       {w.itemCount || 0} items
                     </Text>
                   </View>
-                  <Text>{formatPrice(w.totalWorth)}</Text>
+                  <Text style={styles.priceText}>{formatPrice(w.totalWorth)}</Text>
                   {selectionMode ? (
                     <Ionicons
                       name={selected ? "checkmark-circle" : "ellipse-outline"}
                       size={22}
-                      color="#A855F7"
+                      color={colors.primary}
                     />
                   ) : (
-                    <Ionicons name="chevron-forward-outline" size={22} />
+                    <Ionicons name="chevron-forward-outline" size={22} color={colors.textMuted} />
                   )}
                 </TouchableOpacity>
               );
@@ -249,49 +231,71 @@ export default function AllWardrobesScreen() {
         </View>
       </AppBackground>
     </SafeAreaView>
-      );
+  );
 }
 
-      /* ===============================
-         STYLES
-      ================================ */
-      const styles = StyleSheet.create({
-        container: {flex: 1},
-      header: {
-        
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
       paddingHorizontal: 16,
       paddingBottom: 12,
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       borderBottomWidth: 1,
-      borderBottomColor: "#eee",
-  },
-      headerTitle: {fontSize: 18, fontWeight: "700" },
-      scrollView: {padding: 16 },
-      addWardrobeBtn: {
-        borderWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    scrollView: {
+      padding: 16,
+    },
+    addWardrobeBtn: {
+      borderWidth: 1,
       borderStyle: "dashed",
-      borderColor: "#D8B4FE",
+      borderColor: colors.primary,
       borderRadius: 20,
       padding: 14,
       alignItems: "center",
       marginBottom: 16,
-  },
-      addWardrobeText: {color: "#A855F7", fontWeight: "600" },
-      wardrobeCard: {
-        flexDirection: "row",
+    },
+    addWardrobeText: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    wardrobeCard: {
+      flexDirection: "row",
       alignItems: "center",
       borderRadius: 16,
       padding: 12,
       marginBottom: 12,
-      backgroundColor: "#F3E8FF",
-  },
-      selectedCard: {
-        borderWidth: 2,
-      borderColor: "#A855F7",
-  },
-      colorBox: {width: 40, height: 40, borderRadius: 8 },
-      wardrobeName: {fontWeight: "700" },
-      itemsCount: {color: "#777", marginTop: 4 },
-});
+      backgroundColor: colors.card,
+    },
+    selectedCard: {
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    colorBox: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+    },
+    wardrobeName: {
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    itemsCount: {
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    priceText: {
+      color: colors.textPrimary,
+      marginRight: 8,
+    },
+  });

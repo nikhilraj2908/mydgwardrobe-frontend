@@ -3,7 +3,7 @@ import AppBackground from "@/components/AppBackground";
 import WardrobeHeader from "@/components/WardrobeHeader";
 import { useFollow } from "@/context/FollowContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -15,12 +15,17 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
+import { useTheme } from "@/app/theme/ThemeContext";
+
 const baseURL = api.defaults.baseURL;
 
 export default function FollowersPage() {
   const { userId, tab = "followers" } = useLocalSearchParams();
   const router = useRouter();
   const { isFollowing, toggleFollow, ready } = useFollow();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [activeTab, setActiveTab] = useState<"followers" | "following">(
     tab as any
@@ -33,15 +38,15 @@ export default function FollowersPage() {
       fetchUsers();
     }
   }, [activeTab, ready]);
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const res = await api.get(`/api/follow/${activeTab}/${userId}`);
       const cleanUsers = (res.data || []).filter(
-  (u: any) => u && u._id
-);
-
-setUsers(cleanUsers);
+        (u: any) => u && u._id
+      );
+      setUsers(cleanUsers);
     } catch (err) {
       console.log("Failed to load followers", err);
     } finally {
@@ -49,56 +54,59 @@ setUsers(cleanUsers);
     }
   };
 
- const renderItem = ({ item }: any) => {
-  if (!item || !item._id) return null;
+  const renderItem = ({ item }: any) => {
+    if (!item || !item._id) return null;
 
-  const followed = ready ? isFollowing(item._id) : false;
+    const followed = ready ? isFollowing(item._id) : false;
 
-  return (
-    <TouchableOpacity
-      style={styles.userRow}
-      onPress={() => router.push(`/profile/${item._id}`)}
-      activeOpacity={0.8}
-    >
-      <Image
-        source={{
-          uri: item.photo
-            ? resolveImageUrl(item.photo)
-            : "https://ui-avatars.com/api/?name=User&background=random",
-        }}
-        style={styles.avatar}
-      />
+    return (
+      <TouchableOpacity
+        style={styles.userRow}
+        onPress={() => router.push(`/profile/${item._id}`)}
+        activeOpacity={0.8}
+      >
+        <Image
+          source={{
+            uri: item.photo
+              ? resolveImageUrl(item.photo)
+              : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  item.username || "User"
+                )}&background=${colors.primary.replace(
+                  "#",
+                  ""
+                )}&color=${colors.textPrimary.replace("#", "")}`,
+          }}
+          style={styles.avatar}
+        />
 
-      <View style={styles.userInfo}>
-        <Text style={styles.username}>
-          {item.username || "Deleted user"}
-        </Text>
-        <Text style={styles.bio} numberOfLines={1}>
-          {item.bio || "No bio"}
-        </Text>
-      </View>
-
-      {ready && (
-        <TouchableOpacity
-          style={[
-            styles.followBtn,
-            followed && styles.followingBtn,
-          ]}
-          onPress={() => toggleFollow(item._id)}
-        >
-          <Text style={styles.followText}>
-            {followed ? "Following" : "Follow"}
+        <View style={styles.userInfo}>
+          <Text style={styles.username}>
+            {item.username || "Deleted user"}
           </Text>
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
-  );
-};
+          <Text style={styles.bio} numberOfLines={1}>
+            {item.bio || "No bio"}
+          </Text>
+        </View>
 
+        {ready && (
+          <TouchableOpacity
+            style={[
+              styles.followBtn,
+              followed && styles.followingBtn,
+            ]}
+            onPress={() => toggleFollow(item._id)}
+          >
+            <Text style={styles.followText}>
+              {followed ? "Following" : "Follow"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top","bottom"]}>
       <AppBackground>
         <View style={styles.container}>
           {/* ✅ HEADER */}
@@ -133,12 +141,13 @@ setUsers(cleanUsers);
           {/* ✅ LIST */}
           {loading ? (
             <View style={styles.loader}>
-              <ActivityIndicator size="large" color="#A855F7" />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : (
             <FlatList
               data={users}
-keyExtractor={(item, index) => item?._id || index.toString()}              renderItem={renderItem}
+              keyExtractor={(item, index) => item?._id || index.toString()}
+              renderItem={renderItem}
               contentContainerStyle={{ paddingBottom: 30 }}
               showsVerticalScrollIndicator={false}
             />
@@ -146,96 +155,95 @@ keyExtractor={(item, index) => item?._id || index.toString()}              rende
         </View>
       </AppBackground>
     </SafeAreaView>
-
   );
 }
 
 /* ================= STYLES ================= */
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#ffffff71",
-  },
+    /* Tabs */
+    tabs: {
+      flexDirection: "row",
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 8,
+      backgroundColor: colors.card,
+      borderRadius: 24,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    activeTab: {
+      backgroundColor: colors.primary,
+      borderRadius: 24,
+    },
+    tabText: {
+      fontWeight: "600",
+      color: colors.textPrimary,
+      fontSize: 13,
+    },
+    activeTabText: {
+      color: colors.textPrimary,
+    },
 
-  /* Tabs */
-  tabs: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    backgroundColor: "#F3E8FF",
-    borderRadius: 24,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  activeTab: {
-    backgroundColor: "#A855F7",
-    borderRadius: 24,
-  },
-  tabText: {
-    fontWeight: "600",
-    color: "#7C3AED",
-    fontSize: 13,
-  },
-  activeTabText: {
-    color: "#fff",
-  },
+    /* Loader */
+    loader: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
 
-  /* Loader */
-  loader: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    /* User row */
+    userRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+    },
+    avatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      marginRight: 12,
+      backgroundColor: colors.surface,
+    },
+    userInfo: {
+      flex: 1,
+      marginRight: 10,
+    },
+    username: {
+      fontWeight: "700",
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    bio: {
+      color: colors.textMuted,
+      fontSize: 13,
+      marginTop: 2,
+    },
 
-  /* User row */
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-    backgroundColor: "#eee",
-  },
-  userInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  username: {
-    fontWeight: "700",
-    fontSize: 15,
-    color: "#111",
-  },
-  bio: {
-    color: "#777",
-    fontSize: 13,
-    marginTop: 2,
-  },
-
-  /* Follow button */
-  followBtn: {
-    backgroundColor: "#A855F7",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  followingBtn: {
-    backgroundColor: "#7C3AED",
-  },
-  followText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-});
+    /* Follow button */
+    followBtn: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 16,
+    },
+    followingBtn: {
+      backgroundColor: colors.middary,
+    },
+    followText: {
+      color: colors.textPrimary, // will be white in dark, dark purple in light – okay on primary background
+      fontWeight: "600",
+      fontSize: 13,
+    },
+  });

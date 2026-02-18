@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from "expo-router";
 
 import AppBackground from "@/components/AppBackground";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -23,6 +23,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../../api/api";
 import { useFollow } from "../../../context/FollowContext";
 import { useSavedItems } from "../../../context/SavedItemsContext";
+import { useTheme } from "@/app/theme/ThemeContext";
+
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 export default function ItemDetails() {
@@ -30,6 +32,10 @@ export default function ItemDetails() {
         id: string;
         openComments?: string;
     }>();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const [item, setItem] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [likes, setLikes] = useState(0);
@@ -45,18 +51,10 @@ export default function ItemDetails() {
     const { isFollowing, toggleFollow, ready } = useFollow();
     const [activeIndex, setActiveIndex] = useState(0);
 
-    // const [isFollowing, setIsFollowing] = useState(false);
-    // const [followLoading, setFollowLoading] = useState(false);
-    // const [isSelf, setIsSelf] = useState(false);
-
-
-
-
     const handleFollowToggle = async () => {
         if (!ownerId || isSelf) return;
         await toggleFollow(String(ownerId));
     };
-
 
     const fetchCurrentUser = async () => {
         try {
@@ -68,7 +66,6 @@ export default function ItemDetails() {
     };
     const { toggleSave, savedItemIds } = useSavedItems();
 
-    //   const saved = savedItemIds.includes(item._id);
     const fetchComments = async () => {
         try {
             const res = await api.get(`/api/comment/${id}`);
@@ -83,9 +80,7 @@ export default function ItemDetails() {
         if (openComments === "true") {
             setShowComments(true);
         }
-
     }, [openComments]);
-
 
     useEffect(() => {
         fetchItemDetails();
@@ -94,6 +89,7 @@ export default function ItemDetails() {
     useEffect(() => {
         fetchCurrentUser();
     }, []);
+
     const canDeleteComment = (comment: any) => {
         if (!currentUser || !item) return false;
 
@@ -110,11 +106,11 @@ export default function ItemDetails() {
                 : String(item.user?._id);
 
         return (
-            commentUserId === currentUserId || // comment owner
-            itemOwnerId === currentUserId      // item owner
+            commentUserId === currentUserId ||
+            itemOwnerId === currentUserId
         );
-
     };
+
     const handleDeleteComment = async () => {
         if (!selectedComment) return;
 
@@ -132,7 +128,6 @@ export default function ItemDetails() {
             Alert.alert("Error", "Unable to delete comment");
         }
     };
-
 
     const handleComment = async () => {
         if (!commentText.trim()) return;
@@ -171,9 +166,6 @@ export default function ItemDetails() {
         }
     };
 
-
-
-
     const fetchItemDetails = async () => {
         await fetchComments();
         try {
@@ -183,13 +175,14 @@ export default function ItemDetails() {
             const likeRes = await api.get(`/api/like/item/${id}/count`);
             setLikes(likeRes.data.count || 0);
 
-            await fetchLikeStatus(); // ✅ ADD THIS
+            await fetchLikeStatus();
         } catch (err) {
             console.log("Item fetch failed", err);
         } finally {
             setLoading(false);
         }
     };
+
     const handleLike = async () => {
         try {
             setActionLoading(true);
@@ -230,12 +223,10 @@ export default function ItemDetails() {
         }
     };
 
-
-
     if (loading) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#A855F7" />
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         );
     }
@@ -243,10 +234,11 @@ export default function ItemDetails() {
     if (!item) {
         return (
             <View style={styles.center}>
-                <Text>Item not found</Text>
+                <Text style={{ color: colors.textPrimary }}>Item not found</Text>
             </View>
         );
     }
+
     const ownerId =
         typeof item.user === "string"
             ? item.user
@@ -259,22 +251,16 @@ export default function ItemDetails() {
 
     const followed =
         ready && ownerId ? isFollowing(String(ownerId)) : false;
-    // ✅ SAFE — item exists here
+
     const saved = savedItemIds.includes(item._id);
 
     const formatCommentTime = (dateString: string) => {
         const date = new Date(dateString);
-
         return date.toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
         });
     };
-
-
-
-
-
 
     const images: string[] =
         Array.isArray(item.images) && item.images.length > 0
@@ -282,15 +268,14 @@ export default function ItemDetails() {
                 .map((img: string) => resolveImageUrl(img))
                 .filter(Boolean) as string[]
             : [];
-    return (
 
-        <SafeAreaView style={{ flex: 1 }} edges={["top","bottom"]}>
+    return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top","bottom"]}>
             <AppBackground>
                 <View style={styles.container}>
                     <WardrobeHeader title="Item Details" onBack={() => router.back()} />
 
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        {/* IMAGE */}
                         {/* OWNER */}
                         <View style={styles.itemHeaderContainer}>
                             <View style={styles.ownerTopRow}>
@@ -304,11 +289,10 @@ export default function ItemDetails() {
                                                 uri: resolveImageUrl(item.user.photo) ??
                                                     `https://ui-avatars.com/api/?name=${encodeURIComponent(
                                                         item.user?.username || "User"
-                                                    )}&background=E9D5FF&color=6B21A8&size=128`
+                                                    )}&background=${colors.primary.replace("#", "")}&color=${colors.primaryDark.replace("#", "")}&size=128`
                                             }}
                                             style={styles.ownerAvatar}
                                         />
-
                                     ) : (
                                         <View style={styles.ownerAvatarFallback}>
                                             <Text style={styles.ownerInitial}>
@@ -337,7 +321,7 @@ export default function ItemDetails() {
                                         <Ionicons
                                             name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
                                             size={16}
-                                            color="#fff"
+                                            color={colors.primaryDark}
                                         />
                                         <Text style={styles.followText}>
                                             {isSelf ? "You" : followed ? "Following" : "Follow"}
@@ -346,6 +330,8 @@ export default function ItemDetails() {
                                 )}
                             </View>
                         </View>
+
+                        {/* IMAGE */}
                         <View style={styles.imageCard}>
                             {images.length > 0 ? (
                                 <ScrollView
@@ -363,14 +349,11 @@ export default function ItemDetails() {
                                 </ScrollView>
                             ) : (
                                 <View style={[styles.image, styles.noImage]}>
-                                    <Ionicons name="image-outline" size={60} color="#ccc" />
-                                    <Text style={{ color: "#999", marginTop: 8 }}>No images</Text>
+                                    <Ionicons name="image-outline" size={60} color={colors.textMuted} />
+                                    <Text style={{ color: colors.textMuted, marginTop: 8 }}>No images</Text>
                                 </View>
                             )}
                         </View>
-
-
-
 
                         {/* ACTIONS */}
                         <View style={styles.actionRow}>
@@ -381,10 +364,10 @@ export default function ItemDetails() {
                                         source={require("../../../assets/icons/like.png")}
                                         style={[
                                             styles.actionImageIcon,
-                                            liked && { tintColor: "#A855F7" },
+                                            liked && { tintColor: colors.primary },
                                         ]}
                                     />
-                                    <Text>{likes}</Text>
+                                    <Text style={{ color: colors.textPrimary }}>{likes}</Text>
                                 </TouchableOpacity>
 
                                 {/* COMMENT */}
@@ -396,7 +379,7 @@ export default function ItemDetails() {
                                         source={require("../../../assets/icons/comment.png")}
                                         style={styles.actionImageIcon}
                                     />
-                                    <Text>{commentCount}</Text>
+                                    <Text style={{ color: colors.textPrimary }}>{commentCount}</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -410,7 +393,7 @@ export default function ItemDetails() {
                                     }
                                     style={[
                                         styles.actionImageIconbookmark,
-                                        saved && { tintColor: "#A855F7" },
+                                        saved && { tintColor: colors.primary },
                                     ]}
                                 />
                             </TouchableOpacity>
@@ -433,15 +416,17 @@ export default function ItemDetails() {
                             </View>
                         </View>
                     </ScrollView>
+
+                    {/* COMMENTS MODAL */}
                     <Modal
                         visible={showComments}
                         animationType="slide"
                         onRequestClose={() => setShowComments(false)}
                     >
-                        <View style={styles.modalContainer}>
-                            <View style={styles.modalHeader}>
+                        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+                            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
                                 <TouchableOpacity onPress={() => setShowComments(false)}>
-                                    <Ionicons name="arrow-back" size={24} />
+                                    <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                                 </TouchableOpacity>
                                 <Text style={styles.modalTitle}>Comments</Text>
                                 <View style={{ width: 24 }} />
@@ -449,34 +434,29 @@ export default function ItemDetails() {
 
                             <ScrollView contentContainerStyle={styles.commentsList}>
                                 {comments.map((comment) => (
-
                                     <View key={comment._id} style={styles.commentItem}>
                                         <View style={styles.commentUser}>
-                                            {/* Avatar */}
                                             {comment.user?.photo ? (
                                                 <Image
                                                     source={{
                                                         uri: resolveImageUrl(comment.user.photo) ??
                                                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
                                                                 comment.user?.username || "User"
-                                                            )}&background=E9D5FF&color=6B21A8&size=128`
+                                                            )}&background=${colors.primary.replace("#", "")}&color=${colors.primaryDark.replace("#", "")}&size=128`
                                                     }}
                                                     style={styles.commentAvatar}
                                                 />
-
                                             ) : (
-                                                <View style={styles.commentAvatarPlaceholder}>
-                                                    <Text style={styles.commentInitial}>
+                                                <View style={[styles.commentAvatarPlaceholder, { backgroundColor: colors.card }]}>
+                                                    <Text style={[styles.commentInitial, { color: colors.primary }]}>
                                                         {comment.user?.username?.charAt(0).toUpperCase() || "U"}
                                                     </Text>
                                                 </View>
-
                                             )}
 
-                                            {/* Content */}
                                             <View style={styles.commentContent}>
                                                 <View style={styles.commentHeaderRow}>
-                                                    <Text style={styles.commentUsername}>
+                                                    <Text style={[styles.commentUsername, { color: colors.textPrimary }]}>
                                                         {comment.user?.username || "User"}
                                                     </Text>
 
@@ -487,37 +467,40 @@ export default function ItemDetails() {
                                                                 setShowCommentActions(true);
                                                             }}
                                                         >
-                                                            <Ionicons name="ellipsis-vertical" size={16} />
+                                                            <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
                                                         </TouchableOpacity>
                                                     )}
                                                 </View>
 
-                                                <Text style={styles.commentText}>{comment.text}</Text>
+                                                <Text style={[styles.commentText, { color: colors.textSecondary }]}>
+                                                    {comment.text}
+                                                </Text>
 
-                                                <Text style={styles.commentTime}>
+                                                <Text style={[styles.commentTime, { color: colors.textMuted }]}>
                                                     {formatCommentTime(comment.createdAt)}
                                                 </Text>
                                             </View>
                                         </View>
                                     </View>
                                 ))}
-
-
                             </ScrollView>
 
-                            <View style={styles.modalCommentInput}>
+                            <View style={[styles.modalCommentInput, { borderTopColor: colors.border }]}>
                                 <TextInput
                                     placeholder="Add a comment..."
+                                    placeholderTextColor={colors.textMuted}
                                     value={commentText}
                                     onChangeText={setCommentText}
-                                    style={styles.modalInput}
+                                    style={[styles.modalInput, { color: colors.textPrimary, borderColor: colors.border }]}
                                 />
                                 <TouchableOpacity onPress={handleComment}>
-                                    <Ionicons name="send" size={22} color="#A855F7" />
+                                    <Ionicons name="send" size={22} color={colors.primary} />
                                 </TouchableOpacity>
                             </View>
                         </View>
                     </Modal>
+
+                    {/* COMMENT ACTIONS MODAL */}
                     <Modal
                         transparent
                         visible={showCommentActions}
@@ -525,10 +508,10 @@ export default function ItemDetails() {
                         onRequestClose={() => setShowCommentActions(false)}
                     >
                         <TouchableOpacity
-                            style={styles.overlay}
+                            style={[styles.overlay, { backgroundColor: colors.overlay }]}
                             onPress={() => setShowCommentActions(false)}
                         >
-                            <View style={styles.actionSheet}>
+                            <View style={[styles.actionSheet, { backgroundColor: colors.surface }]}>
                                 <TouchableOpacity
                                     style={styles.deleteBtn}
                                     onPress={() => {
@@ -542,373 +525,312 @@ export default function ItemDetails() {
                                         );
                                     }}
                                 >
-                                    <Text style={styles.deleteText}>Delete</Text>
+                                    <Text style={[styles.deleteText, { color: colors.danger }]}>Delete</Text>
                                 </TouchableOpacity>
                             </View>
                         </TouchableOpacity>
                     </Modal>
-
                 </View>
-            </AppBackground >
+            </AppBackground>
         </SafeAreaView>
     );
-} const styles = StyleSheet.create({
-    container: { flex: 1 },
-    center: { flex: 1, justifyContent: "center", alignItems: "center" },
-    itemHeaderContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 14,
-        paddingBottom: 6,
-    },
-    followingBtn: {
-        backgroundColor: "#7C3AED",
-    },
+}
 
-    disabledBtn: {
-        opacity: 0.6,
-    },
-
-
-
-    actionRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        padding: 16,
-    },
-
-    actionBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-    },
-    actionImageIcon: {
-        width: 30,
-        height: 30,
-        resizeMode: "contain",
-    },
-    actionImageIconbookmark: {
-        width: 25,
-        height: 25,
-        resizeMode: "contain",
-    },
-    details: {
-        paddingHorizontal: 16,
-        paddingBottom: 40,
-    },
-
-    brand: {
-        fontSize: 14,
-        color: "#888",
-        fontWeight: "600",
-    },
-
-    title: {
-        fontSize: 22,
-        fontWeight: "700",
-        marginVertical: 6,
-    },
-
-    price: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#9b5cff",
-        marginBottom: 16,
-    },
-
-    descTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        marginBottom: 6,
-    },
-
-    desc: {
-        fontSize: 15,
-        color: "#555",
-        lineHeight: 22,
-    },
-
-    metaRow: {
-        marginTop: 16,
-    },
-
-    meta: {
-        fontSize: 13,
-        color: "#777",
-    },
-
-    leftActions: {
-        flexDirection: "row",
-        gap: 14,
-    },
-    // Modal Styles
-    modalContainer: {
-        flex: 1,
-        backgroundColor: "#FFF",
-    },
-
-    modalHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
-    },
-
-    backButton: {
-        padding: 4,
-    },
-
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#000",
-    },
-
-    commentsList: {
-        padding: 16,
-    },
-
-    commentItem: {
-        marginBottom: 16,
-    },
-
-    commentUser: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-    },
-
-    commentAvatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        marginRight: 10,
-    },
-
-    commentAvatarPlaceholder: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: "#E9D5FF",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 10,
-    },
-
-    commentInitial: {
-        fontWeight: "600",
-        color: "#6B21A8",
-        fontSize: 14,
-    },
-
-    commentContent: {
-        flex: 1,
-    },
-
-    commentUsername: {
-        fontWeight: "600",
-        fontSize: 14,
-        color: "#000",
-        marginBottom: 2,
-    },
-
-    commentText: {
-        fontSize: 14,
-        color: "#333",
-        lineHeight: 18,
-        marginBottom: 2,
-    },
-
-    commentTime: {
-        fontSize: 12,
-        color: "#888",
-    },
-
-    modalCommentInput: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: "#f0f0f0",
-        backgroundColor: "#fff",
-    },
-
-    modalUserAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        marginRight: 12,
-    },
-
-    modalUserAvatarPlaceholder: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: "#E9D5FF",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 12,
-    },
-
-    modalUserInitial: {
-        fontWeight: "600",
-        color: "#6B21A8",
-        fontSize: 16,
-    },
-
-    modalInput: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: "#DDD",
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        fontSize: 15,
-        color: "#000",
-    },
-
-    modalSendButton: {
-        paddingLeft: 12,
-        paddingRight: 4,
-    },
-    commentHeaderRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-
-    overlay: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.4)",
-        justifyContent: "flex-end",
-    },
-
-    actionSheet: {
-        backgroundColor: "#fff",
-        padding: 16,
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
-    },
-
-    deleteBtn: {
-        paddingVertical: 14,
-    },
-
-    deleteText: {
-        color: "#EF4444",
-        fontSize: 16,
-        fontWeight: "600",
-        textAlign: "center",
-    },
-
-    /* OWNER ROW */
-    ownerTopRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-
-    ownerLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-
-    ownerAvatar: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-    },
-
-    ownerAvatarFallback: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        backgroundColor: "#A855F7",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-
-    ownerInitial: {
-        color: "#fff",
-        fontWeight: "700",
-        fontSize: 16,
-    },
-
-    ownerUsername: {
-        fontWeight: "700",
-        fontSize: 14,
-        color: "#000",
-    },
-
-    ownerSub: {
-        fontSize: 12,
-        color: "#777",
-    },
-
-    /* FOLLOW */
-    followBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#A855F7",
-        paddingHorizontal: 14,
-        paddingVertical: 6,
-        borderRadius: 20,
-        gap: 6,
-    },
-
-    followText: {
-        color: "#fff",
-        fontWeight: "600",
-        fontSize: 13,
-    },
-    imageSlider: {
-        marginTop: 20,
-    },
-
-    noImage: {
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f5f5f5",
-    },
-
-    dotsContainer: {
-        flexDirection: "row",
-        justifyContent: "center",
-        marginTop: 10,
-    },
-
-    dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: "#ddd",
-        marginHorizontal: 4,
-    },
-
-    activeDot: {
-        backgroundColor: "#A855F7",
-    },
-imageCard: {
-  backgroundColor: "#fff",
-  marginHorizontal: 12,
-  overflow: "hidden",
-
-  // subtle depth
-  shadowColor: "#000",
-  shadowOpacity: 0.08,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 4,
-},
-
-image: {
-  width: SCREEN_WIDTH - 24, // align with margins
-  height: 420,
-  resizeMode: "contain",
-  backgroundColor: "#fff", // IMPORTANT
-},
-
-});
-
+const createStyles = (colors: any) =>
+    StyleSheet.create({
+        container: { flex: 1 },
+        center: { flex: 1, justifyContent: "center", alignItems: "center" },
+        itemHeaderContainer: {
+            paddingHorizontal: 16,
+            paddingTop: 14,
+            paddingBottom: 6,
+        },
+        followingBtn: {
+            backgroundColor: colors.primaryDark,
+        },
+        disabledBtn: {
+            opacity: 0.6,
+        },
+        actionRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            padding: 16,
+        },
+        actionBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+        },
+        actionImageIcon: {
+            width: 30,
+            height: 30,
+            resizeMode: "contain",
+            tintColor: colors.textMuted,
+        },
+        actionImageIconbookmark: {
+            width: 25,
+            height: 25,
+            resizeMode: "contain",
+            tintColor: colors.textMuted,
+        },
+        details: {
+            paddingHorizontal: 16,
+            paddingBottom: 40,
+        },
+        brand: {
+            fontSize: 14,
+            color: colors.textMuted,
+            fontWeight: "600",
+        },
+        title: {
+            fontSize: 22,
+            fontWeight: "700",
+            marginVertical: 6,
+            color: colors.textPrimary,
+        },
+        price: {
+            fontSize: 20,
+            fontWeight: "700",
+            color: colors.primary,
+            marginBottom: 16,
+        },
+        descTitle: {
+            fontSize: 16,
+            fontWeight: "600",
+            marginBottom: 6,
+            color: colors.textPrimary,
+        },
+        desc: {
+            fontSize: 15,
+            color: colors.textSecondary,
+            lineHeight: 22,
+        },
+        metaRow: {
+            marginTop: 16,
+        },
+        meta: {
+            fontSize: 13,
+            color: colors.textMuted,
+        },
+        leftActions: {
+            flexDirection: "row",
+            gap: 14,
+        },
+        // Modal Styles
+        modalContainer: {
+            flex: 1,
+        },
+        modalHeader: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: 16,
+            borderBottomWidth: 1,
+        },
+        backButton: {
+            padding: 4,
+        },
+        modalTitle: {
+            fontSize: 18,
+            fontWeight: "600",
+            color: colors.textPrimary,
+        },
+        commentsList: {
+            padding: 16,
+        },
+        commentItem: {
+            marginBottom: 16,
+        },
+        commentUser: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+        },
+        commentAvatar: {
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            marginRight: 10,
+        },
+        commentAvatarPlaceholder: {
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            justifyContent: "center",
+            alignItems: "center",
+            marginRight: 10,
+        },
+        commentInitial: {
+            fontWeight: "600",
+            fontSize: 14,
+        },
+        commentContent: {
+            flex: 1,
+        },
+        commentUsername: {
+            fontWeight: "600",
+            fontSize: 14,
+            marginBottom: 2,
+        },
+        commentText: {
+            fontSize: 14,
+            lineHeight: 18,
+            marginBottom: 2,
+        },
+        commentTime: {
+            fontSize: 12,
+        },
+        modalCommentInput: {
+            flexDirection: "row",
+            alignItems: "center",
+            padding: 16,
+            borderTopWidth: 1,
+            backgroundColor: colors.background,
+        },
+        modalUserAvatar: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            marginRight: 12,
+        },
+        modalUserAvatarPlaceholder: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: colors.card,
+            justifyContent: "center",
+            alignItems: "center",
+            marginRight: 12,
+        },
+        modalUserInitial: {
+            fontWeight: "600",
+            color: colors.primary,
+            fontSize: 16,
+        },
+        modalInput: {
+            flex: 1,
+            borderWidth: 1,
+            borderRadius: 20,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            fontSize: 15,
+        },
+        modalSendButton: {
+            paddingLeft: 12,
+            paddingRight: 4,
+        },
+        commentHeaderRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+        },
+        overlay: {
+            flex: 1,
+            justifyContent: "flex-end",
+        },
+        actionSheet: {
+            padding: 16,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+        },
+        deleteBtn: {
+            paddingVertical: 14,
+        },
+        deleteText: {
+            fontSize: 16,
+            fontWeight: "600",
+            textAlign: "center",
+        },
+        /* OWNER ROW */
+        ownerTopRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+        },
+        ownerLeft: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+        },
+        ownerAvatar: {
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+        },
+        ownerAvatarFallback: {
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: colors.primary,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        ownerInitial: {
+            color: colors.primaryDark,
+            fontWeight: "700",
+            fontSize: 16,
+        },
+        ownerUsername: {
+            fontWeight: "700",
+            fontSize: 14,
+            color: colors.textPrimary,
+        },
+        ownerSub: {
+            fontSize: 12,
+            color: colors.textMuted,
+        },
+        /* FOLLOW */
+        followBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: colors.primary,
+            paddingHorizontal: 14,
+            paddingVertical: 6,
+            borderRadius: 20,
+            gap: 6,
+        },
+        followText: {
+            color: colors.primaryDark,
+            fontWeight: "600",
+            fontSize: 13,
+        },
+        imageSlider: {
+            marginTop: 20,
+        },
+        noImage: {
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: colors.surface,
+        },
+        dotsContainer: {
+            flexDirection: "row",
+            justifyContent: "center",
+            marginTop: 10,
+        },
+        dot: {
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: colors.border,
+            marginHorizontal: 4,
+        },
+        activeDot: {
+            backgroundColor: colors.primary,
+        },
+        imageCard: {
+            backgroundColor: colors.surface,
+            marginHorizontal: 12,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 4,
+        },
+        image: {
+            width: SCREEN_WIDTH - 24,
+            height: 420,
+            resizeMode: "contain",
+            backgroundColor: colors.surface,
+        },
+    });

@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from "expo-image-picker";
+import ImagePicker from "react-native-image-crop-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useTheme } from "@/app/theme/ThemeContext";
+
 import {
     ActivityIndicator,
     Alert,
@@ -18,9 +20,8 @@ import {
     View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-// ✅ Import centralized axios instance
 import AppBackground from "@/components/AppBackground";
-import api from "../../api/api"; // adjust path if needed
+import api from "../../api/api";
 
 // Type definition for Category
 interface Category {
@@ -37,21 +38,13 @@ const DEFAULT_CATEGORIES = {
         "T-Shirts", "Shirts", "Jeans", "Trousers", "Shorts", "Jackets", "Blazers",
         "Sweaters", "Hoodies", "Suits", "Formal Wear", "Casual Wear", "Sportswear",
         "Underwear", "Socks", "Pajamas", "Swimwear", "Coats", "Raincoats", "Vests",
-        // "Polo Shirts", "Tank Tops", "Cardigans", "Joggers", "Cargos", "Chinos",
-        // "Denim Jackets", "Leather Jackets", "Track Pants", "Thermals", "Kurtas",
-        // "Sherwanis", "Dhotis", "Traditional Wear", "Accessories"
     ],
     womens: [
         "Tops", "Blouses", "T-Shirts", "Shirts", "Jeans", "Trousers", "Leggings",
         "Skirts", "Dresses", "Gowns", "Jackets", "Blazers", "Sweaters", "Cardigans",
         "Hoodies", "Suits", "Formal Wear", "Casual Wear", "Sportswear", "Lingerie",
-        // "Bras", "Panties", "Socks", "Stockings", "Pajamas", "Nightwear", "Swimwear",
-        // "Bikinis", "Coats", "Raincoats", "Vests", "Tank Tops", "Jumpsuits", "Rompers",
-        // "Palazzos", "Capris", "Shorts", "Sarees", "Lehengas", "Salwar Suits",
-        // "Kurtis", "Anarkalis", "Blouse", "Traditional Wear", "Accessories"
     ]
 };
-
 
 const CATEGORY_ICONS = {
     mens: {
@@ -93,7 +86,6 @@ const CATEGORY_ICONS = {
         casualwear: require("../../assets/categories/mens/CasualWear.png"),
         tshirts: require("../../assets/categories/mens/T-Shirts.png"),
     },
-
     womens: {
         accessories: require("../../assets/categories/womens/Accessories.png"),
         anarkalis: require("../../assets/categories/womens/Anarkali.png"),
@@ -139,30 +131,25 @@ const CATEGORY_ICONS = {
         vests: require("../../assets/categories/womens/Vest.png"),
         tops: require("../../assets/categories/womens/Top.png"),
         skirts: require("../../assets/categories/womens/Skirt.png"),
-
     },
-
     unisex: {},
-
 };
 
 const normalizeCategoryKey = (name: string) =>
-    name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
+    name.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export default function AddWardrobe() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    // const [image, setImage] = useState<any>(null);
     type ImageItem = {
         uri: string;
         isRemote: boolean;
-        fileName?: string | null;   // ✅ allow null
+        fileName?: string | null;
         mimeType?: string;
     };
-
-    const SERVER = "https://api.digiwardrobe.com"; // or your ENV base
+    const { theme } = useTheme();
+    const colors = theme.colors;
+    const SERVER = "https://api.digiwardrobe.com";
     const [images, setImages] = useState<ImageItem[]>([]);
     const [category, setCategory] = useState("");
     const [customCategory, setCustomCategory] = useState("");
@@ -176,7 +163,6 @@ export default function AddWardrobe() {
     const [useBgRemoval, setUseBgRemoval] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // State for dropdowns
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [showWardrobeDropdown, setShowWardrobeDropdown] = useState(false);
     const [userWardrobes, setUserWardrobes] = useState<string[]>([]);
@@ -184,7 +170,6 @@ export default function AddWardrobe() {
     const [showOtherWardrobeInput, setShowOtherWardrobeInput] = useState(false);
     const [showOtherCategoryInput, setShowOtherCategoryInput] = useState(false);
 
-    // Category API states
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
@@ -195,43 +180,43 @@ export default function AddWardrobe() {
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const mode = (params.mode as "create" | "edit") || "create";
     const itemId = params.itemId as string | undefined;
+    const styles = React.useMemo(() => createStyles(colors), [colors]);
 
     const isEdit = mode === "edit" && !!itemId;
+
     useFocusEffect(
         useCallback(() => {
             return () => {
-                // Only reset form if we're NOT in edit mode
                 if (!isEdit) {
                     resetForm();
                 }
             };
-        }, [isEdit]) // Add isEdit as dependency
+        }, [isEdit])
     );
-useEffect(() => {
-  if (params.editedUri) {
-    setImages(prev => [
-      ...prev,
-      {
-        uri: params.editedUri as string,
-        isRemote: false,
-        fileName: `edited_${Date.now()}.jpg`,
-        mimeType: "image/jpeg",
-      },
-    ]);
-  }
-}, [params.editedUri]);
+
+    useEffect(() => {
+        if (params.editedUri) {
+            setImages(prev => [
+                ...prev,
+                {
+                    uri: params.editedUri as string,
+                    isRemote: false,
+                    fileName: `edited_${Date.now()}.jpg`,
+                    mimeType: "image/jpeg",
+                },
+            ]);
+        }
+    }, [params.editedUri]);
+
     useEffect(() => {
         if (!isEdit) return;
-
         const fetchItem = async () => {
             try {
                 setLoading(true);
                 const token = await AsyncStorage.getItem("token");
-
                 const res = await api.get(`/api/wardrobe/item/${itemId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-
                 const item = res.data;
 
                 if (item.category && typeof item.category === "object") {
@@ -239,7 +224,6 @@ useEffect(() => {
                     setCategory(item.category.name);
                     setCategoryType(item.category.type);
                 }
-
 
                 setWardrobe(
                     typeof item.wardrobe === "string"
@@ -252,12 +236,10 @@ useEffect(() => {
                 setDescription(item.description || "");
                 setAccessLevel(item.accessLevel || "normal");
 
-                // ✅ Convert DB images[] => ImageItem[]
                 const dbImages: ImageItem[] = (item.images || []).map((p: string) => ({
                     uri: normalizeImageUrl(p),
                     isRemote: true,
                 }));
-
                 setImages(dbImages);
             } catch (e) {
                 Alert.alert("Error", "Failed to load item");
@@ -265,21 +247,13 @@ useEffect(() => {
                 setLoading(false);
             }
         };
-
         fetchItem();
     }, [isEdit, itemId]);
 
     const getCategoryIcon = (item: Category) => {
         const key = normalizeCategoryKey(item.name);
-
-        if (item.type === "mens" && CATEGORY_ICONS.mens[key]) {
-            return CATEGORY_ICONS.mens[key];
-        }
-
-        if (item.type === "womens" && CATEGORY_ICONS.womens[key]) {
-            return CATEGORY_ICONS.womens[key];
-        }
-
+        if (item.type === "mens" && CATEGORY_ICONS.mens[key]) return CATEGORY_ICONS.mens[key];
+        if (item.type === "womens" && CATEGORY_ICONS.womens[key]) return CATEGORY_ICONS.womens[key];
         return null;
     };
 
@@ -299,10 +273,9 @@ useEffect(() => {
                     {icon ? (
                         <Image source={icon} style={styles.categoryIcon} />
                     ) : (
-                        <Ionicons name="shirt-outline" size={28} color="#A855F7" />
+                        <Ionicons name="shirt-outline" size={28} color={colors.primary} />
                     )}
                 </View>
-
                 <Text style={styles.categoryCardText} numberOfLines={1}>
                     {item.name}
                 </Text>
@@ -310,24 +283,18 @@ useEffect(() => {
         );
     };
 
-    /* ================= FETCH CATEGORIES ================= */
     const fetchCategories = async () => {
         try {
             setLoadingCategories(true);
-
             const token = await AsyncStorage.getItem("token");
-
             const [exploreRes, userRes] = await Promise.all([
-                api.get("/api/categories"), // scope: explore
+                api.get("/api/categories"),
                 api.get("/api/categories/user", {
                     headers: { Authorization: `Bearer ${token}` },
                 }),
             ]);
-
             setExploreCategories(exploreRes.data || []);
             setUserCategories(userRes.data || []);
-
-            // used only for search
             setFilteredCategories([
                 ...(exploreRes.data || []),
                 ...(userRes.data || []),
@@ -339,36 +306,24 @@ useEffect(() => {
         }
     };
 
-
-    /* ================= CREATE NEW CATEGORY ================= */
     const createNewCategory = async (categoryName: string, type: "mens" | "womens" | "unisex") => {
         try {
             const token = await AsyncStorage.getItem("token");
             if (!token) {
-
                 Alert.alert("Error", "Please login to create categories");
                 return null;
             }
-
             const response = await api.post(
                 "/api/categories",
                 { name: categoryName, type },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
-
             if (response.data) {
-                // Add the new category to the local state
-                // const newCategory = response.data.category || response.data;
-                await fetchCategories(); // always source from backend
-                // return newCategory;
+                await fetchCategories();
                 return response.data.category || response.data;
             }
         } catch (error: any) {
             console.error("Error creating category:", error);
-
-            // Check if it's a duplicate error (409 or similar)
             if (error.response?.status === 409) {
                 Alert.alert("Category exists", "This category already exists.");
             } else {
@@ -378,7 +333,6 @@ useEffect(() => {
         }
     };
 
-    /* ================= DELETE CATEGORY ================= */
     const handleDeleteCategory = async (categoryId: string) => {
         Alert.alert(
             "Delete Category",
@@ -395,18 +349,12 @@ useEffect(() => {
                                 Alert.alert("Error", "Please login to delete categories");
                                 return;
                             }
-
                             await api.delete(`/api/categories/${categoryId}`, {
                                 headers: { Authorization: `Bearer ${token}` },
                             });
-
-                            // Remove from local state
                             setExploreCategories(prev => prev.filter(cat => cat._id !== categoryId));
                             setUserCategories(prev => prev.filter(cat => cat._id !== categoryId));
-
                             setFilteredCategories(prev => prev.filter(cat => cat._id !== categoryId));
-
-
                             Alert.alert("Success", "Category deleted successfully");
                         } catch (error: any) {
                             console.error("Error deleting category:", error);
@@ -418,10 +366,9 @@ useEffect(() => {
         );
     };
 
-    /* ================= FETCH USER'S WARDROBES ================= */
     useEffect(() => {
         fetchUserWardrobes();
-        fetchCategories(); // Fetch categories on component mount
+        fetchCategories();
     }, []);
 
     const fetchUserWardrobes = async () => {
@@ -429,11 +376,9 @@ useEffect(() => {
             setLoadingWardrobes(true);
             const token = await AsyncStorage.getItem("token");
             if (!token) return;
-
             const response = await api.get("/api/wardrobe/list", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
             if (response.data?.wardrobes) {
                 const wardrobeNames = response.data.wardrobes.map((w: any) => w.name);
                 setUserWardrobes(wardrobeNames);
@@ -445,65 +390,56 @@ useEffect(() => {
         }
     };
 
-    /* ================= SEARCH CATEGORIES ================= */
     const handleSearch = (query: string) => {
         setSearchQuery(query);
         if (query.trim() === "") {
-            setFilteredCategories([
-                ...exploreCategories,
-                ...userCategories,
-            ]);
+            setFilteredCategories([...exploreCategories, ...userCategories]);
         } else {
             const allCategories = [...exploreCategories, ...userCategories];
-
             const filtered = allCategories.filter(cat =>
                 cat.name.toLowerCase().includes(query.toLowerCase())
             );
-
-            setFilteredCategories(filtered);
-
             setFilteredCategories(filtered);
         }
     };
 
-    /* ================= IMAGE PICKERS ================= */
-    // const pickFromGallery = async () => {
-    //     const res = await ImagePicker.launchImageLibraryAsync({
-    //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    //         allowsEditing: true,   // ✅ crop enabled
-    //         aspect: [4, 5],        // Instagram-style
-    //         quality: 0.9,
-    //     });
-
-    //     if (!res.canceled && res.assets.length > 0) {
-    //         const a = res.assets[0]; // take first image for editing
-
-    //         router.push({
-    //             pathname: "/image-editor",
-    //             params: { uri: a.uri },
-    //         });
-    //     }
-
-    // };
+    const MAX_IMAGES = 5;
 
     const pickFromGallery = async () => {
-        const res = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,   // ✅ crop enabled
-            // aspect: [4, 5],       
-            quality: 0.9,
-        });
-
-        if (!res.canceled) {
-            setImages(prev => [
-                ...prev,
-                ...res.assets.map(a => ({
-                    uri: a.uri,
+        try {
+            if (images.length >= MAX_IMAGES) {
+                Alert.alert("Limit reached", `You can upload only ${MAX_IMAGES} images.`);
+                return;
+            }
+            const selected = await ImagePicker.openPicker({
+                multiple: true,
+                cropping: false,
+                mediaType: "photo",
+            });
+            const arr = Array.isArray(selected) ? selected : [selected];
+            const remaining = MAX_IMAGES - images.length;
+            const limited = arr.slice(0, remaining);
+            const croppedImages = [];
+            for (const img of limited) {
+                const cropped = await ImagePicker.openCropper({
+                    path: img.path,
+                    mediaType: "photo",
+                    freeStyleCropEnabled: true,
+                    enableRotationGesture: true,
+                    compressImageQuality: 0.6,
+                });
+                croppedImages.push({
+                    uri: cropped.path,
                     isRemote: false,
-                    fileName: a.fileName,
-                    mimeType: a.mimeType,
-                })),
-            ]);
+                    fileName: cropped.filename || cropped.path.split("/").pop() || `gallery_${Date.now()}.jpg`,
+                    mimeType: cropped.mime || "image/jpeg",
+                });
+            }
+            setImages(prev => [...prev, ...croppedImages]);
+        } catch (err: any) {
+            if (err.code !== "E_PICKER_CANCELLED") {
+                console.log("Gallery error:", err);
+            }
         }
     };
 
@@ -513,71 +449,50 @@ useEffect(() => {
         return `https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com/${path}`;
     };
 
-
-
-    // const pickFromCamera = async () => {
-    //     const res = await ImagePicker.launchCameraAsync({
-    //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    //         quality: 0.8,
-    //     });
-
-    //     if (!res.canceled && res.assets?.length) {
-    //         const a = res.assets[0];
-
-    //         router.push({
-    //             pathname: "/image-editor",
-    //             params: { uri: a.uri },
-    //         });
-    //     }
-
-    // };
-
     const pickFromCamera = async () => {
-        const res = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.8,
-             allowsEditing: true, 
-        });
-
-        if (!res.canceled && res.assets?.length) {
-            const a = res.assets[0];
+        try {
+            if (images.length >= 5) {
+                Alert.alert("Limit reached", "You can upload only 5 images.");
+                return;
+            }
+            const img = await ImagePicker.openCamera({
+                cropping: true,
+                freeStyleCropEnabled: true,
+                enableRotationGesture: true,
+                compressImageQuality: 0.6,
+            });
             setImages(prev => [
                 ...prev,
                 {
-                    uri: a.uri,
+                    uri: img.path,
                     isRemote: false,
-                    fileName: a.fileName ?? `camera_${Date.now()}.jpg`,
-                    mimeType: a.mimeType ?? "image/jpeg",
+                    fileName: img.filename || img.path.split("/").pop() || `camera_${Date.now()}.jpg`,
+                    mimeType: img.mime || "image/jpeg",
                 },
             ]);
+        } catch (err: any) {
+            if (err.code !== "E_PICKER_CANCELLED") {
+                console.log("Camera error:", err);
+            }
         }
     };
-
-
 
     const resetForm = () => {
         setImages([]);
         setCategory("");
         setCustomCategory("");
         setCategoryType("unisex");
-
         setWardrobe("");
         setCustomWardrobe("");
-
         setPrice("");
         setBrand("");
         setDescription("");
         setVisibility("private");
-
-
         setShowOtherCategoryInput(false);
         setShowOtherWardrobeInput(false);
-
         setSearchQuery("");
     };
 
-
-    /* ================= CATEGORY SELECTION ================= */
     const handleCategorySelect = (item: Category | "other") => {
         if (item === "other") {
             setShowOtherCategoryInput(true);
@@ -586,16 +501,13 @@ useEffect(() => {
             setShowCategoryDropdown(false);
             return;
         }
-
-        setSelectedCategory(item);       // ✅ STORE FULL OBJECT
-        setCategory(item.name);          // UI display only
-        setCategoryType(item.type);      // sync type
+        setSelectedCategory(item);
+        setCategory(item.name);
+        setCategoryType(item.type);
         setShowOtherCategoryInput(false);
         setShowCategoryDropdown(false);
     };
 
-
-    /* ================= WARDROBE SELECTION ================= */
     const handleWardrobeSelect = (selectedWardrobe: string) => {
         if (selectedWardrobe === "other") {
             setShowOtherWardrobeInput(true);
@@ -608,24 +520,15 @@ useEffect(() => {
         }
     };
 
-    /* ================= SUBMIT ================= */
-    const getToken = async () => {
-        return await AsyncStorage.getItem("token");
-    };
-
     const handleSubmit = async () => {
         let finalCategory = category;
-
-        // Handle custom category if needed
         if (showOtherCategoryInput && customCategory) {
             const newCategory = await createNewCategory(customCategory, categoryType);
             if (!newCategory) return;
             setSelectedCategory(newCategory);
             finalCategory = newCategory._id;
         }
-
         const finalWardrobe = showOtherWardrobeInput && customWardrobe ? customWardrobe : wardrobe;
-
         if (images.length === 0 || !finalCategory || !finalWardrobe) {
             Alert.alert("Error", "At least one image, category & wardrobe are required");
             return;
@@ -642,71 +545,35 @@ useEffect(() => {
             const formData = new FormData();
 
             if (isEdit) {
-                // EDIT MODE
-
-                // 1. Extract existing image paths (S3 keys)
                 const existingImages = images.filter(img => img.isRemote);
                 const newImages = images.filter(img => !img.isRemote);
 
-                console.log("📊 Edit mode breakdown:", {
-                    existing: existingImages.length,
-                    new: newImages.length
-                });
-
-                // ✅ FIX: Send existingImages as JSON array string
                 if (existingImages.length > 0) {
                     const existingPaths = existingImages.map((img) => {
                         let path = img.uri;
-
-                        // Extract S3 key from URL
-                        // From: https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com/wardrobe/1769078556458-237275586.jpg
-                        // To: wardrobe/1769078556458-237275586.jpg
                         if (path.includes("s3.ap-south-1.amazonaws.com")) {
                             const urlParts = path.split('.com/');
-                            if (urlParts.length > 1) {
-                                path = urlParts[1]; // "wardrobe/1769078556458-237275586.jpg"
-                            }
+                            if (urlParts.length > 1) path = urlParts[1];
                         } else if (path.startsWith(SERVER)) {
-                            // Handle local server paths (just in case)
                             path = path.replace(SERVER, "");
-                            if (path.startsWith("/")) {
-                                path = path.substring(1);
-                            }
+                            if (path.startsWith("/")) path = path.substring(1);
                         }
-
                         return path;
                     });
-
-                    console.log("📸 Existing paths array:", existingPaths);
-
-                    // ✅ CRITICAL FIX: Send as JSON string array (exactly what backend expects)
                     formData.append("existingImages", JSON.stringify(existingPaths));
                 }
 
-                // 2. Append new images as files (if any)
                 newImages.forEach((img, index) => {
-                    const cleanUri = Platform.OS === "ios"
-                        ? img.uri.replace("file://", "")
-                        : img.uri;
-
-                    console.log(`📸 New image ${index}:`, cleanUri);
-
+                    const cleanUri = Platform.OS === "ios" ? img.uri.replace("file://", "") : img.uri;
                     formData.append("images", {
                         uri: cleanUri,
                         name: img.fileName || `wardrobe_${Date.now()}_${index}.jpg`,
                         type: img.mimeType || "image/jpeg",
                     } as any);
                 });
-
             } else {
-                // ADD MODE: Send all images as files
                 images.forEach((img, index) => {
-                    const cleanUri = Platform.OS === "ios"
-                        ? img.uri.replace("file://", "")
-                        : img.uri;
-
-                    console.log(`📸 Adding image ${index}:`, cleanUri);
-
+                    const cleanUri = Platform.OS === "ios" ? img.uri.replace("file://", "") : img.uri;
                     formData.append("images", {
                         uri: cleanUri,
                         name: img.fileName || `wardrobe_${Date.now()}_${index}.jpg`,
@@ -715,7 +582,6 @@ useEffect(() => {
                 });
             }
 
-            // ✅ Append other fields
             if (!selectedCategory) {
                 Alert.alert("Error", "Please select a valid category");
                 return;
@@ -731,88 +597,36 @@ useEffect(() => {
             formData.append("gender", selectedCategory.type);
             if (description.trim()) formData.append("description", description.trim());
 
-            // ✅ Log for debugging
-            console.log("📤 Submitting form data:");
-            console.log("- Mode:", isEdit ? "EDIT" : "ADD");
-            console.log("- Category:", finalCategory);
-            console.log("- Wardrobe:", finalWardrobe);
-            console.log("- Price:", price || "0");
-            console.log("- Brand:", brand);
-            console.log("- Visibility:", visibility);
-            console.log("- Total images:", images.length);
-            console.log("- Existing images:", images.filter(img => img.isRemote).length);
-            console.log("- New images:", images.filter(img => !img.isRemote).length);
-
-            // Debug: Log FormData entries
-            console.log("🔍 FormData entries:");
-            for (let pair of formData.entries()) {
-                const [key, value] = pair;
-                if (value && typeof value === 'object' && value.uri) {
-                    console.log(key, "File:", value.uri);
-                } else if (key === "existingImages") {
-                    console.log(key, "JSON String:", value);
-                    console.log("Parsed:", JSON.parse(value as string));
-                } else {
-                    console.log(key, ":", value);
-                }
-            }
-
-            // ✅ Choose the right endpoint
-            let url;
-            let method;
-
+            let url, method;
             if (isEdit && itemId) {
-                // EDIT mode - use PUT
                 url = `${SERVER}/api/wardrobe/item/${itemId}`;
                 method = "PUT";
-                console.log(`🔄 EDIT mode - Updating item ${itemId}`);
             } else {
-                // ADD mode
                 url = `${SERVER}/api/wardrobe/add`;
                 method = "POST";
-                console.log("➕ ADD mode - Creating new item");
             }
 
-            console.log(`🚀 Making ${method} request to: ${url}`);
-
-            // ✅ Make the request using fetch with proper headers
             const response = await fetch(url, {
-                method: method,
+                method,
                 headers: {
                     Authorization: `Bearer ${token}`,
                     Accept: "application/json",
-                    // DO NOT set Content-Type for FormData - let React Native handle it
                 },
                 body: formData,
             });
 
-            // ✅ Handle response
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error("❌ Server error response:", {
-                    status: response.status,
-                    statusText: response.statusText,
-                    errorText: errorText
-                });
-
                 let errorMessage = `Server error: ${response.status}`;
                 try {
                     const errorData = JSON.parse(errorText);
-                    if (errorData.message) {
-                        errorMessage = errorData.message;
-                    } else if (errorData.error) {
-                        errorMessage = errorData.error;
-                    }
-                } catch (e) {
-                    console.log("Error response is not JSON:", errorText);
-                }
-
+                    if (errorData.message) errorMessage = errorData.message;
+                    else if (errorData.error) errorMessage = errorData.error;
+                } catch (e) {}
                 throw new Error(errorMessage);
             }
 
             const data = await response.json();
-            console.log("✅ Success! Response:", data);
-
             Alert.alert(
                 "Success",
                 isEdit ? "Item updated successfully!" : "Item added successfully!",
@@ -820,9 +634,8 @@ useEffect(() => {
                     {
                         text: "OK",
                         onPress: async () => {
-                            await fetchUserWardrobes(); // 🔥 FORCE REFRESH
+                            await fetchUserWardrobes();
                             resetForm();
-
                             if (router.canGoBack()) {
                                 router.back();
                             } else {
@@ -832,38 +645,25 @@ useEffect(() => {
                     },
                 ]
             );
-
-
         } catch (err: any) {
-            console.error("❌ Upload error details:", {
-                message: err.message,
-                stack: err.stack
-            });
-
-            // More specific error message
+            console.error("❌ Upload error details:", err);
             let errorMessage = err.message || "Something went wrong. Please try again.";
-
             if (err.message.includes("Invalid existingImages format")) {
                 errorMessage = "Image format error. Please try removing and re-adding images.";
             } else if (err.message.includes("500") || err.message.includes("Server error")) {
                 errorMessage = "Server error. Please try again in a few moments.";
             }
-
             Alert.alert("Error", errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
-
-
-    /* ================= RENDER CATEGORY ITEM ================= */
     const renderCategoryItem = ({ item }: { item: Category }) => (
         <TouchableOpacity
             style={styles.dropdownItem}
             onPress={() => handleCategorySelect(item)}
             onLongPress={() => {
-                // Only allow deletion for non-default categories
                 if (userCategories.some(c => c._id === item._id)) {
                     handleDeleteCategory(item._id);
                 }
@@ -872,7 +672,7 @@ useEffect(() => {
             <View style={styles.categoryItemContent}>
                 <Text style={styles.dropdownItemText}>{item.name}</Text>
                 {!item._id.startsWith('default-') && (
-                    <Ionicons name="trash-outline" size={16} color="#FF3B30" style={styles.deleteIcon} />
+                    <Ionicons name="trash-outline" size={16} color={colors.danger} style={styles.deleteIcon} />
                 )}
             </View>
             <View style={[
@@ -889,23 +689,19 @@ useEffect(() => {
         </TouchableOpacity>
     );
 
-    /* ================= RENDER CATEGORY SECTION ================= */
     const renderCategorySection = (
         title: string,
         data: Category[],
         typeFilter: "mens" | "womens" | "unisex"
     ) => {
         const sectionData = data.filter(c => c.type === typeFilter);
-
         if (sectionData.length === 0) return null;
-
         return (
             <View style={{ marginBottom: 16 }}>
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionHeaderText}>{title}</Text>
                     <Text style={styles.sectionCount}>{sectionData.length} items</Text>
                 </View>
-
                 <FlatList
                     data={sectionData}
                     keyExtractor={(item) => item._id}
@@ -918,21 +714,17 @@ useEffect(() => {
         );
     };
 
-
-    /* ================= HANDLE CREATE CUSTOM CATEGORY ================= */
     const handleCreateCustomCategory = async () => {
         if (!customCategory.trim()) {
             Alert.alert("Error", "Please enter a category name");
             return;
         }
-
         const newCategory = await createNewCategory(customCategory, categoryType);
         if (newCategory) {
             setSelectedCategory(newCategory);
             setCategory(newCategory.name);
             setCategoryType(newCategory.type);
             Alert.alert("Success", "Category created successfully!");
-
             setShowOtherCategoryInput(false);
         }
     };
@@ -940,103 +732,53 @@ useEffect(() => {
     return (
         <AppBackground>
             <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-                {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => {
-                        if (router.canGoBack()) {
-                            router.back();
-                        } else {
-                            router.replace("/home");
-                        }
+                        if (router.canGoBack()) router.back();
+                        else router.replace("/home");
                     }}>
-                        <Ionicons name="arrow-back" size={24} color="#333" />
+                        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <Text style={styles.title}>{isEdit ? "Edit Item" : "Add to Wardrobe"}</Text>
-
                     <View style={{ width: 24 }} />
                 </View>
 
-                {/* Upload */}
                 <View style={styles.uploadBox}>
                     {images.length > 0 ? (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             {images.map((img, index) => (
                                 <View key={index} style={{ position: "relative", marginRight: 8 }}>
                                     <Image source={{ uri: img.uri }} style={styles.preview} />
-
                                     <TouchableOpacity
                                         style={styles.removeIcon}
                                         onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}
                                     >
-                                        <Ionicons name="close-circle" size={22} color="#EF4444" />
+                                        <Ionicons name="close-circle" size={22} color={colors.danger} />
                                     </TouchableOpacity>
                                 </View>
                             ))}
-
                         </ScrollView>
                     ) : (
                         <>
                             <View style={styles.iconCircle}>
-                                <Ionicons name="camera-outline" size={26} color="#ffffffff" />
+                                <Ionicons name="camera-outline" size={26} color="#ffffff" />
                             </View>
                             <Text style={styles.uploadTitle}>Tap to Add Photo</Text>
-                            <Text style={styles.uploadSub}>
-                                Take a photo or choose from gallery
-                            </Text>
+                            <Text style={styles.uploadSub}>Take a photo or choose from gallery</Text>
                         </>
                     )}
-
                     <View style={styles.actionRow}>
                         <TouchableOpacity style={styles.actionBtn} onPress={pickFromCamera}>
-                            <Ionicons name="camera-outline" size={16} color="#A855F7" />
+                            <Ionicons name="camera-outline" size={16} color={colors.primary} />
                             <Text style={styles.actionText}>Camera</Text>
                         </TouchableOpacity>
-
                         <TouchableOpacity style={styles.actionBtn} onPress={pickFromGallery}>
-                            <Ionicons name="image-outline" size={16} color="#A855F7" />
+                            <Ionicons name="image-outline" size={16} color={colors.primary} />
                             <Text style={styles.actionText}>Gallery</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
-                {/* Background Removal Toggle */}
-                {/* <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Image Processing</Text>
 
-                    <View style={styles.visibilityRow}>
-                        <TouchableOpacity
-                            style={[
-                                styles.visibilityBtn,
-                                !useBgRemoval && styles.activeVisibility,
-                            ]}
-                            onPress={() => setUseBgRemoval(false)}
-                        >
-                            <Text style={{ color: !useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
-                                ORIGINAL
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[
-                                styles.visibilityBtn,
-                                useBgRemoval && styles.activeVisibility,
-                            ]}
-                            onPress={() => setUseBgRemoval(true)}
-                        >
-                            <Text style={{ color: useBgRemoval ? "#fff" : "#111", fontWeight: "600" }}>
-                                REMOVE BG
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {useBgRemoval && (
-                        <Text style={{ fontSize: 12, color: "#666", marginTop: 6 }}>
-                            Background will be removed using AI (may take a few seconds)
-                        </Text>
-                    )}
-                </View> */}
-
-
-                {/* Category Dropdown */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Category *</Text>
                     <TouchableOpacity
@@ -1046,21 +788,20 @@ useEffect(() => {
                         <Text style={category || showOtherCategoryInput ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
                             {showOtherCategoryInput ? "Other (type below)" : category || "Select Category"}
                         </Text>
-                        <Ionicons name="chevron-down-outline" size={20} color="#666" />
+                        <Ionicons name="chevron-down-outline" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
-                {/* Custom Category Input (when "other" is selected) */}
                 {showOtherCategoryInput && (
                     <View style={styles.customCategoryContainer}>
                         <Text style={styles.inputLabel}>Create New Category *</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter custom category name"
+                            placeholderTextColor={colors.textMuted}
                             value={customCategory}
                             onChangeText={setCustomCategory}
                         />
-
                         <Text style={[styles.inputLabel, { marginTop: 12 }]}>Category Type</Text>
                         <View style={styles.visibilityRow}>
                             {(["mens", "womens", "unisex"] as const).map((type) => (
@@ -1074,7 +815,7 @@ useEffect(() => {
                                 >
                                     <Text
                                         style={{
-                                            color: categoryType === type ? "#fff" : "#111",
+                                            color: categoryType === type ? colors.primaryDark : colors.textPrimary,
                                             fontWeight: "600",
                                         }}
                                     >
@@ -1083,7 +824,6 @@ useEffect(() => {
                                 </TouchableOpacity>
                             ))}
                         </View>
-
                         <TouchableOpacity
                             style={[styles.submitBtn, styles.createCategoryBtn]}
                             onPress={handleCreateCustomCategory}
@@ -1091,7 +831,6 @@ useEffect(() => {
                         >
                             <Text style={styles.submitText}>Create Category</Text>
                         </TouchableOpacity>
-
                         <TouchableOpacity
                             style={styles.cancelBtn}
                             onPress={() => {
@@ -1104,7 +843,6 @@ useEffect(() => {
                     </View>
                 )}
 
-                {/* Wardrobe Dropdown */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Wardrobe *</Text>
                     <TouchableOpacity
@@ -1114,61 +852,58 @@ useEffect(() => {
                         <Text style={wardrobe ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
                             {showOtherWardrobeInput ? "Other (type below)" : wardrobe || "Select Wardrobe"}
                         </Text>
-                        <Ionicons name="chevron-down-outline" size={20} color="#666" />
+                        <Ionicons name="chevron-down-outline" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
-                {/* Custom Wardrobe Input (when "other" is selected) */}
                 {showOtherWardrobeInput && (
                     <TextInput
                         style={styles.input}
                         placeholder="Enter new wardrobe name"
+                        placeholderTextColor={colors.textMuted}
                         value={customWardrobe}
                         onChangeText={setCustomWardrobe}
                     />
                 )}
 
-                {/* Price */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Price (Optional)</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="Enter price"
+                        placeholderTextColor={colors.textMuted}
                         keyboardType="numeric"
                         value={price}
                         onChangeText={setPrice}
                     />
                 </View>
 
-                {/* Brand */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Brand (Optional)</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="Enter brand name"
+                        placeholderTextColor={colors.textMuted}
                         value={brand}
                         onChangeText={setBrand}
                     />
                 </View>
+
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Description (Optional)</Text>
                     <TextInput
                         style={[styles.input, { height: 100 }]}
                         placeholder="Describe this item (fit, fabric, front/back, styling tips...)"
+                        placeholderTextColor={colors.textMuted}
                         multiline
                         value={description}
                         onChangeText={setDescription}
                     />
                 </View>
 
-
-
-                {/* Visibility */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Visibility</Text>
-
                     <View style={styles.visibilityRow}>
-                        {/* PRIVATE */}
                         <TouchableOpacity
                             style={[
                                 styles.visibilityBtn,
@@ -1176,20 +911,18 @@ useEffect(() => {
                             ]}
                             onPress={() => {
                                 setVisibility("private");
-                                setAccessLevel("normal"); // 🔥 force normal
+                                setAccessLevel("normal");
                             }}
                         >
                             <Text
                                 style={{
-                                    color: visibility === "private" ? "#fff" : "#111",
-                                    fontWeight: "600",
+                                    color: visibility === "private" ? colors.textPrimary : colors.textPrimary,
+                                    fontWeight: "500",
                                 }}
                             >
                                 PRIVATE
                             </Text>
                         </TouchableOpacity>
-
-                        {/* PUBLIC */}
                         <TouchableOpacity
                             style={[
                                 styles.visibilityBtn,
@@ -1202,35 +935,31 @@ useEffect(() => {
                         >
                             <Text
                                 style={{
-                                    color:
-                                        visibility === "public" && accessLevel === "normal"
-                                            ? "#fff"
-                                            : "#111",
-                                    fontWeight: "600",
+                                    color: visibility === "public" && accessLevel === "normal"
+                                        ? colors.textPrimary
+                                        : colors.textPrimary,
+                                    fontWeight: "500",
                                 }}
                             >
                                 PUBLIC
                             </Text>
                         </TouchableOpacity>
-
-                        {/* PREMIUM */}
                         <TouchableOpacity
                             style={[
                                 styles.visibilityBtn,
                                 visibility === "public" && accessLevel === "premium" && styles.activeVisibility,
                             ]}
                             onPress={() => {
-                                setVisibility("public");     // 🔥 auto public
-                                setAccessLevel("premium");   // 🔥 premium mode
+                                setVisibility("public");
+                                setAccessLevel("premium");
                             }}
                         >
                             <Text
                                 style={{
-                                    color:
-                                        visibility === "public" && accessLevel === "premium"
-                                            ? "#fff"
-                                            : "#111",
-                                    fontWeight: "600",
+                                    color: visibility === "public" && accessLevel === "premium"
+                                        ? colors.textPrimary
+                                        : colors.textPrimary,
+                                    fontWeight: "500",
                                 }}
                             >
                                 PREMIUM
@@ -1239,23 +968,18 @@ useEffect(() => {
                     </View>
                 </View>
 
-
-
-                {/* Submit */}
                 <TouchableOpacity
                     style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
                     onPress={handleSubmit}
                     disabled={loading}
                 >
                     {loading ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color={colors.primaryDark} />
                     ) : (
                         <Text style={styles.submitText}>{isEdit ? "Update Item" : "Add to Wardrobe"}</Text>
-
                     )}
                 </TouchableOpacity>
 
-                {/* Category Dropdown Modal */}
                 <Modal
                     visible={showCategoryDropdown}
                     animationType="slide"
@@ -1263,45 +987,37 @@ useEffect(() => {
                     onRequestClose={() => setShowCategoryDropdown(false)}
                 >
                     <View style={styles.modalOverlay}>
-                        <View
-                            style={[
-                                styles.modalContent,
-                                { paddingBottom: insets.bottom || 16 },
-                            ]}
-                        >
+                        <View style={[styles.modalContent, { paddingBottom: insets.bottom || 16 }]}>
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>Select Category</Text>
                                 <TouchableOpacity onPress={() => setShowCategoryDropdown(false)}>
-                                    <Ionicons name="close" size={24} color="#000" />
+                                    <Ionicons name="close" size={24} color={colors.textPrimary} />
                                 </TouchableOpacity>
                             </View>
-
-                            {/* Search Bar */}
                             <View style={styles.searchContainer}>
-                                <Ionicons name="search-outline" size={20} color="#666" />
+                                <Ionicons name="search-outline" size={20} color={colors.textMuted} />
                                 <TextInput
                                     style={styles.searchInput}
                                     placeholder="Search categories..."
+                                    placeholderTextColor={colors.textMuted}
                                     value={searchQuery}
                                     onChangeText={handleSearch}
                                     autoCapitalize="none"
                                 />
                                 {searchQuery.length > 0 && (
                                     <TouchableOpacity onPress={() => handleSearch("")}>
-                                        <Ionicons name="close-circle" size={20} color="#999" />
+                                        <Ionicons name="close-circle" size={20} color={colors.textMuted} />
                                     </TouchableOpacity>
                                 )}
                             </View>
-
                             {loadingCategories ? (
                                 <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color="#A855F7" />
+                                    <ActivityIndicator size="large" color={colors.primary} />
                                     <Text style={styles.loadingText}>Loading categories...</Text>
                                 </View>
                             ) : (
                                 <ScrollView style={styles.modalScrollView}>
                                     {searchQuery.length > 0 ? (
-                                        // Show filtered results when searching
                                         <View style={styles.searchResultsContainer}>
                                             <Text style={styles.searchResultsTitle}>
                                                 Search Results ({filteredCategories.length})
@@ -1321,7 +1037,7 @@ useEffect(() => {
                                                         <View style={styles.categoryItemContent}>
                                                             <Text style={styles.searchResultText}>{item.name}</Text>
                                                             {!item._id.startsWith('default-') && (
-                                                                <Ionicons name="trash-outline" size={16} color="#FF3B30" style={styles.deleteIcon} />
+                                                                <Ionicons name="trash-outline" size={16} color={colors.danger} style={styles.deleteIcon} />
                                                             )}
                                                         </View>
                                                         <View style={[
@@ -1339,48 +1055,40 @@ useEffect(() => {
                                                 ))
                                             ) : (
                                                 <View style={styles.noResultsContainer}>
-                                                    <Ionicons name="search-outline" size={48} color="#ccc" />
+                                                    <Ionicons name="search-outline" size={48} color={colors.textMuted} />
                                                     <Text style={styles.noResultsText}>No categories found</Text>
-                                                    <Text style={styles.noResultsSubText}>
-                                                        Try a different search term
-                                                    </Text>
+                                                    <Text style={styles.noResultsSubText}>Try a different search term</Text>
                                                 </View>
                                             )}
                                         </View>
                                     ) : (
-                                        // Show categorized view when not searching
                                         <>
                                             {renderCategorySection("Explore – Men", exploreCategories, "mens")}
                                             {renderCategorySection("Explore – Women", exploreCategories, "womens")}
-
                                             {userCategories.length > 0 && (
                                                 <>
                                                     {renderCategorySection("Others", userCategories, "mens")}
                                                     {renderCategorySection("Others", userCategories, "womens")}
                                                 </>
                                             )}
-
-                                            {/* Unisex Categories */}
                                             {exploreCategories.filter(cat => cat.type === 'unisex').length > 0 && (
                                                 renderCategorySection("Unisex Categories", exploreCategories, 'unisex')
                                             )}
                                         </>
                                     )}
-
-                                    {/* "Other" Option */}
                                     <TouchableOpacity
                                         key="other-category-option"
                                         style={styles.otherOption}
                                         onPress={() => handleCategorySelect("other")}
                                     >
                                         <View style={styles.otherIconContainer}>
-                                            <Ionicons name="add-circle-outline" size={24} color="#A855F7" />
+                                            <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
                                         </View>
                                         <View style={styles.otherTextContainer}>
                                             <Text style={styles.otherOptionTitle}>Other</Text>
                                             <Text style={styles.otherOptionSubtitle}>Create custom category</Text>
                                         </View>
-                                        <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+                                        <Ionicons name="chevron-forward-outline" size={20} color={colors.textMuted} />
                                     </TouchableOpacity>
                                 </ScrollView>
                             )}
@@ -1388,7 +1096,6 @@ useEffect(() => {
                     </View>
                 </Modal>
 
-                {/* Wardrobe Dropdown Modal */}
                 <Modal
                     visible={showWardrobeDropdown}
                     animationType="slide"
@@ -1396,28 +1103,20 @@ useEffect(() => {
                     onRequestClose={() => setShowWardrobeDropdown(false)}
                 >
                     <View style={styles.modalOverlay}>
-                        <View
-                            style={[
-                                styles.modalContent,
-                                { paddingBottom: insets.bottom || 16 },
-                            ]}
-                        >
+                        <View style={[styles.modalContent, { paddingBottom: insets.bottom || 16 }]}>
                             <View style={styles.modalHeader}>
                                 <Text style={styles.modalTitle}>Select Wardrobe</Text>
                                 <TouchableOpacity onPress={() => setShowWardrobeDropdown(false)}>
-                                    <Ionicons name="close" size={24} color="#000" />
+                                    <Ionicons name="close" size={24} color={colors.textPrimary} />
                                 </TouchableOpacity>
                             </View>
-
                             {loadingWardrobes ? (
-                                <ActivityIndicator size="large" color="#A855F7" style={styles.loadingIndicator} />
+                                <ActivityIndicator size="large" color={colors.primary} style={styles.loadingIndicator} />
                             ) : (
                                 <FlatList
                                     data={[...userWardrobes, "other"]}
                                     keyExtractor={(item) => item}
-                                    contentContainerStyle={{
-                                        paddingBottom: insets.bottom + 20,
-                                    }}
+                                    contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
                                     renderItem={({ item }) => (
                                         <TouchableOpacity
                                             style={styles.dropdownItem}
@@ -1427,16 +1126,11 @@ useEffect(() => {
                                                 {item === "other" ? "➕ Other (Create New)" : item}
                                             </Text>
                                             {item === "other" && (
-                                                <Ionicons
-                                                    name="add-circle-outline"
-                                                    size={20}
-                                                    color="#A855F7"
-                                                />
+                                                <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                                             )}
                                         </TouchableOpacity>
                                     )}
                                 />
-
                             )}
                         </View>
                     </View>
@@ -1446,393 +1140,411 @@ useEffect(() => {
     );
 }
 
-/* ================= STYLES ================= */
-const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16, paddingTop: 0 },
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+      paddingTop: 0,
+    },
     header: {
-        flexDirection: "row",
-        marginBottom: 16,
-        marginTop: 15,
-
+      flexDirection: "row",
+      marginBottom: 16,
+         alignItems: "center",
+      justifyContent: "space-between",
     },
     removeIcon: {
-        position: "absolute",
-        top: 8,
-        right: 8,
-        backgroundColor: "#fff",
-        borderRadius: 12,
+      position: "absolute",
+      top: 8,
+      right: 8,
+      backgroundColor: colors.primaryDark,
+      borderRadius: 12,
     },
-    title: { fontSize: 18, fontWeight: "700", color: "#333", paddingLeft: 15 },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      paddingLeft: 15,
+    },
     uploadBox: {
-        borderWidth: 1,
-        borderStyle: "dashed",
-        borderColor: "#E5E7EB",
-        borderRadius: 20,
-        padding: 20,
-        alignItems: "center",
-        marginBottom: 20,
-        backgroundColor: "#ffffff91",
+      borderWidth: 1,
+      borderStyle: "dashed",
+      borderColor: colors.border,
+      borderRadius: 20,
+      padding: 20,
+      alignItems: "center",
+      marginBottom: 20,
+      backgroundColor: colors.card,
     },
     iconCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: "#A855F7",
-        justifyContent: "center",
-        alignItems: "center",
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
     },
-    uploadTitle: { fontWeight: "700", marginTop: 10, fontSize: 16, color: "#333" },
-    uploadSub: { fontSize: 12, color: "#777", textAlign: "center" },
-    actionRow: { flexDirection: "row", marginTop: 12 },
+    uploadTitle: {
+      fontWeight: "700",
+      marginTop: 10,
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    uploadSub: {
+      fontSize: 12,
+      color: colors.textMuted,
+      textAlign: "center",
+    },
+    actionRow: {
+      flexDirection: "row",
+      marginTop: 12,
+    },
     actionBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#F3E8FF",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-        marginHorizontal: 6,
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.card,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      marginHorizontal: 6,
     },
-    actionText: { marginLeft: 6, fontWeight: "600", color: "#A855F7" },
-    preview: { width: 180, height: 180, borderRadius: 16 },
+    actionText: {
+      marginLeft: 6,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    preview: {
+      width: 180,
+      height: 180,
+      borderRadius: 16,
+    },
     inputContainer: {
-        marginBottom: 16,
+      marginBottom: 16,
     },
     inputLabel: {
-        fontSize: 14,
-        fontWeight: "600",
-        marginBottom: 6,
-        color: "#333",
+      fontSize: 14,
+      fontWeight: "600",
+      marginBottom: 6,
+      color: colors.textSecondary,
     },
     input: {
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        borderRadius: 14,
-        padding: 14,
-        backgroundColor: "#fff",
-        fontSize: 16,
-        color: "#333",
+      borderWidth: 1,
+      borderColor: colors.lightborder,
+      borderRadius: 14,
+      padding: 14,
+      fontSize: 16,
+      color: colors.textPrimary,
+      backgroundColor: colors.surface,
     },
     dropdownTrigger: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        borderRadius: 14,
-        padding: 14,
-        backgroundColor: "#fff",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.lightborder,
+      borderRadius: 14,
+      padding: 14,
+      backgroundColor: colors.surface,
     },
-    categoryCard: {
-        width: 90,
-        alignItems: "center",
-        marginRight: 12,
-    },
-
-    categoryIconWrap: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: "#F3E8FF",
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 6,
-    },
-
-    categoryIcon: {
-        width: 36,
-        height: 36,
-        resizeMode: "contain",
-    },
-
-    categoryCardText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#333",
-        textAlign: "center",
-    },
-
     dropdownTextSelected: {
-        fontSize: 16,
-        color: "#000",
+      fontSize: 16,
+      color: colors.textPrimary,
     },
     dropdownTextPlaceholder: {
-        fontSize: 16,
-        color: "#999",
+      fontSize: 16,
+      color: colors.textMuted,
     },
-    visibilityRow: { flexDirection: "row" },
+    visibilityRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+    },
     visibilityBtn: {
-        paddingVertical: 12,
-        paddingHorizontal: 22,
-        borderRadius: 30,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        marginRight: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 30,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: 10,
+      marginBottom: 8,
+      backgroundColor: colors.surface,
     },
-    activeVisibility: { backgroundColor: "#7C3AED", borderColor: "#7C3AED" },
+    activeVisibility: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+      color:colors.textPrimary
+    },
     submitBtn: {
-        backgroundColor: "#A855F7",
-        padding: 16,
-        borderRadius: 30,
-        alignItems: "center",
-        marginVertical: 20,
+      backgroundColor: colors.addButton || colors.primary,
+      padding: 16,
+      borderRadius: 30,
+      alignItems: "center",
+      marginVertical: 20,
     },
     submitBtnDisabled: {
-        backgroundColor: "#C4B5FD",
-        opacity: 0.7,
+      backgroundColor: colors.middary,
+      opacity: 0.7,
     },
-    submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-
-    // Custom Category Styles
+    submitText: {
+      color: colors.textPrimary,
+      fontWeight: "700",
+      fontSize: 16,
+    },
     customCategoryContainer: {
-        marginBottom: 20,
-        padding: 16,
-        backgroundColor: "#FAF5FF",
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
+      marginBottom: 20,
+      padding: 16,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     createCategoryBtn: {
-        marginVertical: 12,
-        backgroundColor: "#10B981",
+      marginVertical: 12,
+      backgroundColor: colors.success,
     },
     cancelBtn: {
-        alignItems: "center",
-        padding: 12,
+      alignItems: "center",
+      padding: 12,
     },
     cancelBtnText: {
-        color: "#6B7280",
-        fontWeight: "600",
+      color: colors.textMuted,
+      fontWeight: "600",
     },
-
-    // Modal Styles
     modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "flex-end",
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: "flex-end",
     },
     modalContent: {
-        backgroundColor: "#fff",
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: "80%",
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: "80%",
     },
     modalHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#F0F0F0",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#333",
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
     },
     modalScrollView: {
-        paddingBottom: 16,
+      paddingBottom: 16,
     },
-
-    // Search Styles
     searchContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#F9FAFB",
-        marginHorizontal: 16,
-        marginVertical: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.background,
+      marginHorizontal: 16,
+      marginVertical: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     searchInput: {
-        flex: 1,
-        marginLeft: 12,
-        fontSize: 16,
-        color: "#333",
-        padding: 0,
+      flex: 1,
+      marginLeft: 12,
+      fontSize: 16,
+      color: colors.textPrimary,
+      padding: 0,
     },
     searchResultsContainer: {
-        paddingHorizontal: 16,
+      paddingHorizontal: 16,
     },
     searchResultsTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#666",
-        marginBottom: 12,
-        marginTop: 8,
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textMuted,
+      marginBottom: 12,
+      marginTop: 8,
     },
     searchResultItem: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingVertical: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: "#F0F0F0",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     searchResultText: {
-        fontSize: 16,
-        color: "#333",
+      fontSize: 16,
+      color: colors.textPrimary,
     },
-
-    // Category Section Styles
     sectionHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 12,
-        paddingTop: 16,
-        paddingHorizontal: 16,
-        borderTopWidth: 1,
-        borderTopColor: "#F0F0F0",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+      paddingTop: 16,
+      paddingHorizontal: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
     },
     sectionHeaderText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333",
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
     },
     sectionCount: {
-        fontSize: 12,
-        color: "#666",
-        backgroundColor: "#F3E8FF",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    sectionContent: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        marginBottom: 8,
-        paddingHorizontal: 16,
+      fontSize: 12,
+      color: colors.textPrimary,
+      backgroundColor: colors.card,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
     },
     categoryChip: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        marginRight: 8,
-        marginBottom: 8,
-        borderWidth: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      marginRight: 8,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
     },
     categoryChipText: {
-        fontSize: 14,
-        fontWeight: "500",
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textPrimary,
     },
-
-    // Dropdown Item Styles
     dropdownItem: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#F0F0F0",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     categoryItemContent: {
-        flexDirection: "row",
-        alignItems: "center",
+      flexDirection: "row",
+      alignItems: "center",
     },
     dropdownItemText: {
-        fontSize: 16,
-        color: "#333",
+      fontSize: 16,
+      color: colors.textPrimary,
     },
     categoryBadge: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        justifyContent: "center",
-        alignItems: "center",
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
     },
     categoryBadgeText: {
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: "bold",
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "bold",
     },
-
-    // Delete Icon Styles
     deleteIcon: {
-        marginLeft: 8,
+      marginLeft: 8,
     },
     chipDeleteIcon: {
-        marginLeft: 4,
+      marginLeft: 4,
     },
-
-    // Other Option Styles
     otherOption: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 16,
-        marginHorizontal: 16,
-        marginTop: 16,
-        backgroundColor: "#FAF5FF",
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      marginHorizontal: 16,
+      marginTop: 16,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     otherIconContainer: {
-        marginRight: 12,
+      marginRight: 12,
     },
     otherTextContainer: {
-        flex: 1,
+      flex: 1,
     },
     otherOptionTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333",
-        marginBottom: 2,
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 2,
     },
     otherOptionSubtitle: {
-        fontSize: 14,
-        color: "#666",
+      fontSize: 14,
+      color: colors.textMuted,
     },
-
-    // Loading and Empty States
     loadingContainer: {
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 40,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 40,
     },
     loadingText: {
-        marginTop: 12,
-        fontSize: 14,
-        color: "#666",
+      marginTop: 12,
+      fontSize: 14,
+      color: colors.textMuted,
     },
     loadingIndicator: {
-        padding: 40,
+      padding: 40,
     },
     emptyList: {
-        alignItems: "center",
-        padding: 40,
+      alignItems: "center",
+      padding: 40,
     },
     emptyListText: {
-        fontSize: 16,
-        color: "#666",
-        marginTop: 12,
-        fontWeight: "600",
+      fontSize: 16,
+      color: colors.textMuted,
+      marginTop: 12,
+      fontWeight: "600",
     },
     emptyListSubText: {
-        fontSize: 14,
-        color: "#999",
-        marginTop: 4,
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 4,
     },
     noResultsContainer: {
-        alignItems: "center",
-        padding: 40,
+      alignItems: "center",
+      padding: 40,
     },
     noResultsText: {
-        fontSize: 16,
-        color: "#666",
-        marginTop: 12,
-        fontWeight: "600",
+      fontSize: 16,
+      color: colors.textMuted,
+      marginTop: 12,
+      fontWeight: "600",
     },
     noResultsSubText: {
-        fontSize: 14,
-        color: "#999",
-        marginTop: 4,
-    }
-    ,
-});
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    categoryCard: {
+      width: 90,
+      alignItems: "center",
+      marginRight: 12,
+    },
+    categoryIconWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.card,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    categoryIcon: {
+      width: 36,
+      height: 36,
+      resizeMode: "contain",
+    },
+    categoryCardText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+  });

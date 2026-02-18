@@ -3,7 +3,7 @@ import SearchModal from "@/components/SearchModal";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,6 +16,8 @@ import {
 import api from "../../api/api";
 import AppBackground from "@/components/AppBackground";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
+import { useTheme } from "@/app/theme/ThemeContext"; 
+
 
 /* ================= TYPES ================= */
 interface StoryGroup {
@@ -51,6 +53,8 @@ interface FeedItem {
 
 /* ================= COMPONENT ================= */
 export default function HomeScreen() {
+    const { theme } = useTheme();                         // <-- get current theme
+     const colors = theme.colors;
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -61,6 +65,8 @@ export default function HomeScreen() {
   const [stories, setStories] = useState<StoryGroup[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+      const styles = React.useMemo(() => createStyles(colors), [colors]);
+  
   const LIMIT = 6;
 
   const API_URL = "https://api.digiwardrobe.com";
@@ -241,7 +247,7 @@ export default function HomeScreen() {
         >
           <View style={styles.addStoryWrapper}>
             <View style={styles.addStoryInner}>
-              <Ionicons name="add" size={26} color="#A855F7" />
+              <Ionicons name="add" size={26} color={colors.primaryDark} />
             </View>
           </View>
           <Text style={styles.storyName}>Add Story</Text>
@@ -345,120 +351,123 @@ function injectCollections(posts: FeedItem[], collections: FeedItem[]) {
 }
 
 /* ================= STYLES ================= */
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 16,
-  },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: "contain",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  logoText: {
-    fontSize: 22,
-  },
-  logoHighlight: {
-    fontSize: 35,
-    color: "#A855F7",
-    fontFamily: "Cookie",
-  },
-  logoHighlight2: {
-    fontFamily: "Cookie",
-    fontSize: 35,
-  },
-  headerIcons: {
-    flexDirection: "row",
-  },
-  storiesContainer: {
-    marginTop: 5,
-    flexDirection: "row",
-    paddingVertical: 8,
-  },
-  storyCard: {
-    alignItems: "center",
-    marginRight: 12,
-    width: 72,
-  },
-  // Add Story Styles - Square
-  addStoryWrapper: {
-    width: 64,
-    height: 84,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#A855F7",
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addStoryInner: {
-    width: 56,
-    height: 78,
-    borderRadius: 12,
-    backgroundColor: "#f5f5f5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  // User Story Styles - Square
-  userStoryWrapper: {
-    width: 64,
-    height: 84,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#A855F7",
-    backgroundColor: "#fff",
-    overflow: "hidden",
-  },
-  storyImageContainer: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  storyImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  storyFallback: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#A855F7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  storyInitial: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  storyName: {
-    marginTop: 6,
-    fontSize: 11,
-    color: "#444",
-    textAlign: "center",
-    width: 64,
-  },
-  badge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "#A855F7",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      paddingHorizontal: 16,
+    },
+    headerIcon: {
+      width: 24,
+      height: 24,
+      resizeMode: "contain",
+      tintColor: colors.textDark, // icons are PNGs, but if they are vector-like we can tint
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    logoText: {
+      fontSize: 22,
+    },
+    logoHighlight: {
+      fontSize: 35,
+      color: colors.primary,
+      fontFamily: "Cookie",
+    },
+    logoHighlight2: {
+      fontFamily: "Cookie",
+      fontSize: 35,
+      color: colors.textDark, // second part of logo uses text color
+    },
+    headerIcons: {
+      flexDirection: "row",
+    },
+    storiesContainer: {
+      marginTop: 5,
+      flexDirection: "row",
+      paddingVertical: 8,
+    },
+    storyCard: {
+      alignItems: "center",
+      marginRight: 12,
+      width: 72,
+    },
+    // Add Story Styles - Square
+    addStoryWrapper: {
+      width: 64,
+      height: 84,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      backgroundColor: colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    addStoryInner: {
+      width: 56,
+      height: 78,
+      borderRadius: 12,
+      backgroundColor: colors.card, // slightly different from surface for depth
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    // User Story Styles - Square
+    userStoryWrapper: {
+      width: 64,
+      height: 84,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      backgroundColor: colors.surface,
+      overflow: "hidden",
+    },
+    storyImageContainer: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 12,
+      overflow: "hidden",
+    },
+    storyImage: {
+      width: "100%",
+      height: "100%",
+      resizeMode: "cover",
+    },
+    storyFallback: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    storyInitial: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: colors.primaryDark, // dark text on primary background for contrast
+    },
+    storyName: {
+      marginTop: 6,
+      fontSize: 11,
+      color: colors.textSecondary,
+      textAlign: "center",
+      width: 64,
+    },
+    badge: {
+      position: "absolute",
+      top: -6,
+      right: -6,
+      backgroundColor: colors.primary,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: colors.surface,
+    },
+    badgeText: {
+      color: colors.textLight,
+      fontSize: 9,
+      fontWeight: "700",
+    },
+  });

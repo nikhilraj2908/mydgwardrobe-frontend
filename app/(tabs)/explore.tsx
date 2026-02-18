@@ -2,8 +2,9 @@ import WardrobeHeader from "@/components/WardrobeHeader";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
+import { useTheme } from "@/app/theme/ThemeContext";
 import AppBackground from "@/components/AppBackground";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { useLocalSearchParams } from "expo-router";
@@ -336,6 +337,9 @@ export default function Explore() {
   const [mode, setMode] = useState<"categories" | "items">("categories");
   const [selectedGender, setSelectedGender] = useState<"mens" | "womens" | "unisex">("mens");
   const [isSearching, setIsSearching] = useState(false);
+  const { theme } = useTheme();                         // <-- get current theme
+  const colors = theme.colors;
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [searchResults, setSearchResults] = useState<{
     categories: CategoryItem[];
     users: SearchUser[];
@@ -540,8 +544,8 @@ export default function Explore() {
         />
 
         {/* Gradient Overlay */}
-        <View style={styles.categoryGradient}>
-          <View style={styles.categoryOverlay}>
+        <View style={styles.categoryOverlay}>
+          <View style={styles.categoryTitlePatch}>
             <Text style={styles.categoryTitle} numberOfLines={1}>
               {item.name}
             </Text>
@@ -692,11 +696,12 @@ export default function Explore() {
           backgroundColor: index % 4 === 0 ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.65)'
         }]}>
           <View style={styles.itemInfo}>
-            <Text style={styles.itemTitle} numberOfLines={1}>
-              {item.wardrobe?.name || item.title || "Untitled"}
-            </Text>
+            <View style={styles.itemTitlePatch}>
+              <Text style={styles.itemTitle} numberOfLines={1}>
+                {item.wardrobe?.name || item.title || "Untitled"}
+              </Text>
+            </View>
             <View style={styles.itemMeta}>
-
               <Text style={styles.itemBrand}>
                 {String(item.brand || "Brand")}
               </Text>
@@ -1110,62 +1115,62 @@ export default function Explore() {
     }
   };
 
-const performSearch = async (searchValue: string) => {
-  try {
-    const trimmed = searchValue.trim();
-    if (!trimmed) return;
+  const performSearch = async (searchValue: string) => {
+    try {
+      const trimmed = searchValue.trim();
+      if (!trimmed) return;
 
-    const lower = trimmed.toLowerCase();
+      const lower = trimmed.toLowerCase();
 
-    // 1️⃣ Search users
-    const userRes = await api.get("/api/user/search", {
-      params: { q: trimmed },
-    });
-    const users = userRes.data.users || [];
+      // 1️⃣ Search users
+      const userRes = await api.get("/api/user/search", {
+        params: { q: trimmed },
+      });
+      const users = userRes.data.users || [];
 
-    // 2️⃣ Search categories locally
-    const filteredCategories = categories.filter(category =>
-      category.name.toLowerCase().includes(lower)
-    );
+      // 2️⃣ Search categories locally
+      const filteredCategories = categories.filter(category =>
+        category.name.toLowerCase().includes(lower)
+      );
 
-    // 3️⃣ Search items (ONLY to detect brand match)
-    const itemRes = await api.get("/api/wardrobe/explore", {
-      params: {
-        search: trimmed,
-        gender: selectedGender,
-        page: 1,
-        limit: 20,
-      },
-    });
+      // 3️⃣ Search items (ONLY to detect brand match)
+      const itemRes = await api.get("/api/wardrobe/explore", {
+        params: {
+          search: trimmed,
+          gender: selectedGender,
+          page: 1,
+          limit: 20,
+        },
+      });
 
-    const foundItems: ExploreItem[] = itemRes.data?.items || [];
+      const foundItems: ExploreItem[] = itemRes.data?.items || [];
 
-    // 4️⃣ 🔥 BRAND MATCH LOGIC (NEW)
-    const matchedBrandItems = foundItems.filter(
-      item => item.brand?.toLowerCase() === lower
-    );
+      // 4️⃣ 🔥 BRAND MATCH LOGIC (NEW)
+      const matchedBrandItems = foundItems.filter(
+        item => item.brand?.toLowerCase() === lower
+      );
 
-    if (matchedBrandItems.length > 0) {
-      // ✅ Brand search → go directly to items
-      setMode("items");
-      setItems(matchedBrandItems);
-      setTotalItems(itemRes.data?.total || matchedBrandItems.length);
-      setActiveCategory(null);
-      return;
+      if (matchedBrandItems.length > 0) {
+        // ✅ Brand search → go directly to items
+        setMode("items");
+        setItems(matchedBrandItems);
+        setTotalItems(itemRes.data?.total || matchedBrandItems.length);
+        setActiveCategory(null);
+        return;
+      }
+
+      // 5️⃣ Otherwise → normal search behaviour
+      setMode("categories");
+      setSearchResults({
+        categories: filteredCategories,
+        users,
+      });
+
+    } catch (err) {
+      console.error("Search error:", err);
+      setSearchResults({ categories: [], users: [] });
     }
-
-    // 5️⃣ Otherwise → normal search behaviour
-    setMode("categories");
-    setSearchResults({
-      categories: filteredCategories,
-      users,
-    });
-
-  } catch (err) {
-    console.error("Search error:", err);
-    setSearchResults({ categories: [], users: [] });
-  }
-};
+  };
 
 
   const clearSearch = () => {
@@ -1292,498 +1297,509 @@ const performSearch = async (searchValue: string) => {
 }
 
 /* ================= STYLES ================= */
-const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    paddingTop: 5
-  },
-  container: {
-    flex: 1,
-  },
-
-  // Categories View
-  categoriesHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 16,
-  },
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffffff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 12,
-    marginRight: 12,
-    color: "#333",
-  },
-  genderToggleContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  genderToggle: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    backgroundColor: "#ffffffff",
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  genderToggleActive: {
-    backgroundColor: "#A855F7",
-    borderColor: "#A855F7",
-  },
-  genderToggleText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
-    marginLeft: 6,
-  },
-  genderToggleTextActive: {
-    color: "#fff",
-  },
-
-  // Search Results
-  searchResultsScrollView: {
-    flex: 1,
-  },
-  searchResultsContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  searchSection: {
-    marginBottom: 24,
-  },
-  searchSectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 12,
-  },
-  usersScrollView: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-  },
-  userCard: {
-    alignItems: "center",
-    marginRight: 16,
-    width: 80,
-  },
-  userAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-  },
-  userName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#333",
-    textAlign: "center",
-  },
-  categoriesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -4,
-  },
-  searchCategoryCard: {
-    width: (SCREEN_WIDTH - 48) / 3,
-    height: 100,
-    marginHorizontal: 4,
-    marginBottom: 8,
-    borderRadius: 12,
-    overflow: "hidden",
-    position: "relative",
-    backgroundColor: "#f8f8f9",
-  },
-  searchCategoryImage: {
-    width: "100%",
-    height: "100%",
-  },
-  searchCategoryOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  searchCategoryTitle: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  noResultsContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  noResultsText: {
-    fontSize: 16,
-    color: "#9CA3AF",
-    textAlign: "center",
-    marginTop: 16,
-    fontWeight: "500",
-  },
-
-  // Masonry Layout
-  masonryContainer: {
-    flex: 1,
-    paddingHorizontal: GAP,
-  },
-  masonryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  column: {
-    flex: 1,
-  },
-
-  // Category Cards
-  categoryCard: {
-    overflow: "hidden",
-    backgroundColor: "#f8f8f9",
-    position: "relative",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    screenContainer: {
+      flex: 1,
+      paddingTop: 5,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  categoryImage: {
-    width: "100%",
-    height: "100%",
-  },
-  categoryGradient: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: "40%",
-    backgroundColor: "transparent",
-    backgroundGradient: "vertical",
-    backgroundGradientTop: "transparent",
-    backgroundGradientBottom: "rgba(0,0,0,0.8)",
-  },
-  categoryOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-    backgroundColor: "transparent",
-  },
-  categoryTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "800",
-    textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  categoryCount: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  collageBadge: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-
-  // Items View
-  itemsHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 8,
-  },
-  itemsHeaderTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  activeCategoryContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  activeCategoryText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-  },
-  backToCategories: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: "#F3E8FF",
-    borderRadius: 12,
-  },
-  backToCategoriesText: {
-    fontSize: 12,
-    color: "#A855F7",
-    fontWeight: "600",
-    marginLeft: 4,
-  },
-  resultsText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-  },
-  sortButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#ffffffff",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  sortButtonText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-    marginLeft: 6,
-  },
-
-  // Item Cards
-  card: {
-    overflow: "hidden",
-    backgroundColor: "#f8f8f9",
-    position: "relative",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
+    container: {
+      flex: 1,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  cardTopOverlay: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  iconRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    minWidth: 60,
-    justifyContent: "center",
-  },
-  bookmarkBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  count: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-    marginLeft: 4,
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
-  },
-  cardBottomOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  itemInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  itemTitle: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 6,
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
-  },
-  itemMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  categoryTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginRight: 6,
-    marginBottom: 2,
-  },
-  categoryTagText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  itemBrand: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  itemPrice: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    minWidth: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  priceText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  collageBorder: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderWidth: 2,
-    borderRadius: 16,
-    pointerEvents: "none",
-  },
 
-  // Loading and Empty States
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 100,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 100,
-    paddingHorizontal: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#9CA3AF",
-    textAlign: "center",
-    marginTop: 16,
-    fontWeight: "500",
-  },
-  footerLoader: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
+    // Categories Header
+    categoriesHeader: {
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 16,
+    },
+    searchContainer: {
+      marginBottom: 16,
+    },
+    itemTitlePatch: {
+      backgroundColor: 'rgba(0,0,0,0.7)',
+    
+      alignSelf: 'flex-start',      // Patch only covers the text width
+    },
+    categoryTitlePatch: {
+      backgroundColor: 'rgba(0,0,0,0.7)',
+    
+      alignSelf: 'center',          // Centers the patch horizontally
+      width: '100%',                // Ensures it spans the full width
+    },
+    searchInputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 50,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      marginLeft: 12,
+      marginRight: 12,
+      color: colors.textPrimary,
+    },
+    genderToggleContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    genderToggle: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      marginHorizontal: 4,
+      backgroundColor: colors.surface,
+      borderRadius: 25,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    genderToggleActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    genderToggleText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textPrimary,
+      marginLeft: 6,
+    },
+    genderToggleTextActive: {
+      color: colors.textPrimary,
+    },
 
-  // Sort Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "60%",
-    paddingBottom: 30,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-  },
-  sortOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f5f5f7",
-  },
-  activeSortOption: {
-    backgroundColor: "#f9f5ff",
-  },
-  sortOptionText: {
-    flex: 1,
-    fontSize: 16,
-    color: "#333",
-    marginLeft: 12,
-  },
-  activeSortOptionText: {
-    color: "#A855F7",
-    fontWeight: "600",
-  },
-});
+    // Search Results
+    searchResultsScrollView: {
+      flex: 1,
+    },
+    searchResultsContainer: {
+      paddingHorizontal: 16,
+      paddingTop: 8,
+    },
+    searchSection: {
+      marginBottom: 24,
+    },
+    searchSectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 12,
+    },
+    usersScrollView: {
+      marginHorizontal: -16,
+      paddingHorizontal: 16,
+    },
+    userCard: {
+      alignItems: "center",
+      marginRight: 16,
+      width: 80,
+    },
+    userAvatar: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      marginBottom: 8,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    userName: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    categoriesGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginHorizontal: -4,
+    },
+    searchCategoryCard: {
+      width: (SCREEN_WIDTH - 48) / 3,
+      height: 100,
+      marginHorizontal: 4,
+      marginBottom: 8,
+      borderRadius: 12,
+      overflow: "hidden",
+      position: "relative",
+      backgroundColor: colors.surface,
+    },
+    searchCategoryImage: {
+      width: "100%",
+      height: "100%",
+    },
+    searchCategoryOverlay: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+    },
+    searchCategoryTitle: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    noResultsContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+    },
+    noResultsText: {
+      fontSize: 16,
+      color: colors.textMuted,
+      textAlign: "center",
+      marginTop: 16,
+      fontWeight: "500",
+    },
+
+    // Masonry Layout
+    masonryContainer: {
+      flex: 1,
+      paddingHorizontal: GAP,
+    },
+    masonryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    column: {
+      flex: 1,
+    },
+
+    // Category Cards
+    categoryCard: {
+      overflow: "hidden",
+      backgroundColor: colors.surface,
+      position: "relative",
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    categoryImage: {
+      width: "100%",
+      height: "100%",
+    },
+    categoryGradient: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: "40%",
+      backgroundColor: "transparent",
+      backgroundGradient: "vertical",
+      backgroundGradientTop: "transparent",
+      backgroundGradientBottom: "rgba(0,0,0,0.8)",
+    },
+    categoryOverlay: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "transparent",
+    },
+    categoryTitle: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "800",
+      textAlign: "center",
+      textShadowColor: "rgba(0,0,0,0.5)",
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+    },
+    categoryCount: {
+      color: "rgba(255,255,255,0.9)",
+      fontSize: 12,
+      textAlign: "center",
+      marginTop: 4,
+      fontWeight: "500",
+    },
+    collageBadge: {
+      position: "absolute",
+      top: 10,
+      right: 10,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+
+    // Items Header
+    itemsHeader: {
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 8,
+    },
+    itemsHeaderTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    activeCategoryContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 4,
+    },
+    activeCategoryText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: "500",
+    },
+    backToCategories: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      backgroundColor: colors.middary,
+      borderRadius: 12,
+    },
+    backToCategoriesText: {
+      fontSize: 12,
+      color: colors.primary,
+      fontWeight: "600",
+      marginLeft: 4,
+    },
+    resultsText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: "500",
+    },
+    sortButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sortButtonText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: "500",
+      marginLeft: 6,
+    },
+
+    // Item Cards
+    card: {
+      overflow: "hidden",
+      backgroundColor: colors.surface,
+      position: "relative",
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    image: {
+      width: "100%",
+      height: "100%",
+    },
+    cardTopOverlay: {
+      position: "absolute",
+      top: 10,
+      left: 10,
+      right: 10,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    iconRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 20,
+      minWidth: 60,
+      justifyContent: "center",
+    },
+    bookmarkBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    count: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "700",
+      marginLeft: 4,
+      textShadowColor: "rgba(0,0,0,0.5)",
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 1,
+    },
+    cardBottomOverlay: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 12,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    itemInfo: {
+      flex: 1,
+      marginRight: 8,
+    },
+    itemTitle: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 6,
+      textShadowColor: "rgba(0,0,0,0.5)",
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 1,
+    },
+    itemMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+    },
+    categoryTag: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+      marginRight: 6,
+      marginBottom: 2,
+    },
+    categoryTagText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "700",
+    },
+    itemBrand: {
+      color: "rgba(255,255,255,0.9)",
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    itemPrice: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      minWidth: 60,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    priceText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "800",
+    },
+    collageBorder: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderWidth: 2,
+      borderRadius: 16,
+      pointerEvents: "none",
+    },
+
+    // Loading & Empty
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingTop: 100,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingTop: 100,
+      paddingHorizontal: 20,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: colors.textMuted,
+      textAlign: "center",
+      marginTop: 16,
+      fontWeight: "500",
+    },
+    footerLoader: {
+      paddingVertical: 20,
+      alignItems: "center",
+    },
+
+    // Sort Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: "60%",
+      paddingBottom: 30,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    sortOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    activeSortOption: {
+      backgroundColor: colors.middary + "33", // 20% opacity
+    },
+    sortOptionText: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textPrimary,
+      marginLeft: 12,
+    },
+    activeSortOptionText: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+  });

@@ -2,7 +2,7 @@ import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Alert,
   Dimensions,
@@ -18,7 +18,8 @@ import {
 import api from "../api/api";
 import { useFollow } from "../context/FollowContext";
 import { useSavedItems } from "../context/SavedItemsContext";
-
+import { useTheme } from "@/app/theme/ThemeContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get('window');
 
@@ -36,8 +37,12 @@ interface CommentType {
   createdAt: string;
 }
 
-
 export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(item.likes || 0);
   const [commentText, setCommentText] = useState("");
@@ -45,7 +50,6 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   const [showComments, setShowComments] = useState(false);
   const [loading, setLoading] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const [imageError, setImageError] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [selectedComment, setSelectedComment] = useState<CommentType | null>(null);
@@ -54,36 +58,18 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
-  // const [saved, setSaved] = useState(false);
-  // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  // Debug log
+
   const { isFollowing, toggleFollow, ready } = useFollow();
-  const ownerId =
-    typeof item.user === "string" ? item.user : item.user?._id;
+  const ownerId = typeof item.user === "string" ? item.user : item.user?._id;
 
   const followed = ready && ownerId ? isFollowing(String(ownerId)) : false;
-
   const isOwner = currentUserId && ownerId && String(currentUserId) === String(ownerId);
-
-  const showFollowPlus =
-    ready && !isOwner && ownerId && !followed && !justFollowed;
-
-  const showTick =
-    ready && !isOwner && ownerId && justFollowed;
+  const showFollowPlus = ready && !isOwner && ownerId && !followed && !justFollowed;
+  const showTick = ready && !isOwner && ownerId && justFollowed;
 
   const { savedItemIds, toggleSave, isReady } = useSavedItems();
   const saved = savedItemIds.includes(item._id);
-  console.log("ItemPostCard received item:", {
-    id: item._id,
-    name: item.name,
-    imageUrl: item.imageUrl,
-    image: item.image,
-    price: item.price
-  });
-  console.log("IMAGES DEBUG 👉", {
-    images: item.images,
-    imageUrl: item.imageUrl,
-  });
+
   const images: string[] = Array.isArray(item.images)
     ? item.images.filter(Boolean)
     : item.images
@@ -100,14 +86,11 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
     try {
       setDeleting(true);
       const token = await AsyncStorage.getItem("token");
-
       await api.delete(`/api/wardrobe/item/${item._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setMenuVisible(false);
       onDelete?.(item._id);
-
     } catch (err) {
       console.log("Delete failed", err);
     } finally {
@@ -115,55 +98,37 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
     }
   };
 
-
-
   const canDeleteComment = (comment: CommentType) => {
     if (!currentUserId || !item) return false;
-
     const currentId = String(currentUserId);
-
     const commentUserId =
       typeof comment.user === "string"
         ? String(comment.user)
         : String(comment.user?._id || comment.user?.id || "");
-
     const itemOwnerId =
       typeof item.user === "string" ? String(item.user) : String(item.user?._id || "");
-
     return commentUserId === currentId || itemOwnerId === currentId;
   };
 
   const handleDeleteComment = async () => {
     if (!selectedComment?._id) return;
-
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
         Alert.alert("Login Required", "Please login to delete comments");
         return;
       }
-
       await api.delete(`/api/comment/${selectedComment._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setComments((prev) => prev.filter((c) => c._id !== selectedComment._id));
       setCommentCount((prev) => Math.max(0, prev - 1));
-
       setShowCommentActions(false);
       setSelectedComment(null);
     } catch (err) {
       Alert.alert("Error", "Unable to delete comment");
     }
   };
-  /* ======================================================
-     CHECK IF ITEM IS SAVED
-  ====================================================== */
-
-
-  /* ======================================================
-     TOGGLE SAVE
-  ====================================================== */
 
   const handleSave = () => {
     if (!isReady) {
@@ -174,33 +139,24 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
   };
 
   useEffect(() => {
-    fetchLikeStatus();   // 👈 IMPORTANT
+    fetchLikeStatus();
     fetchLikeCount();
     fetchComments();
-    // checkFollowStatus();
   }, [item._id]);
-
-
 
   const fetchLikeStatus = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
-
-      const res = await api.get(
-        `/api/like/item/${item._id}/me`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      const res = await api.get(`/api/like/item/${item._id}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setLiked(Boolean(res.data.liked));
     } catch (err) {
       console.log("Like status fetch failed", err);
     }
   };
 
-  // const isOwner = currentUserId === item.user?._id;
   const fetchLikeCount = async () => {
     try {
       const res = await api.get(`/api/like/item/${item._id}/count`);
@@ -227,22 +183,13 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
         Alert.alert("Login Required", "Please login to like posts");
         return;
       }
-
       setLoading(true);
-
       const res = await api.post(
         "/api/like/toggle",
-        {
-          postType: "item",
-          postId: item._id,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { postType: "item", postId: item._id },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const isNowLiked = res.data.liked;
-
       setLiked(isNowLiked);
       setLikeCount((prev: number) =>
         isNowLiked ? prev + 1 : Math.max(0, prev - 1)
@@ -255,45 +202,31 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
     }
   };
 
-
   const handlePostOwnerPress = () => {
-  const ownerId =
-    typeof item.user === "string"
-      ? item.user
-      : item.user?._id;
-
-  if (!ownerId) return;
-
-  // 👤 If clicking own post → go to own profile
-  if (currentUserId && String(currentUserId) === String(ownerId)) {
-    router.push("/profile"); // 👈 your own profile screen
-  } else {
-    // 👥 Other user's profile
-    router.push(`/profile/${ownerId}`);
-  }
-};
-
-
+    const ownerId =
+      typeof item.user === "string" ? item.user : item.user?._id;
+    if (!ownerId) return;
+    if (currentUserId && String(currentUserId) === String(ownerId)) {
+      router.push("/profile");
+    } else {
+      router.push(`/profile/${ownerId}`);
+    }
+  };
 
   const handleComment = async () => {
     if (!commentText.trim()) return;
-
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
         Alert.alert("Login Required", "Please login to comment");
         return;
       }
-
       setLoading(true);
       const res = await api.post(
         `/api/comment/${item._id}`,
         { text: commentText },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setComments((prev) => [res.data.comment, ...prev]);
       setCommentCount(prev => prev + 1);
       setCommentText("");
@@ -305,32 +238,8 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
     }
   };
 
-  const openComments = () => {
-    setShowComments(true);
-  };
+  const openComments = () => setShowComments(true);
 
-  // Helper function to get image URL
-  // const getImageUrl = () => {
-  //   // Try multiple possible image fields
-  //   let imagePath = item.imageUrl || item.image || item.photo || item.picture;
-
-  //   if (!imagePath) return null;
-
-  //   // If already a full URL, return as is
-  //   if (imagePath.startsWith('http')) {
-  //     return imagePath;
-  //   }
-
-  //   // If starts with slash, prepend BASE_URL
-  //   if (imagePath.startsWith('/')) {
-  //     return `${BASE_URL}${imagePath}`;
-  //   }
-
-  //   // Otherwise, prepend BASE_URL with slash
-  //   return `${BASE_URL}/${imagePath}`;
-  // };
-
-  // Helper function to get user avatar URL
   const getUserAvatarUrl = () => {
     const photoPath = item.user?.photo;
     if (!photoPath) return null;
@@ -341,25 +250,27 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
+
   useEffect(() => {
-    console.log("Saved IDs from context:", savedItemIds);
-  }, [savedItemIds]);
+    setJustFollowed(false);
+  }, [ownerId]);
+
+  const avatarUrl = getUserAvatarUrl();
+
+  const handleFollowPress = async () => {
+    if (!ready || !ownerId) return;
+    await toggleFollow(String(ownerId));
+    setJustFollowed(true);
+    setTimeout(() => setJustFollowed(false), 1200);
+  };
+
   const renderComment = ({ item: comment }: { item: CommentType }) => {
     const userObj = typeof comment.user === "string" ? null : comment.user;
-
-
     const handleUserPress = () => {
       if (!userObj?._id && !userObj?.id) return;
-
       const userId = userObj._id || userObj.id;
       router.push(`/profile/${userId}`);
     };
-
-
-
-
-
-
 
     return (
       <View style={styles.commentItem}>
@@ -370,14 +281,13 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                 source={{ uri: resolveImageUrl(userObj.photo) }}
                 style={styles.commentAvatar}
               />
-
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={styles.commentAvatarPlaceholder}
+              style={[styles.commentAvatarPlaceholder, { backgroundColor: colors.card }]}
               onPress={handleUserPress}
             >
-              <Text style={styles.commentInitial}>
+              <Text style={[styles.commentInitial, { color: colors.primary }]}>
                 {userObj?.username?.charAt(0).toUpperCase() || "U"}
               </Text>
             </TouchableOpacity>
@@ -386,11 +296,10 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
           <View style={styles.commentContent}>
             <View style={styles.commentHeaderRow}>
               <TouchableOpacity onPress={handleUserPress}>
-                <Text style={styles.commentUsername}>
+                <Text style={[styles.commentUsername, { color: colors.textPrimary }]}>
                   {userObj?.username || "User"}
                 </Text>
               </TouchableOpacity>
-
 
               {canDeleteComment(comment) && (
                 <TouchableOpacity
@@ -399,37 +308,22 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                     setShowCommentActions(true);
                   }}
                 >
-                  <Ionicons name="ellipsis-vertical" size={16} color="#000" />
+                  <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
 
-            <Text style={styles.commentText}>{comment.text}</Text>
+            <Text style={[styles.commentText, { color: colors.textSecondary }]}>
+              {comment.text}
+            </Text>
 
-            <Text style={styles.commentTime}>
+            <Text style={[styles.commentTime, { color: colors.textMuted }]}>
               {formatCommentTime(comment.createdAt)}
             </Text>
           </View>
         </View>
       </View>
     );
-  };
-  useEffect(() => {
-    // Whenever a new post/user renders, reset local UI state
-    setJustFollowed(false);
-  }, [ownerId]);
-
-  // const imageUrl = getImageUrl();
-  const avatarUrl = getUserAvatarUrl();
-
-
-  const handleFollowPress = async () => {
-    if (!ready || !ownerId) return;
-
-    await toggleFollow(String(ownerId));
-
-    setJustFollowed(true);
-    setTimeout(() => setJustFollowed(false), 1200);
   };
 
   return (
@@ -441,68 +335,49 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
             style={{ flexDirection: "row", alignItems: "center" }}
             onPress={handlePostOwnerPress}
           >
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: colors.card }]}>
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
               ) : (
-                <Text style={styles.avatarText}>
+                <Text style={[styles.avatarText, { color: colors.primary }]}>
                   {item.user?.username?.[0]?.toUpperCase() || "U"}
                 </Text>
               )}
             </View>
 
             <View>
-              <Text style={styles.username}>{item.user?.username}</Text>
-              <Text style={styles.handle}>
+              <Text style={[styles.username, { color: colors.textPrimary }]}>
+                {item.user?.username}
+              </Text>
+              <Text style={[styles.handle, { color: colors.textMuted }]}>
                 @{item.user?.username?.toLowerCase()}
               </Text>
             </View>
           </TouchableOpacity>
 
           <View style={{ flexDirection: "row", alignItems: "center", marginLeft: "auto" }}>
-
-            {/* FOLLOW ICON */}
-            {/* FOLLOW UI */}
             {showFollowPlus && (
-              <TouchableOpacity
-                onPress={handleFollowPress}
-                style={styles.followIcon}
-              >
-                <Ionicons
-                  name="person-add-outline"
-                  size={22}
-                  color="#666"
-                />
+              <TouchableOpacity onPress={handleFollowPress} style={styles.followIcon}>
+                <Ionicons name="person-add-outline" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
 
             {showTick && (
               <View style={styles.followIcon}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={22}
-                  color="#A855F7"
-                />
+                <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
               </View>
             )}
 
-
-            {/* MENU */}
             <TouchableOpacity onPress={() => setMenuVisible(v => !v)}>
-              <Ionicons name="ellipsis-vertical" size={18} color="#666" />
+              <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
-
           </View>
-
         </View>
-
 
         {/* Image */}
         <View
           style={styles.imageContainer}
-          onLayout={(e) => {
-            setContainerWidth(e.nativeEvent.layout.width);
-          }}
+          onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
         >
           {images.length > 0 ? (
             <>
@@ -518,14 +393,11 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                 maxToRenderPerBatch={1}
                 windowSize={2}
                 onMomentumScrollEnd={(e) => {
-                  const index = Math.round(
-                    e.nativeEvent.contentOffset.x / containerWidth
-                  );
+                  const index = Math.round(e.nativeEvent.contentOffset.x / containerWidth);
                   setActiveIndex(index);
                 }}
                 renderItem={({ item: uri }) => {
                   const finalUrl = resolveImageUrl(uri);
-
                   return (
                     <View
                       style={{
@@ -539,81 +411,63 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                         style={[
                           styles.image,
                           {
-                            height:
-                              imageRatios[finalUrl]
-                                ? containerWidth * imageRatios[finalUrl]
-                                : containerWidth * 0.75,
+                            height: imageRatios[finalUrl]
+                              ? containerWidth * imageRatios[finalUrl]
+                              : containerWidth * 0.75,
                           },
                         ]}
                         onLoad={(e) => {
                           const source = e?.nativeEvent?.source;
                           if (!source?.width || !source?.height) return;
-
                           setImageRatios((prev) => ({
                             ...prev,
                             [finalUrl]: source.height / source.width,
                           }));
                         }}
                       />
-
                     </View>
                   );
                 }}
               />
 
-
-              {/* Pagination dots */}
               {images.length > 1 && (
                 <View style={styles.dotsContainer}>
                   {images.map((_, i) => (
                     <View
                       key={i}
-                      style={[
-                        styles.dot,
-                        i === activeIndex && styles.activeDot,
-                      ]}
+                      style={[styles.dot, i === activeIndex && styles.activeDot]}
                     />
                   ))}
                 </View>
               )}
             </>
           ) : (
-            <View style={[styles.image, styles.noImage]}>
-              <Ionicons name="image-outline" size={50} color="#CCC" />
-              <Text style={styles.noImageText}>No Image</Text>
+            <View style={[styles.image, styles.noImage, { backgroundColor: colors.surface }]}>
+              <Ionicons name="image-outline" size={50} color={colors.textMuted} />
+              <Text style={[styles.noImageText, { color: colors.textMuted }]}>No Image</Text>
             </View>
           )}
 
-          {/* Price badge stays */}
           {typeof item.price === "number" && (
-            <View style={styles.priceBadge}>
-              <Text style={styles.priceText}>₹{item.price / 1000}K</Text>
+            <View style={[styles.priceBadge, { backgroundColor: colors.card }]}>
+              <Text style={[styles.priceText, { color: colors.primary }]}>
+                ₹{item.price / 1000}K
+              </Text>
             </View>
           )}
         </View>
 
-
         {/* Actions */}
         <View style={styles.actions}>
           <View style={styles.leftActions}>
-            <TouchableOpacity
-              onPress={handleLike}
-              disabled={loading}
-              style={styles.actionIcon}
-            >
+            <TouchableOpacity onPress={handleLike} disabled={loading} style={styles.actionIcon}>
               <Image
                 source={require("../assets/icons/like.png")}
-                style={[
-                  styles.actionImageIcon,
-                  liked && { tintColor: "#A855F7" } // only when liked
-                ]}
+                style={[styles.actionImageIcon, liked && { tintColor: colors.primary }]}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={openComments}
-              style={styles.actionIcon}
-            >
+            <TouchableOpacity onPress={openComments} style={styles.actionIcon}>
               <Image
                 source={require("../assets/icons/comment.png")}
                 style={styles.actionImageIcon}
@@ -628,57 +482,56 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                   ? require("../assets/icons/bookmark-saved.png")
                   : require("../assets/icons/bookmark.png")
               }
-              style={[
-                styles.actionImageIconbookmark,
-                saved && { tintColor: "#A855F7" }
-              ]}
+              style={[styles.actionImageIconbookmark, saved && { tintColor: colors.primary }]}
             />
           </TouchableOpacity>
-
-
-
         </View>
 
         {/* Likes */}
-        <Text style={styles.likes}>{likeCount} likes</Text>
+        <Text style={[styles.likes, { color: colors.textPrimary }]}>{likeCount} likes</Text>
 
         {/* Item Details */}
         <View style={styles.itemDetails}>
-          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.name}</Text>
           {item.description && (
-            <Text style={styles.itemDescription}>{item.description}</Text>
+            <Text style={[styles.itemDescription, { color: colors.textSecondary }]}>
+              {item.description}
+            </Text>
           )}
         </View>
 
         {/* View Comments */}
         {commentCount > 0 && (
           <TouchableOpacity onPress={openComments} style={styles.viewComments}>
-            <Text style={styles.viewCommentsText}>
+            <Text style={[styles.viewCommentsText, { color: colors.textSecondary }]}>
               View all {commentCount} comments
             </Text>
           </TouchableOpacity>
         )}
 
         {/* Add Comment Input */}
-        <View style={styles.commentInputContainer}>
+        <View style={[styles.commentInputContainer, { borderTopColor: colors.border }]}>
           <TextInput
-            style={styles.commentInput}
+            style={[styles.commentInput, { color: colors.textPrimary }]}
             placeholder="Add a comment..."
+            placeholderTextColor={colors.textMuted}
             value={commentText}
             onChangeText={setCommentText}
             onSubmitEditing={handleComment}
             editable={!loading}
-            placeholderTextColor="#999"
           />
           <TouchableOpacity
             onPress={handleComment}
             disabled={!commentText.trim() || loading}
             style={styles.sendButton}
           >
-            <Text style={[
-              styles.sendButtonText,
-              !commentText.trim() && styles.sendButtonDisabled
-            ]}>
+            <Text
+              style={[
+                styles.sendButtonText,
+                !commentText.trim() && styles.sendButtonDisabled,
+                { color: commentText.trim() ? colors.primary : colors.textMuted },
+              ]}
+            >
               Post
             </Text>
           </TouchableOpacity>
@@ -689,18 +542,14 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
       <Modal
         visible={showComments}
         animationType="slide"
-        transparent={false}
         onRequestClose={() => setShowComments(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              onPress={() => setShowComments(false)}
-              style={styles.backButton}
-            >
-              <Ionicons name="arrow-back" size={24} color="#000" />
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setShowComments(false)} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Comments</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Comments</Text>
             <View style={{ width: 40 }} />
           </View>
 
@@ -708,26 +557,34 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
             data={comments}
             renderItem={renderComment}
             keyExtractor={(comment) => comment._id}
-            contentContainerStyle={styles.commentsList}
+            contentContainerStyle={[styles.commentsList, { paddingBottom: insets.bottom + 16 }]}
             showsVerticalScrollIndicator={false}
           />
 
-          <View style={styles.modalCommentInput}>
+          <View
+            style={[
+              styles.modalCommentInput,
+              { borderTopColor: colors.border, paddingBottom: insets.bottom + 12 },
+            ]}
+          >
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.modalUserAvatar} />
             ) : (
-              <View style={styles.modalUserAvatarPlaceholder}>
-                <Text style={styles.modalUserInitial}>
+              <View style={[styles.modalUserAvatarPlaceholder, { backgroundColor: colors.card }]}>
+                <Text style={[styles.modalUserInitial, { color: colors.primary }]}>
                   {item.user?.username?.[0]?.toUpperCase() || "U"}
                 </Text>
               </View>
             )}
             <TextInput
-              style={styles.modalInput}
+              style={[
+                styles.modalInput,
+                { color: colors.textPrimary, borderColor: colors.border },
+              ]}
               placeholder="Add a comment..."
+              placeholderTextColor={colors.textMuted}
               value={commentText}
               onChangeText={setCommentText}
-              placeholderTextColor="#999"
             />
             <TouchableOpacity
               onPress={handleComment}
@@ -737,12 +594,14 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
               <Ionicons
                 name="send"
                 size={22}
-                color={commentText.trim() ? "#A855F7" : "#CCC"}
+                color={commentText.trim() ? colors.primary : colors.textMuted}
               />
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      {/* Comment Actions Modal */}
       <Modal
         transparent
         visible={showCommentActions}
@@ -750,11 +609,16 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
         onRequestClose={() => setShowCommentActions(false)}
       >
         <TouchableOpacity
-          style={styles.overlay}
+          style={[styles.overlay, { backgroundColor: colors.overlay }]}
           onPress={() => setShowCommentActions(false)}
           activeOpacity={1}
         >
-          <View style={styles.actionSheet}>
+          <View
+            style={[
+              styles.actionSheet,
+              { backgroundColor: colors.surface, paddingBottom: insets.bottom + 16 },
+            ]}
+          >
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={() => {
@@ -768,36 +632,35 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
                 );
               }}
             >
-              <Text style={styles.deleteText}>Delete</Text>
+              <Text style={[styles.deleteText, { color: colors.danger }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
+      {/* Delete Menu Modal */}
       {menuVisible && (
         <TouchableOpacity
           activeOpacity={1}
           style={styles.menuOverlay}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={styles.menuBox}>
+          <View style={[styles.menuBox, { backgroundColor: colors.surface }]}>
             <TouchableOpacity
-              style={[
-                styles.menuItem,
-                !isOwner && styles.menuItemDisabled
-              ]}
+              style={[styles.menuItem, !isOwner && styles.menuItemDisabled]}
               disabled={!isOwner || deleting}
               onPress={isOwner ? handleDeleteItem : undefined}
             >
               <Ionicons
                 name="trash-outline"
                 size={18}
-                color={isOwner ? "red" : "#aaa"}
+                color={isOwner ? colors.danger : colors.textMuted}
               />
               <Text
                 style={[
                   styles.menuText,
-                  !isOwner && styles.menuTextDisabled
+                  !isOwner && styles.menuTextDisabled,
+                  { color: isOwner ? colors.danger : colors.textMuted },
                 ]}
               >
                 Delete
@@ -806,437 +669,334 @@ export default function ItemPostCard({ item, onDelete, currentUserId }: any) {
           </View>
         </TouchableOpacity>
       )}
-
-
     </>
-
   );
 }
 
-const styles = StyleSheet.create({
-  dotsContainer: {
-    position: "absolute",
-    bottom: 10,
-    flexDirection: "row",
-    alignSelf: "center",
-  },
-
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#DDD",
-    marginHorizontal: 4,
-  },
-
-  activeDot: {
-    backgroundColor: "#A855F7",
-  },
-
-  menuOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    zIndex: 99,
-  },
-  commentHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-
-  actionSheet: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-
-  deleteBtn: {
-    paddingVertical: 14,
-  },
-
-  deleteText: {
-    color: "#EF4444",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-
-  menuBox: {
-    position: "absolute",
-    top: 50,
-    right: 12,
-    width: 150,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    elevation: 12,
-    paddingVertical: 6,
-  },
-
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-  },
-
-  menuItemDisabled: {
-    opacity: 0.4,
-  },
-
-  menuText: {
-    marginLeft: 10,
-    fontSize: 15,
-    fontWeight: "500",
-    color: "red",
-  },
-
-  menuTextDisabled: {
-    color: "#999",
-  },
-
-
-
-  menuTextDelete: {
-    marginLeft: 10,
-    color: "red",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-
-  card: {
-    backgroundColor: "#ffffffff",
-    borderRadius: 8,
-    marginTop: 12,
-    marginBottom: 5,
-    overflow: "hidden",
-    elevation: 5,
-    shadowColor: "#d87bfdff",
-    shadowOpacity: 0.12,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 4 },
-  },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-  },
-
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#E9D5FF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  actionImageIcon: {
-    width: 30,
-    height: 30,
-    resizeMode: "contain",
-  },
-  actionImageIconbookmark: {
-    width: 25,
-    height: 25,
-    resizeMode: "contain",
-  },
-
-  avatarImg: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-  },
-
-  avatarText: {
-    fontWeight: "700",
-    color: "#6B21A8",
-    fontSize: 16,
-  },
-
-  username: {
-    fontWeight: "700",
-    fontSize: 14,
-    color: "#000",
-  },
-
-  handle: {
-    fontSize: 12,
-    color: "#777",
-  },
-
-  imageContainer: {
-    width: "100%",
-    backgroundColor: "#ffffffff",  // light neutral background
-    justifyContent: "center",
-    alignItems: "center",
-
-  },
-
-  image: {
-    width: "100%",
-    resizeMode: "contain",
-  },
-
-  noImage: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  noImageText: {
-    marginTop: 8,
-    color: "#666",
-    fontSize: 14,
-  },
-
-  priceBadge: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    backgroundColor: "#F3E8FF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-
-  priceText: {
-    fontWeight: "700",
-    color: "#7C3AED",
-    fontSize: 14,
-  },
-
-  actions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-
-  leftActions: {
-    flexDirection: "row",
-    gap: 14,
-  },
-
-  actionIcon: {
-    padding: 0,
-
-  },
-
-  likes: {
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    fontWeight: "700",
-    color: "#000",
-    fontSize: 14,
-  },
-
-  itemDetails: {
-    paddingHorizontal: 14,
-    paddingTop: 1,
-    paddingBottom: 1,
-  },
-
-  itemName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 4,
-  },
-
-  itemDescription: {
-    fontSize: 14,
-    color: "#555",
-    lineHeight: 18,
-  },
-
-  viewComments: {
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    marginTop: 4,
-  },
-
-  viewCommentsText: {
-    fontSize: 14,
-    color: "#666",
-  },
-
-  commentInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-  },
-
-  commentInput: {
-    flex: 1,
-    fontSize: 14,
-    paddingVertical: 6,
-    color: "#000",
-  },
-
-  sendButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-
-  sendButtonText: {
-    color: "#A855F7",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-
-  sendButtonDisabled: {
-    color: "#CCC",
-  },
-
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "#FFF",
-  },
-
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-
-  backButton: {
-    padding: 4,
-  },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-
-  commentsList: {
-    padding: 16,
-  },
-
-  commentItem: {
-    marginBottom: 16,
-  },
-
-  commentUser: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 10,
-  },
-
-  commentAvatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#E9D5FF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-
-  commentInitial: {
-    fontWeight: "600",
-    color: "#6B21A8",
-    fontSize: 14,
-  },
-
-  commentContent: {
-    flex: 1,
-  },
-
-  commentUsername: {
-    fontWeight: "600",
-    fontSize: 14,
-    color: "#000",
-    marginBottom: 2,
-  },
-
-  commentText: {
-    fontSize: 14,
-    color: "#333",
-    lineHeight: 18,
-    marginBottom: 2,
-  },
-
-  commentTime: {
-    fontSize: 12,
-    color: "#888",
-  },
-
-  modalCommentInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    backgroundColor: "#fff",
-  },
-
-  modalUserAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
-  },
-
-  modalUserAvatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#E9D5FF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-
-  modalUserInitial: {
-    fontWeight: "600",
-    color: "#6B21A8",
-    fontSize: 16,
-  },
-
-  modalInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: "#000",
-  },
-
-  modalSendButton: {
-    paddingLeft: 12,
-    paddingRight: 4,
-  },
-  followIcon: {
-    marginRight: 12,
-    padding: 4,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    dotsContainer: {
+      position: "absolute",
+      bottom: 10,
+      flexDirection: "row",
+      alignSelf: "center",
+    },
+    dot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+      marginHorizontal: 4,
+    },
+    activeDot: {
+      backgroundColor: colors.primary,
+    },
+    menuOverlay: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      zIndex: 99,
+    },
+    commentHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    overlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    actionSheet: {
+      padding: 16,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+    },
+    deleteBtn: {
+      paddingVertical: 14,
+    },
+    deleteText: {
+      fontSize: 16,
+      fontWeight: "600",
+      textAlign: "center",
+    },
+    menuBox: {
+      position: "absolute",
+      top: 50,
+      right: 12,
+      width: 150,
+      borderRadius: 12,
+      elevation: 12,
+      paddingVertical: 6,
+    },
+    menuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 12,
+    },
+    menuItemDisabled: {
+      opacity: 0.4,
+    },
+    menuText: {
+      marginLeft: 10,
+      fontSize: 15,
+      fontWeight: "500",
+    },
+    menuTextDisabled: {
+      color: colors.textMuted,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      marginTop: 12,
+      marginBottom: 5,
+      overflow: "hidden",
+      elevation: 5,
+      shadowColor: colors.primary,
+      shadowOpacity: 0.12,
+      shadowRadius: 5,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 14,
+    },
+    avatar: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 10,
+    },
+    actionImageIcon: {
+      width: 30,
+      height: 30,
+      resizeMode: "contain",
+      tintColor: colors.textMuted,
+    },
+    actionImageIconbookmark: {
+      width: 25,
+      height: 25,
+      resizeMode: "contain",
+      tintColor: colors.textMuted,
+    },
+    avatarImg: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+    },
+    avatarText: {
+      fontWeight: "700",
+      fontSize: 16,
+    },
+    username: {
+      fontWeight: "700",
+      fontSize: 14,
+    },
+    handle: {
+      fontSize: 12,
+    },
+    imageContainer: {
+      width: "100%",
+      backgroundColor: colors.background,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    image: {
+      width: "100%",
+      resizeMode: "contain",
+    },
+    noImage: {
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    noImageText: {
+      marginTop: 8,
+      fontSize: 14,
+    },
+    priceBadge: {
+      position: "absolute",
+      bottom: 12,
+      right: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    priceText: {
+      fontWeight: "700",
+      fontSize: 14,
+    },
+    actions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    leftActions: {
+      flexDirection: "row",
+      gap: 14,
+    },
+    actionIcon: {
+      padding: 0,
+    },
+    likes: {
+      paddingHorizontal: 14,
+      paddingTop: 8,
+      fontWeight: "700",
+      fontSize: 14,
+    },
+    itemDetails: {
+      paddingHorizontal: 14,
+      paddingTop: 1,
+      paddingBottom: 1,
+    },
+    itemName: {
+      fontSize: 15,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    itemDescription: {
+      fontSize: 14,
+      lineHeight: 18,
+    },
+    viewComments: {
+      paddingHorizontal: 14,
+      paddingVertical: 4,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      marginTop: 4,
+    },
+    viewCommentsText: {
+      fontSize: 14,
+    },
+    commentInputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderTopWidth: 1,
+    },
+    commentInput: {
+      flex: 1,
+      fontSize: 14,
+      paddingVertical: 6,
+    },
+    sendButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    sendButtonText: {
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    sendButtonDisabled: {
+      opacity: 0.5,
+    },
+    modalContainer: {
+      flex: 1,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      borderBottomWidth: 1,
+    },
+    backButton: {
+      padding: 4,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+    },
+    commentsList: {
+      padding: 16,
+    },
+    commentItem: {
+      marginBottom: 16,
+    },
+    commentUser: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+    },
+    commentAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      marginRight: 10,
+    },
+    commentAvatarPlaceholder: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 10,
+    },
+    commentInitial: {
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    commentContent: {
+      flex: 1,
+    },
+    commentUsername: {
+      fontWeight: "600",
+      fontSize: 14,
+      marginBottom: 2,
+    },
+    commentText: {
+      fontSize: 14,
+      lineHeight: 18,
+      marginBottom: 2,
+    },
+    commentTime: {
+      fontSize: 12,
+    },
+    modalCommentInput: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      borderTopWidth: 1,
+    },
+    modalUserAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 12,
+    },
+    modalUserAvatarPlaceholder: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    modalUserInitial: {
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    modalInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      fontSize: 15,
+    },
+    modalSendButton: {
+      paddingLeft: 12,
+      paddingRight: 4,
+    },
+    followIcon: {
+      marginRight: 12,
+      padding: 4,
+    },
+  });

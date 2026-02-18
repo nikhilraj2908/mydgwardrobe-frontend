@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Image,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSavedItems } from '../context/SavedItemsContext';
+import { useTheme } from '@/app/theme/ThemeContext';
 
 interface SavedGridCardProps {
   item: {
@@ -26,6 +27,10 @@ interface SavedGridCardProps {
 
 export default function SavedGridCard({ item, onPress }: SavedGridCardProps) {
   const { toggleSave, savedItemIds } = useSavedItems();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const isSaved = savedItemIds.includes(item._id);
 
   const formatPrice = (price: number) => {
@@ -44,7 +49,6 @@ export default function SavedGridCard({ item, onPress }: SavedGridCardProps) {
       return imagePath;
     }
     
-    // If it's a relative path
     if (imagePath.startsWith('/')) {
       return `https://api.digiwardrobe.com${imagePath}`;
     }
@@ -71,7 +75,7 @@ export default function SavedGridCard({ item, onPress }: SavedGridCardProps) {
           <Ionicons
             name={isSaved ? "bookmark" : "bookmark-outline"}
             size={20}
-            color={isSaved ? "#A855F7" : "#666"}
+            color={isSaved ? colors.primary : colors.textSecondary}
           />
         </TouchableOpacity>
       </View>
@@ -91,7 +95,7 @@ export default function SavedGridCard({ item, onPress }: SavedGridCardProps) {
           </Text>
           
           <View style={styles.likesContainer}>
-            <Ionicons name="heart" size={12} color="#666" />
+            <Ionicons name="heart" size={12} color={colors.textSecondary} />
             <Text style={styles.likesCount}>
               {item.likes || 0}
             </Text>
@@ -102,68 +106,69 @@ export default function SavedGridCard({ item, onPress }: SavedGridCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  imageContainer: {
-    position: 'relative',
-    width: '100%',
-    height: 150,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  bookmarkButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    padding: 6,
-    zIndex: 10,
-  },
-  content: {
-    padding: 12,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  brand: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  price: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#000',
-  },
-  likesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  likesCount: {
-    fontSize: 12,
-    color: '#666',
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    card: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      marginBottom: 16,
+      overflow: 'hidden',
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    imageContainer: {
+      position: 'relative',
+      width: '100%',
+      height: 150,
+    },
+    image: {
+      width: '100%',
+      height: '100%',
+    },
+    bookmarkButton: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      borderRadius: 20,
+      padding: 6,
+      zIndex: 10,
+    },
+    content: {
+      padding: 12,
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    brand: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 8,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    price: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    likesContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    likesCount: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+  });

@@ -3,10 +3,11 @@ import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState, useMemo } from "react";
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/api";
+import { useTheme } from "@/app/theme/ThemeContext";
 
 interface WardrobeItem {
   _id: string;
@@ -24,9 +25,11 @@ export default function PremiumWardrobeScreen() {
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { userId } = useLocalSearchParams<{ userId?: string }>();
-
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
 
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const detectOwner = async () => {
     const token = await AsyncStorage.getItem("token");
@@ -43,7 +46,6 @@ export default function PremiumWardrobeScreen() {
     detectOwner();
   }, [userId]);
 
-
   const fetchPremiumItems = async () => {
     try {
       setLoading(true);
@@ -52,7 +54,6 @@ export default function PremiumWardrobeScreen() {
 
       let finalItems: WardrobeItem[] = [];
 
-      // 👑 OWNER → own premium items
       if (isOwner) {
         const res = await api.get("/api/wardrobe/my", {
           headers: { Authorization: `Bearer ${token}` },
@@ -65,10 +66,7 @@ export default function PremiumWardrobeScreen() {
               item.visibility === "public"
           );
         }
-      }
-
-      // 👤 USER → owner's premium items (APPROVED ONLY)
-      else {
+      } else {
         const res = await api.get(
           `/api/premium/user/${userId}/premium-items`,
           {
@@ -76,7 +74,6 @@ export default function PremiumWardrobeScreen() {
           }
         );
 
-        // 🔥 THIS WAS YOUR BUG EARLIER
         if (Array.isArray(res.data?.items)) {
           finalItems = res.data.items;
         }
@@ -97,10 +94,6 @@ export default function PremiumWardrobeScreen() {
     }
   };
 
-
-
-
-
   useEffect(() => {
     if (isOwner !== null) {
       fetchPremiumItems();
@@ -112,13 +105,12 @@ export default function PremiumWardrobeScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top","bottom"]}>
       <AppBackground>
         <ScrollView style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#000" />
+              <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Premium Collection</Text>
             <View style={{ width: 40 }} />
@@ -133,7 +125,7 @@ export default function PremiumWardrobeScreen() {
 
           {items.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="diamond-outline" size={64} color="#ccc" />
+              <Ionicons name="diamond-outline" size={64} color={colors.textMuted} />
               <Text style={styles.emptyStateText}>No public items yet</Text>
               <Text style={styles.emptyStateSubText}>
                 Set your items to "public" to add them to your Premium Collection
@@ -181,102 +173,105 @@ export default function PremiumWardrobeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  statsContainer: {
-    backgroundColor: "#a453fc4d",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  itemCount: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  totalWorth: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
-  },
-  emptyState: {
-    alignItems: "center",
-    padding: 40,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 12,
-    fontWeight: "600",
-  },
-  emptyStateSubText: {
-    fontSize: 14,
-    color: "#999",
-    marginTop: 4,
-    textAlign: "center",
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  itemCard: {
-    width: "48%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: "hidden",
-    position: "relative",
-  },
-  itemImage: {
-    width: "100%",
-    height: 150,
-  },
-  placeholderImage: {
-    width: "100%",
-    height: 150,
-    backgroundColor: "#E9D5FF",
-  },
-  itemInfo: {
-    padding: 12,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  itemBrand: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
-  },
-  itemPrice: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#A855F7",
-    marginTop: 4,
-  },
-  premiumBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 12,
-    padding: 4,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20,
+    },
+    backButton: {
+      padding: 8,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    statsContainer: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 20,
+    },
+    itemCount: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    totalWorth: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    emptyState: {
+      alignItems: "center",
+      padding: 40,
+    },
+    emptyStateText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginTop: 12,
+      fontWeight: "600",
+    },
+    emptyStateSubText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 4,
+      textAlign: "center",
+    },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+    },
+    itemCard: {
+      width: "48%",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      marginBottom: 16,
+      overflow: "hidden",
+      position: "relative",
+    },
+    itemImage: {
+      width: "100%",
+      height: 150,
+    },
+    placeholderImage: {
+      width: "100%",
+      height: 150,
+      backgroundColor: colors.card,
+    },
+    itemInfo: {
+      padding: 12,
+    },
+    itemName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    itemBrand: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    itemPrice: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.primary,
+      marginTop: 4,
+    },
+    premiumBadge: {
+      position: "absolute",
+      top: 8,
+      right: 8,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      borderRadius: 12,
+      padding: 4,
+    },
+  });

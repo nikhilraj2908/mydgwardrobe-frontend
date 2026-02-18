@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import React, { useMemo } from "react";
 import {
   Image,
   Platform,
@@ -12,35 +13,37 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTheme } from "@/app/theme/ThemeContext";
+
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const BASE_BAR_HEIGHT = 60;
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#ffffffff" }}
-      edges={["top"]} // ✅ fixes status bar overlap
+      style={{ flex: 1, backgroundColor: colors.background }}
+      edges={["top"]}
     >
       <Tabs
         screenOptions={{
           headerShown: false,
-
           tabBarStyle: {
             height: BASE_BAR_HEIGHT + insets.bottom,
             paddingBottom: insets.bottom,
             paddingTop: 10,
-
             borderTopWidth: 0,
             elevation: 10,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
-            backgroundColor: "#ffffffff",
+            backgroundColor: colors.surface,
           },
-
-          tabBarActiveTintColor: "#A855F7",
-          tabBarInactiveTintColor: "#9CA3AF",
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarLabelStyle: {
             fontSize: 12,
             fontWeight: "500",
@@ -57,7 +60,7 @@ export default function TabsLayout() {
                 source={require("../../assets/icons/home.png")}
                 style={[
                   styles.tabIcon,
-                  { tintColor: focused ? "#A855F7" : undefined },
+                  { tintColor: focused ? colors.primary : colors.textMuted },
                 ]}
               />
             ),
@@ -73,7 +76,7 @@ export default function TabsLayout() {
                 source={require("../../assets/icons/search.png")}
                 style={[
                   styles.tabIcon,
-                  { tintColor: focused ? "#A855F7" : undefined },
+                  { tintColor: focused ? colors.primary : colors.textMuted },
                 ]}
               />
             ),
@@ -93,11 +96,10 @@ export default function TabsLayout() {
                   onPress={() => {
                     router.replace({
                       pathname: "/add-wardrobe",
-                      params: { mode: "create" }, // 🔥 FORCE CREATE MODE
+                      params: { mode: "create" },
                     });
                   }}
                 >
-
                   <View style={styles.centerButtonInner}>
                     <Ionicons name="add" size={32} color="#FFFFFF" />
                   </View>
@@ -116,7 +118,7 @@ export default function TabsLayout() {
                 source={require("../../assets/icons/logo.png")}
                 style={[
                   styles.wardrobeIcon,
-                  { tintColor: focused ? "#A855F7" : "#424141ff" },
+                  { tintColor: focused ? colors.primary : colors.textMuted },
                 ]}
               />
             ),
@@ -132,7 +134,7 @@ export default function TabsLayout() {
                 source={require("../../assets/icons/person.png")}
                 style={[
                   styles.tabIcon,
-                  { tintColor: focused ? "#A855F7" : undefined },
+                  { tintColor: focused ? colors.primary : colors.textMuted },
                 ]}
               />
             ),
@@ -143,45 +145,45 @@ export default function TabsLayout() {
   );
 }
 
-
-const styles = StyleSheet.create({
-  tabIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: "contain",
-  },
-  wardrobeIcon: {
-    width: 50,
-    height: 50,
-    resizeMode: "contain",
-  },
-  centerButtonContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  centerButton: {
-    top: Platform.OS === "ios" ? -15 : -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#A855F7",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#A855F7",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
-  },
-  centerButtonInner: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#A855F7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    tabIcon: {
+      width: 28,
+      height: 28,
+      resizeMode: "contain",
+    },
+    wardrobeIcon: {
+      width: 50,
+      height: 50,
+      resizeMode: "contain",
+    },
+    centerButtonContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    centerButton: {
+      top: Platform.OS === "ios" ? -15 : -20,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+      borderWidth: 3,
+      borderColor: colors.background, // provides contrast against any theme background
+    },
+    centerButtonInner: {
+      width: 54,
+      height: 54,
+      borderRadius: 27,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });

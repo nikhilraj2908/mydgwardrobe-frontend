@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -15,6 +15,7 @@ import { useLocalSearchParams } from "expo-router";
 import api from "../../api/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppBackground from "@/components/AppBackground";
+import { useTheme } from "@/app/theme/ThemeContext";
 
 const COLORS = [
   "#F97316",
@@ -38,6 +39,10 @@ export default function CreateWardrobe() {
   );
   const [loading, setLoading] = useState(false);
 
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const submitWardrobe = async () => {
     if (!name.trim()) {
       Alert.alert("Error", "Wardrobe name is required");
@@ -54,7 +59,6 @@ export default function CreateWardrobe() {
       }
 
       if (isEditMode) {
-        // ✅ EDIT
         await api.put(
           `/api/wardrobe/${wardrobeId}`,
           { name, color },
@@ -62,10 +66,8 @@ export default function CreateWardrobe() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-
         Alert.alert("Success", "Wardrobe updated");
       } else {
-        // ✅ CREATE
         await api.post(
           "/api/wardrobe/create",
           { name, color },
@@ -73,7 +75,6 @@ export default function CreateWardrobe() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-
         Alert.alert("Success", "Wardrobe created");
       }
 
@@ -89,131 +90,164 @@ export default function CreateWardrobe() {
   };
 
   return (
-          <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-
-    <AppBackground>
-      <ScrollView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} />
-          </TouchableOpacity>
-          <Text style={styles.title}>
-            {isEditMode ? "Edit Wardrobe" : "Create Wardrobe"}
-          </Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        {/* Name */}
-        <Text style={styles.label}>Wardrobe Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Summer Collection"
-          value={name}
-          onChangeText={setName}
-        />
-
-        {/* Color */}
-        <Text style={styles.label}>Choose Color</Text>
-        <View style={styles.colorGrid}>
-          {COLORS.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[
-                styles.colorBox,
-                { backgroundColor: c },
-                color === c && styles.activeColor,
-              ]}
-              onPress={() => setColor(c)}
-            >
-              {color === c && (
-                <Ionicons name="checkmark" size={20} color="#fff" />
-              )}
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+      <AppBackground>
+        <ScrollView style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Preview */}
-        <Text style={styles.label}>Preview</Text>
-        <View style={[styles.previewCard, { backgroundColor: color + "33" }]}>
-          <View style={[styles.previewIcon, { backgroundColor: color }]} />
-          <View>
-            <Text style={styles.previewName}>{name || "Wardrobe"}</Text>
-            <Text style={styles.previewCount}>0 items</Text>
+            <Text style={styles.title}>
+              {isEditMode ? "Edit Wardrobe" : "Create Wardrobe"}
+            </Text>
+            <View style={{ width: 24 }} />
           </View>
-        </View>
 
-        {/* Submit */}
-        <TouchableOpacity
-          style={styles.submitBtn}
-          onPress={submitWardrobe}
-          disabled={loading}
-        >
-          <Text style={styles.submitText}>
-            {loading
-              ? isEditMode
-                ? "Updating..."
-                : "Creating..."
-              : isEditMode
-                ? "Update Wardrobe"
-                : "Create Wardrobe"}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </AppBackground>
+          {/* Name */}
+          <Text style={styles.label}>Wardrobe Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Summer Collection"
+            placeholderTextColor={colors.textMuted}
+            value={name}
+            onChangeText={setName}
+          />
+
+          {/* Color */}
+          <Text style={styles.label}>Choose Color</Text>
+          <View style={styles.colorGrid}>
+            {COLORS.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.colorBox,
+                  { backgroundColor: c },
+                  color === c && styles.activeColor,
+                ]}
+                onPress={() => setColor(c)}
+              >
+                {color === c && (
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Preview */}
+          <Text style={styles.label}>Preview</Text>
+          <View style={[styles.previewCard, { backgroundColor: color + "33" }]}>
+            <View style={[styles.previewIcon, { backgroundColor: color }]} />
+            <View>
+              <Text style={styles.previewName}>{name || "Wardrobe"}</Text>
+              <Text style={styles.previewCount}>0 items</Text>
+            </View>
+          </View>
+
+          {/* Submit */}
+          <TouchableOpacity
+            style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+            onPress={submitWardrobe}
+            disabled={loading}
+          >
+            <Text style={styles.submitText}>
+              {loading
+                ? isEditMode
+                  ? "Updating..."
+                  : "Creating..."
+                : isEditMode
+                  ? "Update Wardrobe"
+                  : "Create Wardrobe"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </AppBackground>
     </SafeAreaView>
-
-
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#ffffff7c" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  title: { fontSize: 18, fontWeight: "700" },
-  label: { fontWeight: "600", marginBottom: 8, marginTop: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 14,
-    padding: 14,
-  },
-  colorGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
-  colorBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    margin: 6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  activeColor: { borderWidth: 3, borderColor: "#000" },
-  previewCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 10,
-  },
-  previewIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  previewName: { fontWeight: "700" },
-  previewCount: { color: "#555", marginTop: 4 },
-  submitBtn: {
-    backgroundColor: "#A855F7",
-    padding: 16,
-    borderRadius: 30,
-    alignItems: "center",
-    marginTop: 30,
-  },
-  submitText: { color: "#fff", fontWeight: "700" },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    label: {
+      fontWeight: "600",
+      marginBottom: 8,
+      marginTop: 12,
+      color: colors.textSecondary,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 14,
+      padding: 14,
+      backgroundColor: colors.surface,
+      color: colors.textPrimary,
+    },
+    colorGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginTop: 8,
+    },
+    colorBox: {
+      width: 60,
+      height: 60,
+      borderRadius: 16,
+      margin: 6,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    activeColor: {
+      borderWidth: 3,
+      borderColor: colors.primary, // or use black if preferred, but primary works
+    },
+    previewCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 16,
+      padding: 16,
+      marginTop: 10,
+    },
+    previewIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      marginRight: 12,
+    },
+    previewName: {
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    previewCount: {
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    submitBtn: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 30,
+      alignItems: "center",
+      marginTop: 30,
+    },
+    submitBtnDisabled: {
+      opacity: 0.5,
+    },
+    submitText: {
+      color: colors.textLight,
+      fontWeight: "700",
+    },
+  });

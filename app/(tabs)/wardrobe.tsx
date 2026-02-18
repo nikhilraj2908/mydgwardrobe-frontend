@@ -1,7 +1,7 @@
 import CollectionPostCard from "@/components/CollectionPostCard";
 import WardrobeHeader from "@/components/WardrobeHeader";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,12 +10,17 @@ import {
 } from "react-native";
 import api from "../../api/api";
 import AppBackground from "@/components/AppBackground";
+import { useTheme } from "../theme/ThemeContext";
 
 export default function Wardrobe() {
   const router = useRouter();
+  const { theme } = useTheme();                         // <-- get current theme
+  const colors = theme.colors;
+        const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
   const [sortBy, setSortBy] = useState<
     "worth" | "alpha" | "views"
   >("worth");
@@ -56,41 +61,42 @@ export default function Wardrobe() {
 
   return (
     <AppBackground>
-    <View style={{ flex: 1, paddingTop:5}}>
-      <WardrobeHeader
-        onBack={() => router.back()}
-        onSearch={() => console.log("Search")}
-        onNotification={() => console.log("Notification")}
-        showFilters
-        activeSort={sortBy}
-        onSort={setSortBy}
-      />
+      <View style={{ flex: 1, paddingTop: 5 }}>
+        <WardrobeHeader
+          onBack={() => router.back()}
+          onSearch={() => console.log("Search")}
+          onNotification={() => console.log("Notification")}
+          showFilters
+          activeSort={sortBy}
+          onSort={setSortBy}
+        />
 
 
-      <FlatList
-        data={sortedCollections}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => (
-          <CollectionPostCard item={item} />
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        ListFooterComponent={
-          loading ? (
-            <ActivityIndicator
-              size="small"
-              color="#A855F7"
-              style={{ marginVertical: 20 }}
-            />
-          ) : null
-        }
-      />
-    </View>
+        <FlatList
+          data={sortedCollections}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <CollectionPostCard item={item} />
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            loading ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginVertical: 20 }}
+              />
+            ) : null
+          }
+        />
+      </View>
     </AppBackground>
   );
 }
+const createStyles = (colors: any) =>
+  StyleSheet.create({
 
-const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     paddingBottom: 20,

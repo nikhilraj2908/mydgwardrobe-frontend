@@ -4,7 +4,7 @@ import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@/app/theme/ThemeContext";
 
 interface PremiumRequest {
   _id: string;
@@ -43,28 +44,27 @@ const formatDateTime = (date: string) =>
 
 export default function PremiumRequestsPage() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<PremiumRequest[]>([]);
   const [approved, setApproved] = useState<PremiumRequest[]>([]);
-
 
   const loadRequests = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
 
-      // 🔵 1. Pending requests
       const pendingRes = await api.get("/api/premium/requests", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setPending(pendingRes.data || []);
 
-      // 🟢 2. Approved-by-me
       const approvedRes = await api.get("/api/premium/approved-by-me", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setApproved(approvedRes.data?.approvals || []);
     } catch (err) {
       console.log("Failed to load premium requests", err);
@@ -73,11 +73,7 @@ export default function PremiumRequestsPage() {
     }
   };
 
-
-  const respond = async (
-    requestId: string,
-    action: "approve" | "reject"
-  ) => {
+  const respond = async (requestId: string, action: "approve" | "reject") => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
@@ -95,18 +91,6 @@ export default function PremiumRequestsPage() {
     }
   };
 
-  useEffect(() => {
-    loadRequests();
-  }, []);
-
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#A855F7" />
-      </View>
-    );
-  }
   const revoke = (requestId: string, username: string) => {
     Alert.alert(
       "Revoke Premium Access",
@@ -138,15 +122,25 @@ export default function PremiumRequestsPage() {
     );
   };
 
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <AppBackground>
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={26} />
+            <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Premium Access Requests</Text>
         </View>
@@ -178,9 +172,7 @@ export default function PremiumRequestsPage() {
                 )}
 
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>
-                    {req.requester.username}
-                  </Text>
+                  <Text style={styles.name}>{req.requester.username}</Text>
                   <Text style={styles.subText}>
                     Wants access to{" "}
                     <Text style={{ fontWeight: "600" }}>
@@ -210,6 +202,11 @@ export default function PremiumRequestsPage() {
             </View>
           ))}
 
+          {/* APPROVED */}
+          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
+            Approved Users ({approved.length})
+          </Text>
+
           {approved.length === 0 && (
             <Text style={styles.emptyText}>No approved users yet</Text>
           )}
@@ -232,13 +229,10 @@ export default function PremiumRequestsPage() {
 
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{req.requester.username}</Text>
-
-
-
                   <Text style={styles.subText}>
                     Access to{" "}
                     <Text style={{ fontWeight: "600" }}>
-                      {req.item?.name || "Premium Item"}
+                      {req.item?.wardrobe?.name || "Premium Item"}
                     </Text>
                   </Text>
                   <Text style={styles.subText}>
@@ -246,132 +240,121 @@ export default function PremiumRequestsPage() {
                   </Text>
                 </View>
 
-
-                <Ionicons name="checkmark-circle" size={22} color="#10B981" />
-                <TouchableOpacity
-                  onPress={() => revoke(req._id, req.requester.username)}
-
-                >
-                  <Ionicons name="close-circle" size={20} color="#EF4444" />
+                <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                <TouchableOpacity onPress={() => revoke(req._id, req.requester.username)}>
+                  <Ionicons name="close-circle" size={20} color={colors.danger} />
                 </TouchableOpacity>
-
               </View>
             </View>
           ))}
-
         </ScrollView>
       </AppBackground>
     </SafeAreaView>
-
   );
 }
 
-/* ---------------- STYLES ---------------- */
-
-const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    gap: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginVertical: 12,
-  },
-
-  emptyText: {
-    color: "#777",
-    marginBottom: 10,
-  },
-
-  card: {
-    backgroundColor: "#F9F5FF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#E9D5FF",
-  },
-
-  approvedCard: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#A7F3D0",
-  },
-
-  row: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
-  },
-
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-
-  avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#A855F7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  avatarText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-
-  name: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
-  subText: {
-    fontSize: 13,
-    color: "#555",
-    marginTop: 2,
-  },
-
-  actions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-
-  btn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-
-  approve: { backgroundColor: "#10B981" },
-  reject: { backgroundColor: "#EF4444" },
-
-  btnText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    center: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      gap: 12,
+      backgroundColor: colors.background,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    container: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginVertical: 12,
+    },
+    emptyText: {
+      color: colors.textMuted,
+      marginBottom: 10,
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    approvedCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.success,
+    },
+    row: {
+      flexDirection: "row",
+      gap: 12,
+      alignItems: "center",
+    },
+    avatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+    },
+    avatarFallback: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarText: {
+      color: colors.primaryDark,
+      fontWeight: "700",
+      fontSize: 16,
+    },
+    name: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    subText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    actions: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 14,
+    },
+    btn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 12,
+    },
+    approve: {
+      backgroundColor: colors.success, // #22C55E
+    },
+    reject: {
+      backgroundColor: colors.danger, // #EF4444
+    },
+    btnText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 14,
+    },
+  });

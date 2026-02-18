@@ -5,7 +5,7 @@ import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/api";
+import { useTheme } from "@/app/theme/ThemeContext";
 
 interface User {
   _id: string;
@@ -63,6 +64,9 @@ interface PremiumRequest {
 export default function OtherUserProfile() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const router = useRouter();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [user, setUser] = useState<User | null>(null);
   const [wardrobes, setWardrobes] = useState<Wardrobe[]>([]);
@@ -239,8 +243,9 @@ export default function OtherUserProfile() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (isOwner) {
-          return null; // or loader
+        if (meRes.data?._id === userId) {
+          setIsOwner(true);
+          loadPremiumRequests();
         }
       }
 
@@ -276,29 +281,6 @@ export default function OtherUserProfile() {
     }
   }, [premiumItemId]);
 
-  // Load premium requests if this is the owner's profile
-  useEffect(() => {
-    const loadOwnerData = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) return;
-
-        const meRes = await api.get("/api/user/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (meRes.data?._id === userId) {
-          setIsOwner(true);
-          loadPremiumRequests();
-        }
-      } catch (error) {
-        console.log("Failed to check ownership:", error);
-      }
-    };
-
-    loadOwnerData();
-  }, [userId]);
-
   const onRefresh = () => {
     setRefreshing(true);
     loadProfile();
@@ -323,7 +305,7 @@ export default function OtherUserProfile() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#A855F7" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
@@ -334,7 +316,7 @@ export default function OtherUserProfile() {
       <View style={styles.loading}>
         <Text style={styles.errorText}>User not found</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>Go Back</Text>
+          <Text style={[styles.backText, { color: colors.primary }]}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -346,9 +328,8 @@ export default function OtherUserProfile() {
   const publishedCoverImage = wardrobes.find(w => w.coverImage)?.coverImage || null;
 
   return (
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-
-    <AppBackground>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+      <AppBackground>
         <View style={styles.container}>
           {/* Header */}
           <WardrobeHeader
@@ -497,7 +478,6 @@ export default function OtherUserProfile() {
               <TouchableOpacity
                 style={styles.publicCard}
                 onPress={() =>
-                  // router.push(`/wardrobe/items/${userId}`)
                   router.push(`/profile/public-wardrobe?userId=${userId}`)
                 }
                 activeOpacity={0.7}
@@ -519,39 +499,6 @@ export default function OtherUserProfile() {
                 </View>
               </TouchableOpacity>
             </View>
-
-            {/* INDIVIDUAL WARDROBES */}
-            {/* {wardrobes.length > 0 ? (
-              wardrobes.map((w) => (
-                <TouchableOpacity
-                  key={w._id}
-                  style={styles.wardrobeCard}
-                  onPress={() =>
-                    router.push(`/wardrobe/${w._id}?public=true`)
-                  }
-                >
-                  <View style={[styles.wardrobeIcon, { backgroundColor: "#A855F7" }]}>
-                    <Text style={styles.wardrobeIconText}>
-                      {w.name[0]?.toUpperCase()}
-                    </Text>
-                  </View>
-
-                  <View style={styles.wardrobeInfo}>
-                    <Text style={styles.wardrobeName}>{w.name}</Text>
-                    <Text style={styles.itemsCount}>
-                      {w.totalItems || 0} items
-                    </Text>
-                  </View>
-                  <Text style={styles.price}>₹{w.totalWorth || 0}</Text>
-                  <Ionicons name="chevron-forward" size={22} color="#777" />
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.emptyWardrobes}>
-                <Ionicons name="folder-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>No wardrobes yet</Text>
-              </View>
-            )} */}
           </ScrollView>
 
           {/* Premium Access Modal */}
@@ -568,13 +515,13 @@ export default function OtherUserProfile() {
                     style={styles.closeButton}
                     onPress={() => setShowPremiumModal(false)}
                   >
-                    <Ionicons name="close" size={24} color="#666" />
+                    <Ionicons name="close" size={24} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.modalBody}>
                   <View style={styles.modalIcon}>
-                    <Ionicons name="lock-closed" size={48} color="#A855F7" />
+                    <Ionicons name="lock-closed" size={48} color={colors.primary} />
                   </View>
 
                   <Text style={styles.modalTitle}>Request Premium Access</Text>
@@ -626,13 +573,13 @@ export default function OtherUserProfile() {
                     style={styles.closeButton}
                     onPress={() => setShowRequestsModal(false)}
                   >
-                    <Ionicons name="close" size={24} color="#666" />
+                    <Ionicons name="close" size={24} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
 
                 {premiumRequests.length === 0 ? (
                   <View style={styles.emptyRequests}>
-                    <Ionicons name="notifications-off-outline" size={64} color="#ccc" />
+                    <Ionicons name="notifications-off-outline" size={64} color={colors.textMuted} />
                     <Text style={styles.emptyRequestsText}>No pending requests</Text>
                   </View>
                 ) : (
@@ -699,517 +646,516 @@ export default function OtherUserProfile() {
             </View>
           </Modal>
         </View>
-    </AppBackground>
-      </SafeAreaView>
-
+      </AppBackground>
+    </SafeAreaView>
   );
 }
 
 /* ---------- STYLES ---------- */
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // backgroundColor: "#ffffff70",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  loading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  loadingText: {
-    marginTop: 12,
-    color: "#666",
-    fontSize: 14,
-  },
-  errorText: {
-    fontSize: 18,
-    color: "#666",
-    marginBottom: 20,
-  },
-  backText: {
-    color: "#A855F7",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  userCard: {
-    flexDirection: "row",
-    marginBottom: 24,
-    alignItems: "center",
-  },
-  avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35
-  },
-  avatarFallback: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#A855F7",
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  avatarText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "700"
-  },
-  userInfo: {
-    flex: 1,
-    marginLeft: 16
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  handle: {
-    color: "#777",
-    marginVertical: 2,
-    fontSize: 14,
-  },
-  bio: {
-    color: "#444",
-    fontSize: 14,
-    marginTop: 4,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  statBox: {
-    alignItems: "center",
-    flex: 1,
-    paddingHorizontal: 8,
-  },
-  statValue: {
-    fontWeight: "700",
-    fontSize: 18,
-    color: "#1A1A1A",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 4,
-  },
-  sectionHeader: {
-    marginBottom: 12
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  wardrobeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3E8FF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  wardrobeIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    marginRight: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  wardrobeIconText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  wardrobeInfo: {
-    flex: 1
-  },
-  wardrobeName: {
-    fontWeight: "700",
-    fontSize: 14,
-    color: "#1A1A1A",
-    marginBottom: 2,
-  },
-  itemsCount: {
-    fontSize: 13,
-    color: "#777"
-  },
-  price: {
-    marginRight: 12,
-    fontWeight: "600",
-    fontSize: 16,
-    color: "#1A1A1A",
-  },
-  followBtnInline: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#A855F7",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  followingBtn: {
-    backgroundColor: "#7C3AED",
-  },
-  followText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  boxGrid: {
-    flexDirection: "column",
-    marginBottom: 20,
-  },
-  emptyWardrobes: {
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    color: "#777",
-    fontSize: 14,
-    marginTop: 12,
-  },
-  // Card Styles (Replacing BoxWardrobeCard)
-  premiumCard: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 3,
-    marginBottom: 12,
-    elevation: 3,
-    overflow: "hidden",
-    position: "relative",
-    height: 220,
-  },
-  publicCard: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 3,
-    marginBottom: 20,
-    elevation: 3,
-    overflow: "hidden",
-    position: "relative",
-    height: 220,
-  },
-  lockedCard: {
-    opacity: 0.9,
-  },
-  cardImage: {
-    width: "100%",
-    height: "100%",
-  },
-  cardPlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#E9D5FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardPlaceholderText: {
-    color: "#7C3AED",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  lockOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 5,
-  },
-  lockText: {
-    marginTop: 6,
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  premiumBadge: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    backgroundColor: "#A855F7",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    zIndex: 6,
-  },
-  publicBadge: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    backgroundColor: "#10B981",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    zIndex: 6,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    width: "100%",
-    maxWidth: 400,
-    maxHeight: "80%",
-  },
-  requestsModalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    width: "100%",
-    maxWidth: 400,
-    maxHeight: "80%",
-  },
-  modalHeader: {
-    padding: 20,
-    paddingBottom: 10,
-    alignItems: "flex-end",
-  },
-  requestsModalHeader: {
-    padding: 20,
-    paddingBottom: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  closeButton: {
-    padding: 4,
-  },
-  modalBody: {
-    padding: 20,
-    paddingTop: 0,
-    alignItems: "center",
-  },
-  modalIcon: {
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#1A1A1A",
-    textAlign: "center",
-  },
-  modalDescription: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  boldText: {
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  // Premium Card Preview
-  premiumCardPreview: {
-    backgroundColor: "#F8F5FF",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E9D5FF",
-    width: "100%",
-  },
-  premiumBadgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  premiumCardCount: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 16,
-  },
-  // Buttons
-  sendRequestButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#A855F7",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 16,
-    gap: 8,
-    marginBottom: 16,
-    width: "100%",
-  },
-  sendRequestButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  cancelButton: {
-    paddingVertical: 12,
-    alignItems: "center",
-    width: "100%",
-  },
-  cancelButtonText: {
-    color: "#666",
-    fontSize: 16,
-  },
-  // Premium Requests Styles
-  requestsBadge: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    zIndex: 100,
-    backgroundColor: "#A855F7",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  badgeCount: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    backgroundColor: "#EF4444",
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  badgeCountText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  emptyRequests: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyRequestsText: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 12,
-  },
-  requestsList: {
-    flex: 1,
-    padding: 20,
-  },
-  requestItem: {
-    backgroundColor: "#f8f8f8",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  requestHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  requesterAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-  },
-  requesterAvatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#A855F7",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  requesterAvatarText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  requesterInfo: {
-    flex: 1,
-  },
-  requesterName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 2,
-  },
-  requestTime: {
-    fontSize: 12,
-    color: "#666",
-  },
-  requestActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 6,
-    flex: 1,
-  },
-  approveButton: {
-    backgroundColor: "#10B981",
-  },
-  rejectButton: {
-    backgroundColor: "#EF4444",
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-  },
-  approvedBadge: {
-    backgroundColor: "#10B98120",
-  },
-  rejectedBadge: {
-    backgroundColor: "#EF444420",
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 20,
+    },
+    loading: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      marginTop: 12,
+      color: colors.textSecondary,
+      fontSize: 14,
+    },
+    errorText: {
+      fontSize: 18,
+      color: colors.textSecondary,
+      marginBottom: 20,
+    },
+    backText: {
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    userCard: {
+      flexDirection: "row",
+      marginBottom: 24,
+      alignItems: "center",
+    },
+    avatar: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+    },
+    avatarFallback: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarText: {
+      color: colors.primaryDark,
+      fontSize: 24,
+      fontWeight: "700",
+    },
+    userInfo: {
+      flex: 1,
+      marginLeft: 16,
+    },
+    name: {
+      fontSize: 18,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+      color: colors.textPrimary,
+    },
+    handle: {
+      color: colors.textMuted,
+      marginVertical: 2,
+      fontSize: 14,
+    },
+    bio: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      marginTop: 4,
+    },
+    statsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 24,
+    },
+    statBox: {
+      alignItems: "center",
+      flex: 1,
+      paddingHorizontal: 8,
+    },
+    statValue: {
+      fontWeight: "700",
+      fontSize: 18,
+      color: colors.textPrimary,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    sectionHeader: {
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    wardrobeCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+    },
+    wardrobeIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      marginRight: 12,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    wardrobeIconText: {
+      color: "#fff",
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    wardrobeInfo: {
+      flex: 1,
+    },
+    wardrobeName: {
+      fontWeight: "700",
+      fontSize: 14,
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    itemsCount: {
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    price: {
+      marginRight: 12,
+      fontWeight: "600",
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    followBtnInline: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      gap: 6,
+    },
+    followingBtn: {
+      backgroundColor: colors.primaryDark,
+    },
+    followText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 13,
+    },
+    nameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    boxGrid: {
+      flexDirection: "column",
+      marginBottom: 20,
+    },
+    emptyWardrobes: {
+      alignItems: "center",
+      paddingVertical: 40,
+    },
+    emptyText: {
+      color: colors.textMuted,
+      fontSize: 14,
+      marginTop: 12,
+    },
+    // Card Styles (Replacing BoxWardrobeCard)
+    premiumCard: {
+      width: "100%",
+      backgroundColor: colors.surface,
+      borderRadius: 3,
+      marginBottom: 12,
+      elevation: 3,
+      overflow: "hidden",
+      position: "relative",
+      height: 220,
+    },
+    publicCard: {
+      width: "100%",
+      backgroundColor: colors.surface,
+      borderRadius: 3,
+      marginBottom: 20,
+      elevation: 3,
+      overflow: "hidden",
+      position: "relative",
+      height: 220,
+    },
+    lockedCard: {
+      opacity: 0.9,
+    },
+    cardImage: {
+      width: "100%",
+      height: "100%",
+    },
+    cardPlaceholder: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: colors.card,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    cardPlaceholderText: {
+      color: colors.primary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    lockOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 5,
+    },
+    lockText: {
+      marginTop: 6,
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    premiumBadge: {
+      position: "absolute",
+      top: 12,
+      left: 12,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 20,
+      zIndex: 6,
+    },
+    publicBadge: {
+      position: "absolute",
+      top: 12,
+      left: 12,
+      backgroundColor: colors.success,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 20,
+      zIndex: 6,
+    },
+    badgeText: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    // Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      width: "100%",
+      maxWidth: 400,
+      maxHeight: "80%",
+    },
+    requestsModalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      width: "100%",
+      maxWidth: 400,
+      maxHeight: "80%",
+    },
+    modalHeader: {
+      padding: 20,
+      paddingBottom: 10,
+      alignItems: "flex-end",
+    },
+    requestsModalHeader: {
+      padding: 20,
+      paddingBottom: 16,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    modalBody: {
+      padding: 20,
+      paddingTop: 0,
+      alignItems: "center",
+    },
+    modalIcon: {
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 12,
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    modalDescription: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 24,
+      lineHeight: 20,
+    },
+    boldText: {
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    // Premium Card Preview
+    premiumCardPreview: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 24,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+      width: "100%",
+    },
+    premiumBadgeText: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    premiumCardCount: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 16,
+    },
+    // Buttons
+    sendRequestButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 16,
+      borderRadius: 16,
+      gap: 8,
+      marginBottom: 16,
+      width: "100%",
+    },
+    sendRequestButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    cancelButton: {
+      paddingVertical: 12,
+      alignItems: "center",
+      width: "100%",
+    },
+    cancelButtonText: {
+      color: colors.textMuted,
+      fontSize: 16,
+    },
+    // Premium Requests Styles
+    requestsBadge: {
+      position: "absolute",
+      top: 60,
+      right: 20,
+      zIndex: 100,
+      backgroundColor: colors.primary,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    badgeCount: {
+      position: "absolute",
+      top: -5,
+      right: -5,
+      backgroundColor: colors.danger,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    badgeCountText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "700",
+    },
+    emptyRequests: {
+      alignItems: "center",
+      paddingVertical: 60,
+    },
+    emptyRequestsText: {
+      fontSize: 16,
+      color: colors.textMuted,
+      marginTop: 12,
+    },
+    requestsList: {
+      flex: 1,
+      padding: 20,
+    },
+    requestItem: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    requestHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    requesterAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      marginRight: 12,
+    },
+    requesterAvatarFallback: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    requesterAvatarText: {
+      color: colors.primaryDark,
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    requesterInfo: {
+      flex: 1,
+    },
+    requesterName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    requestTime: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    requestActions: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    actionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      gap: 6,
+      flex: 1,
+    },
+    approveButton: {
+      backgroundColor: colors.success,
+    },
+    rejectButton: {
+      backgroundColor: colors.danger,
+    },
+    actionButtonText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    statusBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      alignSelf: "flex-start",
+    },
+    approvedBadge: {
+      backgroundColor: colors.success + "20", // 12% opacity
+    },
+    rejectedBadge: {
+      backgroundColor: colors.danger + "20",
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+  });
