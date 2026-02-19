@@ -1,10 +1,10 @@
+import { useTheme } from '@/app/theme/ThemeContext';
 import AppBackground from '@/components/AppBackground';
 import WardrobeHeader from '@/components/WardrobeHeader';
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { router } from "expo-router";
+import React, { useMemo } from 'react';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '@/app/theme/ThemeContext';
 
 const HelpSupportPage = () => {
   const { theme } = useTheme();
@@ -86,9 +86,9 @@ const HelpSupportPage = () => {
           </Text>
           <Text
             style={styles.emailLink}
-            onPress={() => Linking.openURL('mailto:reportdgwardrobe@alogicdata.com')}
+            onPress={() => Linking.openURL('mailto:support@digiwardrobe.com')}
           >
-            reportdgwardrobe@alogicdata.com
+            support@digiwardrobe.com
           </Text>
           <Text style={styles.text}>We’re always here to assist and resolve any problems you may face!</Text>
 

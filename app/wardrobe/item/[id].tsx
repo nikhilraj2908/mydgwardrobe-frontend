@@ -278,149 +278,150 @@ export default function ItemDetails() {
             <AppBackground>
                 <View style={styles.container}>
                     <WardrobeHeader title="Item Details" onBack={() => router.back()} />
-                    
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* OWNER */}
-                            <View style={styles.itemHeaderContainer}>
-                                <View style={styles.ownerTopRow}>
-                                    <TouchableOpacity
-                                        style={styles.ownerLeft}
-                                        onPress={handleOwnerPress}
-                                    >
-                                        {item.user?.photo ? (
-                                            <Image
-                                                source={{
-                                                    uri: resolveImageUrl(item.user.photo) ??
-                                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                                            item.user?.username || "User"
-                                                        )}&background=${colors.primary.replace("#", "")}&color=${colors.primaryDark.replace("#", "")}&size=128`
-                                                }}
-                                                style={styles.ownerAvatar}
-                                            />
-                                        ) : (
-                                            <View style={styles.ownerAvatarFallback}>
-                                                <Text style={styles.ownerInitial}>
-                                                    {item.user?.username?.[0]?.toUpperCase() || "U"}
-                                                </Text>
-                                            </View>
-                                        )}
 
-                                        <View>
-                                            <Text style={styles.ownerUsername}>@{item.user?.username}</Text>
-                                            <Text style={styles.ownerSub}>Item Owner</Text>
-                                        </View>
-                                    </TouchableOpacity>
-
-                                    {/* FOLLOW BUTTON */}
-                                    {ready && (
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.followBtn,
-                                                followed && styles.followingBtn,
-                                                isSelf && styles.disabledBtn,
-                                            ]}
-                                            onPress={handleFollowToggle}
-                                            disabled={isSelf}
-                                        >
-                                            <Ionicons
-                                                name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
-                                                size={16}
-                                                color={colors.primaryDark}
-                                            />
-                                            <Text style={styles.followText}>
-                                                {isSelf ? "You" : followed ? "Following" : "Follow"}
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {/* OWNER */}
+                        <View style={styles.itemHeaderContainer}>
+                            <View style={styles.ownerTopRow}>
+                                <TouchableOpacity
+                                    style={styles.ownerLeft}
+                                    onPress={handleOwnerPress}
+                                >
+                                    {item.user?.photo ? (
+                                        <Image
+                                            source={{
+                                                uri: resolveImageUrl(item.user.photo) ??
+                                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                        item.user?.username || "User"
+                                                    )}&background=${colors.primary.replace("#", "")}&color=${colors.primaryDark.replace("#", "")}&size=128`
+                                            }}
+                                            style={styles.ownerAvatar}
+                                        />
+                                    ) : (
+                                        <View style={styles.ownerAvatarFallback}>
+                                            <Text style={styles.ownerInitial}>
+                                                {item.user?.username?.[0]?.toUpperCase() || "U"}
                                             </Text>
-                                        </TouchableOpacity>
+                                        </View>
                                     )}
-                                </View>
-                            </View>
 
-                            {/* IMAGE */}
-                            <View style={styles.imageCard}>
-                                {images.length > 0 ? (
-                                    <ScrollView
-                                        horizontal
-                                        pagingEnabled
-                                        showsHorizontalScrollIndicator={false}
-                                    >
-                                        {images.map((img, index) => (
-                                            <Image
-                                                key={index}
-                                                source={{ uri: img }}
-                                                style={styles.image}
-                                            />
-                                        ))}
-                                    </ScrollView>
-                                ) : (
-                                    <View style={[styles.image, styles.noImage]}>
-                                        <Ionicons name="image-outline" size={60} color={colors.textMuted} />
-                                        <Text style={{ color: colors.textMuted, marginTop: 8 }}>No images</Text>
+                                    <View>
+                                        <Text style={styles.ownerUsername}>@{item.user?.username}</Text>
+                                        <Text style={styles.ownerSub}>Item Owner</Text>
                                     </View>
-                                )}
-                            </View>
+                                </TouchableOpacity>
 
-                            {/* ACTIONS */}
-                            <View style={styles.actionRow}>
-                                {/* LIKE */}
-                                <View style={styles.leftActions}>
-                                    <TouchableOpacity onPress={handleLike} style={styles.actionBtn}>
-                                        <Image
-                                            source={require("../../../assets/icons/like.png")}
-                                            style={[
-                                                styles.actionImageIcon,
-                                                liked && { tintColor: colors.primary },
-                                            ]}
-                                        />
-                                        <Text style={{ color: colors.textPrimary }}>{likes}</Text>
-                                    </TouchableOpacity>
-
-                                    {/* COMMENT */}
+                                {/* FOLLOW BUTTON */}
+                                {ready && (
                                     <TouchableOpacity
-                                        onPress={() => setShowComments(true)}
-                                        style={styles.actionBtn}
-                                    >
-                                        <Image
-                                            source={require("../../../assets/icons/comment.png")}
-                                            style={styles.actionImageIcon}
-                                        />
-                                        <Text style={{ color: colors.textPrimary }}>{commentCount}</Text>
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/* SAVE */}
-                                <TouchableOpacity onPress={() => toggleSave(item._id)}>
-                                    <Image
-                                        source={
-                                            saved
-                                                ? require("../../../assets/icons/bookmark-saved.png")
-                                                : require("../../../assets/icons/bookmark.png")
-                                        }
                                         style={[
-                                            styles.actionImageIconbookmark,
-                                            saved && { tintColor: colors.primary },
+                                            styles.followBtn,
+                                            followed && styles.followingBtn,
+                                            isSelf && styles.disabledBtn, // Disable when it's the user's own item
+                                        ]}
+                                        onPress={handleFollowToggle}
+                                        disabled={isSelf}  // Disable the button when it's the user's own post
+                                    >
+                                        <Ionicons
+                                            name={isSelf ? "person" : followed ? "checkmark" : "person-add-outline"}
+                                            size={16}
+                                            color={colors.primaryDark}
+                                        />
+                                        <Text style={styles.followText}>
+                                            {isSelf ? "You" : followed ? "Following" : "Follow"}  {/* Adjust text */}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+
+                            </View>
+                        </View>
+
+                        {/* IMAGE */}
+                        <View style={styles.imageCard}>
+                            {images.length > 0 ? (
+                                <ScrollView
+                                    horizontal
+                                    pagingEnabled
+                                    showsHorizontalScrollIndicator={false}
+                                >
+                                    {images.map((img, index) => (
+                                        <Image
+                                            key={index}
+                                            source={{ uri: img }}
+                                            style={styles.image}
+                                        />
+                                    ))}
+                                </ScrollView>
+                            ) : (
+                                <View style={[styles.image, styles.noImage]}>
+                                    <Ionicons name="image-outline" size={60} color={colors.textMuted} />
+                                    <Text style={{ color: colors.textMuted, marginTop: 8 }}>No images</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* ACTIONS */}
+                        <View style={styles.actionRow}>
+                            {/* LIKE */}
+                            <View style={styles.leftActions}>
+                                <TouchableOpacity onPress={handleLike} style={styles.actionBtn}>
+                                    <Image
+                                        source={require("../../../assets/icons/like.png")}
+                                        style={[
+                                            styles.actionImageIcon,
+                                            liked && { tintColor: colors.primary },
                                         ]}
                                     />
+                                    <Text style={{ color: colors.textPrimary }}>{likes}</Text>
+                                </TouchableOpacity>
+
+                                {/* COMMENT */}
+                                <TouchableOpacity
+                                    onPress={() => setShowComments(true)}
+                                    style={styles.actionBtn}
+                                >
+                                    <Image
+                                        source={require("../../../assets/icons/comment.png")}
+                                        style={styles.actionImageIcon}
+                                    />
+                                    <Text style={{ color: colors.textPrimary }}>{commentCount}</Text>
                                 </TouchableOpacity>
                             </View>
 
-                            {/* DETAILS */}
-                            <View style={styles.details}>
-                                <Text style={styles.brand}>{item.brand}</Text>
-                                <Text style={styles.title}>{item.title || item.wardrobe?.name}</Text>
-                                <Text style={styles.price}>₹{item.price}</Text>
+                            {/* SAVE */}
+                            <TouchableOpacity onPress={() => toggleSave(item._id)}>
+                                <Image
+                                    source={
+                                        saved
+                                            ? require("../../../assets/icons/bookmark-saved.png")
+                                            : require("../../../assets/icons/bookmark.png")
+                                    }
+                                    style={[
+                                        styles.actionImageIconbookmark,
+                                        saved && { tintColor: colors.primary },
+                                    ]}
+                                />
+                            </TouchableOpacity>
+                        </View>
 
-                                <Text style={styles.descTitle}>Description</Text>
-                                <Text style={styles.desc}>{item.description}</Text>
+                        {/* DETAILS */}
+                        <View style={styles.details}>
+                            <Text style={styles.brand}>{item.brand}</Text>
+                            <Text style={styles.title}>{item.title || item.wardrobe?.name}</Text>
+                            <Text style={styles.price}>₹{item.price}</Text>
 
-                                <View style={styles.metaRow}>
-                                    <Text style={styles.meta}>Wardrobe: {item.wardrobe?.name}</Text>
-                                    <Text style={styles.meta}>
-                                        Added: {new Date(item.createdAt).toDateString()}
-                                    </Text>
-                                </View>
+                            <Text style={styles.descTitle}>Description</Text>
+                            <Text style={styles.desc}>{item.description}</Text>
+
+                            <View style={styles.metaRow}>
+                                <Text style={styles.meta}>Wardrobe: {item.wardrobe?.name}</Text>
+                                <Text style={styles.meta}>
+                                    Added: {new Date(item.createdAt).toDateString()}
+                                </Text>
                             </View>
-                        </ScrollView>
-                   
+                        </View>
+                    </ScrollView>
+
                     {/* COMMENTS MODAL (with safe area) */}
                     <Modal
                         visible={showComments}
@@ -828,7 +829,7 @@ const createStyles = (colors: any) =>
             gap: 6,
         },
         followText: {
-            color: colors.primaryDark,
+            color: colors.textLight,
             fontWeight: "600",
             fontSize: 13,
         },
