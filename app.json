@@ -5,7 +5,7 @@
     "owner": "nikhilraj2908",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/DW_logo_A855F7.png",  
     "scheme": "myfirstapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -31,12 +31,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/DW_logo_A855F7.png",  
           "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "resizeMode": "contain",  
+          "backgroundColor": "#ffffff",  
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#000000" 
           }
         }
       ]

@@ -244,13 +244,30 @@ export default function ProfileScreen() {
   };
 
 
-  const getWardrobeCoverImage = (wardrobeId: string) => {
-    const items = wardrobeItems.filter(i => i.wardrobe === wardrobeId);
-    if (!items.length) return null;
-    const firstItem = items[0];
-    const imagePath = firstItem.images?.[0] || firstItem.imageUrl || null;
-    return imagePath ? resolveImageUrl(imagePath) : null;
-  };
+ const getWardrobeCoverImage = (wardrobeId: string) => {
+  // Guard: if wardrobeItems is empty, return null (will show color until data loads)
+  if (!wardrobeItems.length) return null;
+
+  // Find all items belonging to this wardrobe (handle both string and object _id)
+  const items = wardrobeItems.filter(item => {
+    const itemWardrobeId = typeof item.wardrobe === 'object'
+      ? item.wardrobe?._id
+      : item.wardrobe;
+    return itemWardrobeId === wardrobeId;
+  });
+
+  if (!items.length) return null;
+
+  // Find the first item that actually has an image
+  const itemWithImage = items.find(item =>
+    (item.images && item.images.length > 0) || item.imageUrl
+  );
+
+  if (!itemWithImage) return null;
+
+  const imagePath = itemWithImage.images?.[0] || itemWithImage.imageUrl;
+  return imagePath ? resolveImageUrl(imagePath) : null;
+};
 
   // Get first image from all items for "All Items" box
   const getAllItemsCoverImage = () => {
@@ -986,10 +1003,8 @@ const createStyles = (theme: any) =>
       fontWeight: "700",
       fontSize: 18,
       marginBottom: 4,
-      color: theme.colors.primary,
     },
     statLabel: {
-      color: theme.colors.primary,
       fontSize: 12,
     },
     tabRow: {
