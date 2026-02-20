@@ -13,9 +13,9 @@ export default function ThemeSelector() {
         <Text>Light Theme</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => setTheme(darkTheme)}>
+      {/* <TouchableOpacity onPress={() => setTheme(darkTheme)}>
         <Text>Dark Theme</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <TouchableOpacity onPress={() => setTheme(blueTheme)}>
         <Text>Blue Theme</Text>
