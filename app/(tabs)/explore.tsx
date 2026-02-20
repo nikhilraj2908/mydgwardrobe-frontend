@@ -319,6 +319,8 @@ const getRandomHeight = (baseHeight: number, index: number): number => {
 };
 
 export default function Explore() {
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+const [activeCategoryName, setActiveCategoryName] = useState<string | null>(null);
   const [items, setItems] = useState<ExploreItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -390,6 +392,8 @@ export default function Explore() {
   // };
   const handleCategorySelect = (category: CategoryItem) => {
     // Set the active category with its ID AND type
+      setActiveCategoryName(category.name);   // for display
+  setActiveCategoryId(category._id);      // for fetching
     setActiveCategory(category.name);
     setMode("items");
     setItems([]);
@@ -402,61 +406,43 @@ export default function Explore() {
 
   // Fetch items by category
   // Update this function in your Explore component
-  const fetchItemsByCategory = async (
-    categoryId: string,
-    categoryType: "mens" | "womens" | "unisex",
-    pageNum = 1,
-    shouldReset = false
-  ) => {
-    try {
-      if (pageNum === 1) {
-        setLoading(true);
-      }
+ const fetchItemsByCategory = async (
+  categoryId: string,
+  pageNum = 1,
+  shouldReset = false
+) => {
+  try {
+    if (pageNum === 1) setLoading(true);
 
-      const params: Record<string, any> = {
-        page: pageNum,
-        limit: 20,
-        sort: sortBy,
-        category: categoryId,
-      };
+    const params: Record<string, any> = {
+      page: pageNum,
+      limit: 20,
+      sort: sortBy,
+      category: categoryId,
+    };
+    // No gender parameter – the category ID already ensures correct items
 
-      // Handle gender filtering logic
-      if (selectedGender === "unisex") {
-        // When "All" is selected, we should see items from all genders
-        // Don't send gender filter, or send all genders
-        params.gender = "unisex"; // Or don't send at all to get all
-      } else {
-        // For specific gender (mens/womens), show items of that gender AND unisex items
-        // The backend should handle this with $in operator
-        params.gender = selectedGender;
-      }
+    const res = await api.get("/api/wardrobe/explore", { params });
+    const newItems = res.data?.items || res.data || [];
+    const total = res.data?.total || newItems.length;
 
-      console.log("Fetching with params:", params); // Debug log
-
-      const res = await api.get("/api/wardrobe/explore", { params });
-      const newItems = res.data?.items || res.data || [];
-      const total = res.data?.total || newItems.length;
-
-      console.log("Received items:", newItems.length, "Total:", total); // Debug log
-
-      setTotalItems(total);
-
-      if (shouldReset) {
-        setItems(newItems);
-      } else {
-        setItems(prev => pageNum === 1 ? newItems : [...prev, ...newItems]);
-      }
-
-      setHasMore(newItems.length === 20);
-      setPage(pageNum);
-    } catch (err) {
-      console.error("Category items fetch error:", err);
-      setItems([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    setTotalItems(total);
+    if (shouldReset) {
+      setItems(newItems);
+    } else {
+      setItems(prev => (pageNum === 1 ? newItems : [...prev, ...newItems]));
     }
-  };
+
+    setHasMore(newItems.length === 20);
+    setPage(pageNum);
+  } catch (err) {
+    console.error("Category items fetch error:", err);
+    setItems([]);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   // Back handler
   useEffect(() => {
@@ -487,22 +473,14 @@ export default function Explore() {
     }
   }, [q]);
 
-
-  useEffect(() => {
-    if (mode === "items" && activeCategory) {
-      // Find the category to get its ID and type
-      const category = categories.find(cat =>
-        cat.name.toLowerCase() === activeCategory.toLowerCase()
-      );
-
-      if (category) {
-        setItems([]);
-        setPage(1);
-        setHasMore(true);
-        fetchItemsByCategory(category._id, category.type, 1, true);
-      }
-    }
-  }, [activeCategory, sortBy, selectedGender, mode]); // Added selectedGender dependency
+useEffect(() => {
+  if (mode === "items" && activeCategoryId) {
+    setItems([]);
+    setPage(1);
+    setHasMore(true);
+    fetchItemsByCategory(activeCategoryId, 1, true);
+  }
+}, [activeCategoryId, sortBy, mode]); // selectedGender removed
   // Enhanced getCategoryImage function
   const getCategoryImageForItem = (category: CategoryItem) => {
     const categoryName = category.name.toLowerCase();
@@ -1137,7 +1115,6 @@ export default function Explore() {
       const itemRes = await api.get("/api/wardrobe/explore", {
         params: {
           search: trimmed,
-          gender: selectedGender,
           page: 1,
           limit: 20,
         },

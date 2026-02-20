@@ -104,7 +104,7 @@ export default function ForgotPasswordScreen() {
 
             <TextInput
               style={styles.input}
-              placeholder="Email or Mobile Number"
+              placeholder="+910000000000 or demo@gmail.com"
               value={identifier}
               onChangeText={setIdentifier}
             />
