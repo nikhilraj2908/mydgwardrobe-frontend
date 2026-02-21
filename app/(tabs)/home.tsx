@@ -466,7 +466,7 @@ const createStyles = (colors: any) =>
       borderColor: colors.surface,
     },
     badgeText: {
-      color: colors.textLight,
+      color: colors.textPrimary,
       fontSize: 9,
       fontWeight: "700",
     },

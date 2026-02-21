@@ -10,7 +10,7 @@ import { useMemo } from "react";
 const THEMES = [
   { id: "light", label: "Light Theme", icon: "sunny-outline" },
   // { id: "dark", label: "Dark Theme", icon: "moon-outline" },
-  { id: "blue", label: "Blue Theme", icon: "color-palette-outline" },
+  { id: "blue", label: "Yellow Theme", icon: "color-palette-outline" },
 ];
 
 export default function ThemeSettings() {

@@ -1069,6 +1069,8 @@ const createStyles = (theme: any) =>
       borderRadius: 16,
       padding: 12,
       marginBottom: 12,
+      borderWidth:.5,
+      borderColor:theme.colors.primary
     },
     imagesRow: {
       flexDirection: "row",

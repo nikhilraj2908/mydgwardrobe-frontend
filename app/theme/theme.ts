@@ -59,29 +59,31 @@ export const theme = {
 
 // 🔵 BLUE THEME
 export const blueTheme = {
-  colors: {
-    primary: "#628eec",
-    primaryDark: "#1D4ED8",
-    middary: "#93C5FD",
+   colors: {
+    primary: "#FFB900", // Rich Yellow
+    primaryDark: "#D77B00", // Darker Yellow for hover or dark accents
+    secondary: "#1A3C72", // Dark Blue for strong contrasts
+    secondaryDark: "#0F1E3E", // Even darker blue for shadows or hover effects
 
-    background: "#FFFFFF",
-    surface: "#EFF6FF",
-    card: "#DBEAFE",
+    background: "#fcfcf7", // Light off-white for background
+    surface: "#FFFFFF", // Clean white surface for cards or modals
+    card: "#fcf9eb", // Light blueish tint for card background
 
-    addButton: "#2563EB",
+    addButton: "#3A7BFF", // Soft Blue for action buttons (similar to the add button)
+    
+    textPrimary: "#1A3C72", // Dark Blue text for primary content
+    textSecondary: "#4B5563", // Muted blue-gray for secondary text
+    textMuted: "#6B7280", // Light gray for less important text
+    textDark: "#000000", // Standard black for dark text
+    textLight: "#FFFFFF", // White text for contrast on dark backgrounds
 
-    textPrimary: "#000000",
-    textSecondary: "#4B5563",
-    textMuted: "#6B7280",
-    textDark: "#000000",
-    textLight: "#FFFFFF",
+    border: "#E4E7EC", // Light border for inputs or cards
+    divider: "#D1D5DB", // Dividers between sections
+    danger: "#EF4444", // Red for error or danger states
+    success: "#22C55E", // Green for success messages or states
+    warning: "#FBBF24", // Yellow for warnings
 
-    border: "#BFDBFE",
-
-    danger: "#EF4444",
-    success: "#22C55E",
-
-    overlay: "rgba(0,0,0,0.3)",
+    overlay: "rgba(0, 0, 0, 0.4)", // Semi-transparent overlay for modals or focus states
   },
 };
 

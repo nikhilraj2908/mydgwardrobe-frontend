@@ -131,7 +131,7 @@ const createStyles = (theme: any) =>
     },
 
     badgeText: {
-      color: "#fff",
+      color: theme.colors.textPrimary,
       fontSize: 10,
       fontWeight: "600",
     },

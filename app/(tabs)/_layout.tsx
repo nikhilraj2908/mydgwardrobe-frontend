@@ -101,7 +101,7 @@ export default function TabsLayout() {
                   }}
                 >
                   <View style={styles.centerButtonInner}>
-                    <Ionicons name="add" size={32} color="#FFFFFF" />
+                    <Ionicons name="add" size={32}/>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -151,6 +151,7 @@ const createStyles = (colors: any) =>
       width: 28,
       height: 28,
       resizeMode: "contain",
+      
     },
     wardrobeIcon: {
       width: 50,
@@ -185,5 +186,6 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.primary,
       alignItems: "center",
       justifyContent: "center",
+      color:colors.textPrimary
     },
   });

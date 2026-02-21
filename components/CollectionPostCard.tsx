@@ -343,6 +343,7 @@ const createStyles = (colors: any) =>
     container: {
       paddingHorizontal: 12,
       marginBottom: 16,
+      
     },
     card: {
       height: 340,
@@ -350,6 +351,8 @@ const createStyles = (colors: any) =>
       overflow: "hidden",
       backgroundColor: colors.background,
       marginTop: 20,
+      borderWidth: 1, 
+      borderColor: colors.primaryDark
     },
     bg: {
       flex: 1,
@@ -440,6 +443,8 @@ const createStyles = (colors: any) =>
       borderRadius: 12,
       padding: 8,
       marginBottom: 12,
+      borderWidth: .3, 
+      borderColor: colors.primaryDark
     },
     wardrobeImage: {
       width: "100%",
