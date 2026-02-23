@@ -1026,6 +1026,8 @@ const createStyles = (colors: any) =>
       shadowOpacity: 0.3,
       shadowRadius: 6,
       elevation: 6,
+      color: colors.background,
+
     },
     categoryIcon: {
       width: 28,
@@ -1033,7 +1035,9 @@ const createStyles = (colors: any) =>
       resizeMode: "contain",
     },
     categoryIconSelected: {
-      tintColor: colors.primaryDark,
+      // tintColor: colors.primaryDark,
+      color: colors.card,
+
     },
     categoryCountBadge: {
       position: "absolute",

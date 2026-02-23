@@ -1,5 +1,8 @@
+import { useTheme } from "@/app/theme/ThemeContext";
+import AppBackground from "@/components/AppBackground";
 import ItemPostCard from "@/components/ItemPostCard";
 import SearchModal from "@/components/SearchModal";
+import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -14,9 +17,6 @@ import {
   View,
 } from "react-native";
 import api from "../../api/api";
-import AppBackground from "@/components/AppBackground";
-import { resolveImageUrl } from "@/utils/resolveImageUrl";
-import { useTheme } from "@/app/theme/ThemeContext"; 
 
 
 /* ================= TYPES ================= */
@@ -53,8 +53,8 @@ interface FeedItem {
 
 /* ================= COMPONENT ================= */
 export default function HomeScreen() {
-    const { theme } = useTheme();                         // <-- get current theme
-     const colors = theme.colors;
+  const { theme } = useTheme();                         // <-- get current theme
+  const colors = theme.colors;
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -65,8 +65,8 @@ export default function HomeScreen() {
   const [stories, setStories] = useState<StoryGroup[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-      const styles = React.useMemo(() => createStyles(colors), [colors]);
-  
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const LIMIT = 6;
 
   const API_URL = "https://api.digiwardrobe.com";
@@ -154,7 +154,16 @@ export default function HomeScreen() {
       }));
 
       const merged = injectCollections(processedPublic, collections);
-      setFeed((prev) => (reset ? merged : [...prev, ...merged]));
+      setFeed(prev => {
+        const combined = reset ? merged : [...prev, ...merged];
+
+        const map = new Map();
+        combined.forEach(item => {
+          map.set(item._id, item);
+        });
+
+        return Array.from(map.values());
+      });
       setPage((prev) => (reset ? 2 : prev + 1));
       setHasMore(publicItems.length === LIMIT);
     } catch (err) {
@@ -190,16 +199,16 @@ export default function HomeScreen() {
   };
 
   /* ================= STORY UTILITIES ================= */
- const getStoryCoverImage = (storyGroup: StoryGroup) => {
-  if (storyGroup.stories && storyGroup.stories.length > 0) {
-    return resolveImageUrl(storyGroup.stories[0].media);
-  }
-  return null;
-};
+  const getStoryCoverImage = (storyGroup: StoryGroup) => {
+    if (storyGroup.stories && storyGroup.stories.length > 0) {
+      return resolveImageUrl(storyGroup.stories[0].media);
+    }
+    return null;
+  };
 
   const getUserPhotoUrl = (photoPath?: string) => {
-  return photoPath ? resolveImageUrl(photoPath) : null;
-};
+    return photoPath ? resolveImageUrl(photoPath) : null;
+  };
 
 
   /* ================= HEADER ================= */
@@ -305,7 +314,7 @@ export default function HomeScreen() {
     <AppBackground>
       <FlatList
         data={feed}
-        keyExtractor={(item, index) => `${item._id}-${index}`}
+      keyExtractor={(item) => item._id} 
         renderItem={renderPost}
         ListHeaderComponent={renderHeader}
         onEndReached={() => loadFeed()}
@@ -339,14 +348,21 @@ export default function HomeScreen() {
 /* ================= HELPERS ================= */
 function injectCollections(posts: FeedItem[], collections: FeedItem[]) {
   if (!collections.length) return posts;
+
+  const existingIds = new Set(posts.map(p => p._id));
   const result = [...posts];
+
   let insertIndex = 2;
+
   collections.forEach((collection) => {
-    if (insertIndex < result.length) {
-      result.splice(insertIndex, 0, collection);
-      insertIndex += 4;
+    if (!existingIds.has(collection._id)) {
+      if (insertIndex < result.length) {
+        result.splice(insertIndex, 0, collection);
+        insertIndex += 4;
+      }
     }
   });
+
   return result;
 }
 
