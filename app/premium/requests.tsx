@@ -264,7 +264,7 @@ const createStyles = (colors: any) =>
     header: {
       flexDirection: "row",
       alignItems: "center",
-      padding: 16,
+      // padding: 16,
       gap: 12,
       backgroundColor: colors.background,
     },
