@@ -1,10 +1,11 @@
 import api from "@/api/api";
+import { useTheme } from "@/app/theme/ThemeContext";
 import AppBackground from "@/components/AppBackground";
 import { resolveImageUrl } from "@/utils/resolveImageUrl";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     FlatList,
     Image,
@@ -14,7 +15,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@/app/theme/ThemeContext";
 
 interface Notification {
     _id: string;
@@ -117,7 +117,7 @@ export default function NotificationsScreen() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top","bottom"]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
             <AppBackground>
                 <View style={styles.container}>
                     <View style={styles.header}>
@@ -173,16 +173,20 @@ export default function NotificationsScreen() {
                                     />
 
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.message}>
-                                            <Text style={styles.name}>
-                                                {item.actor?.username || "Deleted user"}
-                                            </Text>{" "}
-                                            {item.message}
-                                        </Text>
+                                        {item.type === "system" ? (
+                                            // System notification: show a "System" label
+                                            <Text style={styles.message}>
+                                                <Text style={styles.name}>System</Text> {item.message}
+                                            </Text>
+                                        ) : (
+                                            // User‑generated notification: show actor name
+                                            <Text style={styles.message}>
+                                                <Text style={styles.name}>{item.actor?.username || "Deleted user"}</Text>{" "}
+                                                {item.message}
+                                            </Text>
+                                        )}
 
-                                        <Text style={styles.time}>
-                                            {formatNotificationTime(item.createdAt)}
-                                        </Text>
+                                        <Text style={styles.time}>{formatNotificationTime(item.createdAt)}</Text>
                                     </View>
 
                                     {!item.read && <View style={styles.unreadDot} />}

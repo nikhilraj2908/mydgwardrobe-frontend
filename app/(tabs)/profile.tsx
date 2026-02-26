@@ -26,7 +26,6 @@ import BoxWardrobeCard from "../../components/BoxWardrobeCard";
 import SavedGridCard from "../../components/SavedGridCard";
 import { useAuth } from "../../context/AuthContext";
 import { useSavedItems } from "../../context/SavedItemsContext";
-import ImagePicker from "react-native-image-crop-picker";
 interface Wardrobe {
   _id: string;
   name: string;
@@ -58,6 +57,7 @@ interface User {
   dob?: string;
   photo?: string;
   createdAt: string;
+  status: string
 }
 
 interface UserData {
@@ -88,10 +88,10 @@ interface SavedItem {
 export default function ProfileScreen() {
   const { theme } = useTheme();
 
-// if (!theme || !theme.colors) return null;
+  // if (!theme || !theme.colors) return null;
 
- const styles = React.useMemo(() => createStyles(theme), [theme]);
- 
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"myWardrobes" | "savedItems">("myWardrobes");
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -114,6 +114,7 @@ export default function ProfileScreen() {
   const { clearFollowing } = useFollow();
   const [pendingPremiumCount, setPendingPremiumCount] = useState(0);
   const { token, isAuthenticated, isLoading, logout } = useAuth();
+  const [blocked, setBlocked] = useState(false);
   // Filter premium items (public items of the logged-in user)
   // ✅ Premium items (public + premium access)
   const premiumItems = wardrobeItems.filter(
@@ -244,30 +245,30 @@ export default function ProfileScreen() {
   };
 
 
- const getWardrobeCoverImage = (wardrobeId: string) => {
-  // Guard: if wardrobeItems is empty, return null (will show color until data loads)
-  if (!wardrobeItems.length) return null;
+  const getWardrobeCoverImage = (wardrobeId: string) => {
+    // Guard: if wardrobeItems is empty, return null (will show color until data loads)
+    if (!wardrobeItems.length) return null;
 
-  // Find all items belonging to this wardrobe (handle both string and object _id)
-  const items = wardrobeItems.filter(item => {
-    const itemWardrobeId = typeof item.wardrobe === 'object'
-      ? item.wardrobe?._id
-      : item.wardrobe;
-    return itemWardrobeId === wardrobeId;
-  });
+    // Find all items belonging to this wardrobe (handle both string and object _id)
+    const items = wardrobeItems.filter(item => {
+      const itemWardrobeId = typeof item.wardrobe === 'object'
+        ? item.wardrobe?._id
+        : item.wardrobe;
+      return itemWardrobeId === wardrobeId;
+    });
 
-  if (!items.length) return null;
+    if (!items.length) return null;
 
-  // Find the first item that actually has an image
-  const itemWithImage = items.find(item =>
-    (item.images && item.images.length > 0) || item.imageUrl
-  );
+    // Find the first item that actually has an image
+    const itemWithImage = items.find(item =>
+      (item.images && item.images.length > 0) || item.imageUrl
+    );
 
-  if (!itemWithImage) return null;
+    if (!itemWithImage) return null;
 
-  const imagePath = itemWithImage.images?.[0] || itemWithImage.imageUrl;
-  return imagePath ? resolveImageUrl(imagePath) : null;
-};
+    const imagePath = itemWithImage.images?.[0] || itemWithImage.imageUrl;
+    return imagePath ? resolveImageUrl(imagePath) : null;
+  };
 
   // Get first image from all items for "All Items" box
   const getAllItemsCoverImage = () => {
@@ -323,29 +324,34 @@ export default function ProfileScreen() {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      // const token = await AsyncStorage.getItem("token");
-      // if (!token) {
-      //   router.push("/login-username");
-      //   return;
-      // }
-      // 1. Fetch user's actual profile data
+      // Fetch user's actual profile data
       const userResponse = await api.get("/api/user/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const user = userResponse.data;
+
+      // Check if the user is blocked
+      if (user.status === "blocked" || user.status === "suspended") {
+        setBlocked(true);
+        setUser(null);
+        return;
+      }
+
+
+      // Continue fetching other profile details if the user is not blocked
       setUser(user);
 
-      // 2. Fetch followers & following counts
+      // Fetch followers & following counts
       const followCountRes = await api.get(`/api/follow/counts/${user._id}`);
       setFollowersCount(followCountRes.data.followers || 0);
       setFollowingCount(followCountRes.data.following || 0);
 
-      // 3. Fetch user's wardrobe collections
+      // Fetch user's wardrobe collections
       const wardrobesResponse = await api.get("/api/wardrobe/list", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // 4. Fetch user's wardrobe items
+      // Fetch user's wardrobe items
       const itemsResponse = await api.get("/api/wardrobe/my", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -365,7 +371,7 @@ export default function ProfileScreen() {
         }, 0);
       }
 
-      // 5. Process wardrobe collections data
+      // Process wardrobe collections data
       let wardrobesList: Wardrobe[] = [];
       if (wardrobesResponse.data?.wardrobes) {
         wardrobesList = wardrobesResponse.data.wardrobes;
@@ -395,24 +401,33 @@ export default function ProfileScreen() {
         wardrobeCount: wardrobesList.length,
       });
 
-    } catch (error: any) {
-      console.error("Error fetching profile data:", error);
-      setUserData({
-        name: "John Doe",
-        handle: "@johndoe",
-        bio: "Fashion enthusiast | Style curator",
-        collectionWorth: "₹0",
-        followers: "0",
-        wardrobeCount: 0,
-      });
-      setWardrobes([]);
-      setRecentWardrobes([]);
-      setWardrobeItems([]);
-    } finally {
+    }catch (error: any) {
+  console.error("Error fetching profile data:", error);
+
+  // If the API returns 403, treat as blocked (regardless of message)
+  if (error.response?.status === 403) {
+    setBlocked(true);
+    setUser(null);
+  } else {
+    // Fallback for other errors (network, server down, etc.)
+    setUserData({
+      name: "John Doe",
+      handle: "@johndoe",
+      bio: "Fashion enthusiast | Style curator",
+      collectionWorth: "₹0",
+      followers: "0",
+      wardrobeCount: 0,
+    });
+    setWardrobes([]);
+    setRecentWardrobes([]);
+    setWardrobeItems([]);
+  }
+}finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
+
 
   // Create a bio based on user info
   const createUserBio = (user: User): string => {
@@ -448,10 +463,10 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
-  if (!isLoading && isAuthenticated && token) {
-    fetchProfileData();
-  }
-}, [isLoading, isAuthenticated, token]);
+    if (!isLoading && isAuthenticated && token) {
+      fetchProfileData();
+    }
+  }, [isLoading, isAuthenticated, token]);
   const onRefresh = () => {
     setRefreshing(true);
     fetchProfileData();
@@ -519,7 +534,11 @@ export default function ProfileScreen() {
     setSettingsModalVisible(false);
     router.push("/help");
   };
-
+useEffect(() => {
+  if (blocked) {
+    router.replace('/blocked');
+  }
+}, [blocked]);
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
@@ -946,8 +965,8 @@ const createStyles = (theme: any) =>
     },
 
     actionBtn: {
-      width: 28 ,
-      height: 28  ,
+      width: 28,
+      height: 28,
       borderRadius: 18,
       justifyContent: "center",
       alignItems: "center",
@@ -956,7 +975,7 @@ const createStyles = (theme: any) =>
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.2,
       shadowRadius: 3,
-      
+
     },
 
     premiumBtn: {
@@ -1048,7 +1067,7 @@ const createStyles = (theme: any) =>
       padding: 14,
       alignItems: "center",
       marginBottom: 16,
-      backgroundColor:theme.colors.surface,
+      backgroundColor: theme.colors.surface,
     },
     addWardrobeText: {
       color: theme.colors.primaryDark,
@@ -1069,8 +1088,8 @@ const createStyles = (theme: any) =>
       borderRadius: 16,
       padding: 12,
       marginBottom: 12,
-      borderWidth:.5,
-      borderColor:theme.colors.primary
+      borderWidth: .5,
+      borderColor: theme.colors.primary
     },
     imagesRow: {
       flexDirection: "row",
@@ -1102,7 +1121,7 @@ const createStyles = (theme: any) =>
     },
     emptyStateSubText: {
       fontSize: 14,
-     color: theme.colors.textSecondary,
+      color: theme.colors.textSecondary,
       marginTop: 4,
       textAlign: "center",
     },
@@ -1144,7 +1163,7 @@ const createStyles = (theme: any) =>
     modalItemText: {
       marginLeft: 12,
       fontSize: 16,
-     color: theme.colors.textPrimary,
+      color: theme.colors.textPrimary,
       flex: 1,
     },
     modalDivider: {
@@ -1213,5 +1232,34 @@ const createStyles = (theme: any) =>
       fontSize: 11,
       fontWeight: "700",
     },
-
+    blockedMessage: {
+      fontSize: 18,
+      textAlign: "center",
+      color: "red",
+      marginTop: 20,
+    },
+    helpLink: {
+      color: "blue",
+      textAlign: "center",
+      marginTop: 10,
+    },
+    noAccessMessage: {
+      fontSize: 16,
+      textAlign: "center",
+      marginTop: 20,
+      color: "gray",
+    },
+logoutButton: {
+  marginTop: 20,
+  paddingVertical: 12,
+  paddingHorizontal: 24,
+  backgroundColor: theme.colors.primary,
+  borderRadius: 8,
+  alignSelf: 'center',
+},
+logoutButtonText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 16,
+},
   });

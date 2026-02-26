@@ -80,7 +80,9 @@ export default {
     scheme: "mydgwardrobe",
 
     extra: {
-      apiBaseUrl: "https://api.digiwardrobe.com",
+      // apiBaseUrl: "https://api.digiwardrobe.com",
+      apiBaseUrl: "https://mydgwardrobe-backend-1.onrender.com",
+      // apiBaseUrl: "http://localhost:5001",
       imageBaseUrl:
         "https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com",
 
