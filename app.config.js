@@ -13,7 +13,7 @@
 //       // apiBaseUrl: "http://localhost:5001",
 //      apiBaseUrl: "https://api.digiwardrobe.com",
 //       imageBaseUrl: "https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com",
- 
+
 //       AUTH0_DOMAIN: "dev-yhb3xssuawesxfyk.us.auth0.com",
 //       AUTH0_CLIENT_ID: "b6BEiuZ5bJ29sar6FfCfrr35QqnKS4YA",
 
@@ -81,10 +81,10 @@ export default {
 
     extra: {
       // apiBaseUrl: "https://api.digiwardrobe.com",
-      apiBaseUrl: "https://mydgwardrobe-backend-1.onrender.com",
+      // apiBaseUrl: "https://mydgwardrobe-backend-1.onrender.com",
       // apiBaseUrl: "http://localhost:5001",
-      imageBaseUrl:
-        "https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com",
+      apiBaseUrl: "http://13.233.44.232:5001",
+      imageBaseUrl: "https://digiwardrobe.s3.ap-south-1.amazonaws.com",
 
       AUTH0_DOMAIN: "dev-yhb3xssuawesxfyk.us.auth0.com",
       AUTH0_CLIENT_ID: "b6BEiuZ5bJ29sar6FfCfrr35QqnKS4YA",

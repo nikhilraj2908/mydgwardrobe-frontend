@@ -1,10 +1,11 @@
+import { useTheme } from "@/app/theme/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import ImagePicker from "react-native-image-crop-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { useTheme } from "@/app/theme/ThemeContext";
+import ImagePicker from "react-native-image-crop-picker";
 
+import AppBackground from "@/components/AppBackground";
 import {
     ActivityIndicator,
     Alert,
@@ -20,7 +21,6 @@ import {
     View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AppBackground from "@/components/AppBackground";
 import api from "../../api/api";
 
 // Type definition for Category
@@ -446,7 +446,7 @@ export default function AddWardrobe() {
     const normalizeImageUrl = (path: string) => {
         if (!path) return "";
         if (path.startsWith("http")) return path;
-        return `https://digiwardrobe-assets.s3.ap-south-1.amazonaws.com/${path}`;
+        return `https://digiwardrobe.s3.ap-south-1.amazonaws.com/${path}`;
     };
 
     const pickFromCamera = async () => {
