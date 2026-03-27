@@ -1,20 +1,20 @@
-import ImagePicker from 'react-native-image-crop-picker';
+import AppBackground from "@/components/AppBackground";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Alert,
-  Platform,
 } from "react-native";
+import ImagePicker from 'react-native-image-crop-picker';
 import { SafeAreaView } from "react-native-safe-area-context";
-import AppBackground from "@/components/AppBackground";
 
 /* ================= SAFE API URL ================= */
 const API_URL =
@@ -23,7 +23,7 @@ const API_URL =
   "";
 
 if (!API_URL) {
-  console.warn("⚠️ API base URL is not defined");
+  console.warn("⚠️ API base URL is not defined",API_URL);
 }
 
 export default function AddStory() {

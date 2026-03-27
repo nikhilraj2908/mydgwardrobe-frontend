@@ -149,7 +149,7 @@ export default function AddWardrobe() {
     };
     const { theme } = useTheme();
     const colors = theme.colors;
-    const SERVER = "https://api.digiwardrobe.com";
+    const SERVER = "http://13.233.44.232:5001";
     const [images, setImages] = useState<ImageItem[]>([]);
     const [category, setCategory] = useState("");
     const [customCategory, setCustomCategory] = useState("");

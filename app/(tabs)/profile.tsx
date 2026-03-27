@@ -401,28 +401,28 @@ export default function ProfileScreen() {
         wardrobeCount: wardrobesList.length,
       });
 
-    }catch (error: any) {
-  console.error("Error fetching profile data:", error);
+    } catch (error: any) {
+      console.error("Error fetching profile data:", error);
 
-  // If the API returns 403, treat as blocked (regardless of message)
-  if (error.response?.status === 403) {
-    setBlocked(true);
-    setUser(null);
-  } else {
-    // Fallback for other errors (network, server down, etc.)
-    setUserData({
-      name: "John Doe",
-      handle: "@johndoe",
-      bio: "Fashion enthusiast | Style curator",
-      collectionWorth: "₹0",
-      followers: "0",
-      wardrobeCount: 0,
-    });
-    setWardrobes([]);
-    setRecentWardrobes([]);
-    setWardrobeItems([]);
-  }
-}finally {
+      // If the API returns 403, treat as blocked (regardless of message)
+      if (error.response?.status === 403) {
+        setBlocked(true);
+        setUser(null);
+      } else {
+        // Fallback for other errors (network, server down, etc.)
+        setUserData({
+          name: "John Doe",
+          handle: "@johndoe",
+          bio: "Fashion enthusiast | Style curator",
+          collectionWorth: "₹0",
+          followers: "0",
+          wardrobeCount: 0,
+        });
+        setWardrobes([]);
+        setRecentWardrobes([]);
+        setWardrobeItems([]);
+      }
+    } finally {
       setLoading(false);
       setRefreshing(false);
     }
@@ -534,11 +534,11 @@ export default function ProfileScreen() {
     setSettingsModalVisible(false);
     router.push("/help");
   };
-useEffect(() => {
-  if (blocked) {
-    router.replace('/blocked');
-  }
-}, [blocked]);
+  useEffect(() => {
+    if (blocked) {
+      router.replace('/blocked');
+    }
+  }, [blocked]);
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
@@ -582,8 +582,8 @@ useEffect(() => {
                   </Text>
                 </View>
               )}
-              <TouchableOpacity style={styles.addStoryBtn} onPress={handleAddStory}>
-                <Ionicons name="add" size={20} color={theme.colors.textPrimary} />
+              <TouchableOpacity style={styles.addStoryBtn} onPress={handleEditProfile}>
+                <Ionicons name="pencil" size={13} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
             <View style={{ flex: 1, marginLeft: 16 }}>
@@ -609,12 +609,12 @@ useEffect(() => {
             </TouchableOpacity>
 
             {/* Edit Profile */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={[styles.actionBtn, styles.editBtn]}
               onPress={handleEditProfile}
             >
               <Ionicons name="pencil" size={16} color="#fff" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* Menu */}
             <TouchableOpacity
@@ -1249,17 +1249,17 @@ const createStyles = (theme: any) =>
       marginTop: 20,
       color: "gray",
     },
-logoutButton: {
-  marginTop: 20,
-  paddingVertical: 12,
-  paddingHorizontal: 24,
-  backgroundColor: theme.colors.primary,
-  borderRadius: 8,
-  alignSelf: 'center',
-},
-logoutButtonText: {
-  color: '#fff',
-  fontWeight: '600',
-  fontSize: 16,
-},
+    logoutButton: {
+      marginTop: 20,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      backgroundColor: theme.colors.primary,
+      borderRadius: 8,
+      alignSelf: 'center',
+    },
+    logoutButtonText: {
+      color: '#fff',
+      fontWeight: '600',
+      fontSize: 16,
+    },
   });

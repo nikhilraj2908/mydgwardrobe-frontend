@@ -69,7 +69,7 @@ export const blueTheme = {
     surface: "#FFFFFF", // Clean white surface for cards or modals
     card: "#fcf9eb", // Light blueish tint for card background
 
-    addButton: "#3A7BFF", // Soft Blue for action buttons (similar to the add button)
+    addButton: "#ffc31f", // Soft Blue for action buttons (similar to the add button)
     
     textPrimary: "#1A3C72", // Dark Blue text for primary content
     textSecondary: "#4B5563", // Muted blue-gray for secondary text
