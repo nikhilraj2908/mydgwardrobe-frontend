@@ -54,7 +54,11 @@ export default function OtpVerify() {
       otp: code,
     });
 
-  await login(res.data.token, res.data.user.profileCompleted);
+  await login(
+  res.data.token,
+  res.data.refreshToken,
+  res.data.user.profileCompleted
+);
 
 
     setLoading(false); // ✅ FIX 1: stop loader

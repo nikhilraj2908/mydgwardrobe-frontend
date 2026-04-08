@@ -23,7 +23,7 @@ const API_URL =
   "";
 
 if (!API_URL) {
-  console.warn("⚠️ API base URL is not defined",API_URL);
+  console.warn("⚠️ API base URL is not defined", API_URL);
 }
 
 export default function AddStory() {
@@ -83,14 +83,11 @@ export default function AddStory() {
   const pickMedia = async () => {
     try {
       const result = await ImagePicker.openPicker({
-        mediaType: 'any',          // images & videos
-        cropping: true,            // enable crop for images
-        freeStyleCropEnabled: true,// allow free crop
-        enableRotationGesture: true,
-        compressImageQuality: 0.6, // optional compression
-        videoMaxDuration: 15,      // limit video duration
+        mediaType: "photo",
+        cropping: true,
+        freeStyleCropEnabled: true,
+        compressImageQuality: 0.6,
       });
-
       if (result?.path) {
         const fileObj = {
           uri: result.path,
@@ -116,37 +113,13 @@ export default function AddStory() {
 
     const formData = new FormData();
 
-    // Get file extension
-    let fileExtension = 'jpg';
-    if (selectedMedia.uri.includes('.mp4') || selectedMedia.type === 'video') {
-      fileExtension = 'mp4';
-    } else if (selectedMedia.uri.includes('.png')) {
-      fileExtension = 'png';
-    } else if (selectedMedia.uri.includes('.jpeg')) {
-      fileExtension = 'jpeg';
-    }
-
-    // Create file name
-    const fileName = selectedMedia.fileName ||
-      `story_${Date.now()}.${fileExtension}`;
-
-    // Determine MIME type
-    let mimeType = selectedMedia.mimeType;
-    if (!mimeType) {
-      mimeType = selectedMedia.type === 'video'
-        ? 'video/mp4'
-        : selectedMedia.type === 'image'
-          ? 'image/jpeg'
-          : 'application/octet-stream';
-    }
-
-    console.log("📁 File info:", { fileName, mimeType, uri: selectedMedia.uri });
-
-    // ✅ CRITICAL FIX: Format the file object correctly for React Native
     const fileObject = {
-      uri: selectedMedia.uri,
-      name: fileName,
-      type: mimeType,
+      uri:
+        Platform.OS === "android"
+          ? selectedMedia.uri
+          : selectedMedia.uri.replace("file://", ""),
+      name: selectedMedia.name || `story_${Date.now()}.jpg`,
+      type: selectedMedia.type || "image/jpeg",
     };
 
     formData.append("media", fileObject as any);
@@ -173,7 +146,6 @@ export default function AddStory() {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
         Alert.alert("Authentication Required", "Please login again");
-        router.replace("/login");
         return;
       }
 
@@ -182,60 +154,32 @@ export default function AddStory() {
         throw new Error("Failed to create form data");
       }
 
-      console.log("🚀 Uploading to:", `${API_URL}/api/story`);
-      console.log("🔑 Token present:", !!token);
-
-      // ✅ OPTION 1: Using fetch with better error handling
       const res = await fetch(`${API_URL}/api/story`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
-          // Let FormData set Content-Type automatically
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
 
-      // First get response as text
-      const responseText = await res.text();
-      console.log("📨 Response status:", res.status);
-      console.log("📨 Response text (first 500 chars):", responseText.substring(0, 500));
+      const text = await res.text();
+      let data: any = {};
 
-      let data;
       try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error("❌ Failed to parse JSON:", parseError);
-        console.error("Raw response was:", responseText);
-
-        // Check if it's an HTML error page
-        if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
-          throw new Error("Server returned HTML error page. Check backend logs.");
-        } else {
-          throw new Error(`Server returned invalid response: ${responseText.substring(0, 100)}`);
-        }
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(text || "Invalid server response");
       }
 
       if (!res.ok) {
-        throw new Error(data.message || `Upload failed with status ${res.status}`);
+        throw new Error(data.message || "Upload failed");
       }
 
       Alert.alert("Success ✅", "Your story has been uploaded!");
       router.back();
     } catch (err: any) {
       console.error("❌ Story upload failed:", err);
-
-      // More specific error messages
-      let errorMessage = err.message || "Network error";
-
-      if (err.message.includes('Network request failed')) {
-        errorMessage = "Network connection failed. Check your internet.";
-      } else if (err.message.includes('JSON Parse')) {
-        errorMessage = "Server returned invalid response. Please try again.";
-      } else if (err.message.includes('HTML error page')) {
-        errorMessage = "Server error. Please contact support.";
-      }
-
-      Alert.alert("Upload Failed", errorMessage);
+      Alert.alert("Upload Failed", err.message || "Network Error");
     } finally {
       setUploading(false);
     }

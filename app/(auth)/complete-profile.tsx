@@ -19,7 +19,6 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function CompleteProfile() {
 
-    const { token, login } = useAuth();
     const [showCountryModal, setShowCountryModal] = useState(false);
     const [username, setUsername] = useState("");
     const [gender, setGender] = useState<"Male" | "Female" | null>(null);
@@ -32,7 +31,7 @@ export default function CompleteProfile() {
         flag: "🇮🇳",
     });
     const [phone, setPhone] = useState("");
-
+const { token, updateProfileCompleted } = useAuth();
     // DOB
     const [day, setDay] = useState("");
     const [month, setMonth] = useState("");
@@ -72,17 +71,17 @@ export default function CompleteProfile() {
             const response = await api.post(
                 "/api/auth/complete-profile",
                 payload,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+                // {
+                //     headers: {
+                //         Authorization: `Bearer ${token}`,
+                //     },
+                // }
             );
 
             console.log("✅ Profile completion response:", response.data);
 
             // ✅ Update profileCompleted in context
-            await login(token!, true);
+            await updateProfileCompleted(true);
 
             console.log("✅ Profile completed, redirecting...");
 

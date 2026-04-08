@@ -64,8 +64,11 @@ export default function Callback() {
                 console.log("🔐 Profile Completed Status:", profileCompleted);
 
                 // Update frontend state and login the user
-                await login(res.data.token, profileCompleted);
-
+                await login(
+                    res.data.token,
+                    res.data.refreshToken,
+                    profileCompleted
+                );
                 // Clean up AsyncStorage
                 await AsyncStorage.removeItem("auth0_code_verifier");
                 await AsyncStorage.removeItem("auth0_redirect_uri");
